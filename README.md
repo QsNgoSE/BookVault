@@ -7,6 +7,8 @@ It’s built with a robust **microservices backend (Java/Spring Boot)** and a cl
 
 ## Project Structure
 
+subject to change when intergrated Java Backend 
+
 ```plaintext
 /bookvault-frontend/
 ├── index.html                 # Landing page (Home)
@@ -141,8 +143,8 @@ Please open an issue for bugs or feature requests.
 
 ## Authors
 
-* \[Your Name / Team]
-* \[Your Email or GitHub]
+* \[Quang Sang Ngo]
+* \[QsngoSE@gmail.com/ https://github.com/QsNgoSE]
 
 ---
 
@@ -151,8 +153,5 @@ For backend service setup, see each microservice’s README.*
 
 ```
 
----
 
-**You can copy-paste this directly into your `README.md` and edit author/contact/license details as needed.**  
-Let me know if you want a backend microservices diagram, or a full project ZIP with sample files!
 ```

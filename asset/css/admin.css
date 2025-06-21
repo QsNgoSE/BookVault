@@ -1,0 +1,36 @@
+    .admin-hero {
+      background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
+      padding: 2rem 0 1.7rem 0;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .admin-section-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #d18e07;
+      margin-bottom: 1rem;
+    }
+    .table thead { background: #fff9ee; }
+    .table tbody tr:hover { background: #fff6e0; }
+    .admin-card {
+      background: #fff;
+      border-radius: 1.1rem;
+      box-shadow: 0 2px 16px rgba(110,100,70,0.07);
+      padding: 1.7rem 1.3rem 1.2rem 1.3rem;
+      margin-bottom: 2.2rem;
+    }
+    .action-btns .btn { margin-right: 0.35rem; }
+    .search-bar-admin {
+      max-width: 260px;
+      margin-bottom: .9rem;
+      border-radius: 1.5rem;
+      font-size: 1.04rem;
+      padding-left: 1.2rem;
+    }
+    .nav-tabs .nav-link.active { background: #f59e0b; color: #232323 !important; border: none; }
+    .nav-tabs .nav-link { border-radius: 1.2rem 1.2rem 0 0; font-weight: 600; color: #b88712; }
+    .tab-pane { padding-top: 1.4rem; }
+    @media (max-width: 600px) {
+      .admin-card { padding: 1.1rem .7rem; }
+      .admin-section-title { font-size: 1.04rem;}
+    }

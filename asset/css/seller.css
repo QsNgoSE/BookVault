@@ -1,0 +1,53 @@
+.seller-hero {
+      background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
+      padding: 2.5rem 0 2rem 0;
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .seller-hero h1 { font-size: 2.2rem; font-weight: bold; color: #232323; }
+    .dashboard-card {
+      background: #fff;
+      border-radius: 1.1rem;
+      box-shadow: 0 2px 16px rgba(110,100,70,0.09);
+      padding: 1.7rem 1.3rem 1.2rem 1.3rem;
+      margin-bottom: 2rem;
+    }
+    .dashboard-card h5 { font-weight: 700; color: #d18e07; }
+    .upload-book-form .form-label { font-weight: 600; color: #a48433; }
+    .upload-book-form .form-control { border-radius: 1.5rem; }
+    .upload-book-form .btn { border-radius: 2rem; font-weight: 700; }
+    .stat-card {
+      background: #fffbe8;
+      border-radius: 1rem;
+      text-align: center;
+      padding: 1.2rem 1rem;
+      margin-bottom: 1rem;
+      min-width: 130px;
+    }
+    .stat-card .bi { color: #f59e0b; font-size: 2rem; }
+    .stat-value { font-size: 1.45rem; font-weight: 700; color: #232323; }
+    .stat-label { color: #856100; font-size: .95rem; }
+    .product-table th, .product-table td { vertical-align: middle; }
+    .revenue-chart {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .nav-tabs .nav-link.active { background: #f59e0b; color: #232323 !important; border: none; }
+    .nav-tabs .nav-link { border-radius: 1.2rem 1.2rem 0 0; font-weight: 600; color: #b88712; }
+    .tab-pane { padding-top: 1.4rem; }
+    .table>thead { background: #fff9ee; }
+    .table>tbody tr:hover { background: #fff6e0; }
+    @media (max-width: 992px) {
+      .stat-card { margin-bottom: 1rem; }
+      .revenue-chart { max-width: 100%; }
+    }
+    .dashboard-card .bi-star-fill,
+.dashboard-card .bi-star-half {
+  font-size: 1.12rem;
+  vertical-align: -0.12em;
+}
+.dashboard-card .btn-outline-warning {
+  border-width: 2px;
+  font-weight: 600;
+}

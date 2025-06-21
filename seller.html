@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Seller Dashboard – BookVault</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/asset/css/bookvault.css">
+  <link rel="stylesheet" href="/asset/css/seller.css">
+
+<style>
+    
+  </style>
+  <!-- Chart.js CDN for revenue chart (optional) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <!-- NAVBAR -->
+ <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
+      <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo" style="height:44px; width:auto;">
+      <span style="font-size:2rem;font-weight:700;color:#232323;">BookVault</span>
+    </a>
+    <div class="mx-auto order-0">
+      <div class="collapse navbar-collapse justify-content-center" id="navbarBookVault">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="booklisting.html">Explore </a></li>
+          <li class="nav-item"><a class="nav-link" href="about.html">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+          <li class="nav-item"><a class="nav-link" href="help.html">Help </a></li>
+          <li class="nav-item"><a class="nav-link" href="user.html">User </a></li>
+          <li class="nav-item"><a class="nav-link" href="seller.html">Seller </a></li>
+          <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>
+        </ul>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarBookVault">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+    <div class="d-flex align-items-center gap-2 ms-auto">
+      <a class="nav-link" href="user.html"><i class="bi bi-person"></i></a>
+      <a class="nav-link" href="booklisting.html"><i class="bi bi-cart"></i></a>
+      <a class="btn bookvault-btn" href="login.html">Sign In</a>
+    </div>
+  </div>
+</nav>
+
+  <!-- HERO SECTION -->
+<section class="hero-section py-5" style="background:linear-gradient(120deg,#fff7e6 60%,#ffe9c5 100%);">
+  <div class="container text-center">
+    <h1 class="hero-title mb-3 fw-bold" style="color:#d18e07;">Discover Your Next Favorite Book</h1>
+    <p class="hero-subtitle mb-4" style="max-width:540px;margin:0 auto;color:#6d6554;">
+      Beautifully curated collections, reviews, and the tools to help you find and manage books you love. Experience a new level of discovery with BookVault.
+    </p>
+
+  <!-- SELLER DETAILS -->
+<section class="container mb-4">
+  <div class="dashboard-card d-flex flex-wrap align-items-center gap-4">
+    <img src="https://randomuser.me/api/portraits/men/32.jpg"
+         class="rounded-circle border border-warning"
+         style="width:80px;height:80px;object-fit:cover;"
+         alt="Seller Avatar">
+    <div class="flex-grow-1">
+      <h4 class="mb-0 fw-bold" style="color:#d18e07;">BookBarn by John Doe</h4>
+      <div class="mb-1" style="color:#856100;">Premium Book Seller • Since 2022</div>
+      <div class="mb-2 small">
+        <span class="me-3"><i class="bi bi-geo-alt text-warning"></i> London, UK</span>
+        <span class="me-3"><i class="bi bi-envelope"></i> john@example.com</span>
+        <span><i class="bi bi-telephone"></i> +44 7890 123456</span>
+      </div>
+      <div class="mb-2">
+        <span class="me-1 text-warning">
+          <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+          <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+          <i class="bi bi-star-half"></i>
+        </span>
+        <span class="fw-bold" style="color:#d18e07;">4.8</span>
+        <span class="text-muted small ms-2">(243 reviews)</span>
+      </div>
+      <div class="mb-2" style="color:#646464;">
+        Sharing my love of books with readers worldwide. Specializing in rare editions, children’s stories, and trending bestsellers.
+      </div>
+      <button class="btn btn-outline-warning btn-sm rounded-pill px-3 mt-2">
+        <i class="bi bi-pencil"></i> Edit Profile
+      </button>
+    </div>
+  </div>
+</section>
+
+  <!-- SELLER HERO -->
+  <section class="seller-hero">
+    <div class="container">
+      <h1>Seller Dashboard</h1>
+      <p>Welcome, <span class="fw-bold text-warning">BookSeller</span>! Manage your store, upload new books, track your sales and performance.</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="row g-4">
+      <!-- LEFT: Upload form + stats -->
+      <div class="col-lg-4">
+        <!-- Upload new book -->
+        <div class="dashboard-card">
+          <h5 class="mb-3"><i class="bi bi-cloud-upload"></i> Upload New Book</h5>
+          <form class="upload-book-form">
+            <div class="mb-3">
+              <label for="bookTitle" class="form-label">Title</label>
+              <input type="text" class="form-control" id="bookTitle" placeholder="Enter book title" required>
+            </div>
+            <div class="mb-3">
+              <label for="bookAuthor" class="form-label">Author</label>
+              <input type="text" class="form-control" id="bookAuthor" placeholder="Author name" required>
+            </div>
+            <div class="mb-3">
+              <label for="bookPrice" class="form-label">Price (USD)</label>
+              <input type="number" class="form-control" id="bookPrice" placeholder="Price" min="0" step="0.01" required>
+            </div>
+            <div class="mb-3">
+              <label for="bookGenre" class="form-label">Genre</label>
+              <input type="text" class="form-control" id="bookGenre" placeholder="e.g. Fiction, Nonfiction" required>
+            </div>
+            <div class="mb-3">
+              <label for="bookCover" class="form-label">Cover Image</label>
+              <input class="form-control" type="file" id="bookCover" accept="image/*">
+            </div>
+            <div class="mb-3">
+              <label for="bookDesc" class="form-label">Description</label>
+              <textarea class="form-control" id="bookDesc" rows="2" placeholder="Short book description"></textarea>
+            </div>
+            <div class="d-grid">
+              <button class="btn bookvault-btn" type="submit"><i class="bi bi-upload"></i> Add Book</button>
+            </div>
+          </form>
+        </div>
+        <!-- Seller stats -->
+        <div class="d-flex flex-wrap gap-3 justify-content-between">
+          <div class="stat-card flex-grow-1">
+            <i class="bi bi-box-seam"></i>
+            <div class="stat-value" id="statProducts">17</div>
+            <div class="stat-label">Active Books</div>
+          </div>
+          <div class="stat-card flex-grow-1">
+            <i class="bi bi-cash-stack"></i>
+            <div class="stat-value" id="statSold">483</div>
+            <div class="stat-label">Sold Items</div>
+          </div>
+          <div class="stat-card flex-grow-1">
+            <i class="bi bi-graph-up-arrow"></i>
+            <div class="stat-value" id="statRevenue">$7,890</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+        </div>
+      </div>
+      <!-- RIGHT: Tabs with book listing, sold, revenue -->
+      <div class="col-lg-8">
+        <ul class="nav nav-tabs mb-2" id="sellerTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">My Products</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sold-tab" data-bs-toggle="tab" data-bs-target="#sold" type="button" role="tab">Sold Items</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="revenue-tab" data-bs-toggle="tab" data-bs-target="#revenue" type="button" role="tab">Revenue & Performance</button>
+          </li>
+        </ul>
+        <div class="tab-content" id="sellerTabsContent">
+          <!-- Product Listings -->
+          <div class="tab-pane fade show active" id="products" role="tabpanel">
+            <h5 class="mb-3"><i class="bi bi-book"></i> My Product Listings</h5>
+            <div class="table-responsive">
+              <table class="table product-table align-middle">
+                <thead>
+                  <tr>
+                    <th>Cover</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Example static rows, replace with backend loop -->
+                  <tr>
+                    <td><img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=60&q=80" class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="..."></td>
+                    <td>Atomic Habits</td>
+                    <td>James Clear</td>
+                    <td>$16.99</td>
+                    <td><span class="badge bg-success">Active</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><img src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=60&q=80" class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="..."></td>
+                    <td>Educated</td>
+                    <td>Tara Westover</td>
+                    <td>$13.99</td>
+                    <td><span class="badge bg-success">Active</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><img src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=60&q=80" class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="..."></td>
+                    <td>The Great Gatsby</td>
+                    <td>F. Scott Fitzgerald</td>
+                    <td>$10.99</td>
+                    <td><span class="badge bg-warning text-dark">Paused</span></td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </td>
+                  </tr>
+                  <!-- Add more rows as needed -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Sold Items -->
+          <div class="tab-pane fade" id="sold" role="tabpanel">
+            <h5 class="mb-3"><i class="bi bi-bag-check"></i> Sold Items</h5>
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Cover</th>
+                    <th>Title</th>
+                    <th>Buyer</th>
+                    <th>Sold Date</th>
+                    <th>Price</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=60&q=80" class="rounded" style="width: 46px; height: 60px;" alt="..."></td>
+                    <td>Atomic Habits</td>
+                    <td>Sophia Lee</td>
+                    <td>2024-06-12</td>
+                    <td>$16.99</td>
+                    <td><span class="badge bg-success">Delivered</span></td>
+                  </tr>
+                  <tr>
+                    <td><img src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=60&q=80" class="rounded" style="width: 46px; height: 60px;" alt="..."></td>
+                    <td>Educated</td>
+                    <td>David Kim</td>
+                    <td>2024-06-05</td>
+                    <td>$13.99</td>
+                    <td><span class="badge bg-success">Delivered</span></td>
+                  </tr>
+                  <!-- More sold items ... -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Revenue & Performance -->
+          <div class="tab-pane fade" id="revenue" role="tabpanel">
+            <h5 class="mb-3"><i class="bi bi-bar-chart-line"></i> Revenue & Performance</h5>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <div class="dashboard-card">
+                  <h6 class="fw-bold mb-2">Past Month Revenue</h6>
+                  <div class="stat-value mb-1">$850</div>
+                  <div class="small text-success">+18% vs last month</div>
+                  <canvas id="chartMonth" class="revenue-chart mt-3"></canvas>
+                </div>
+              </div>
+              <div class="col-md-6 mb-3">
+                <div class="dashboard-card">
+                  <h6 class="fw-bold mb-2">Past Year Revenue</h6>
+                  <div class="stat-value mb-1">$7,890</div>
+                  <div class="small text-success">+32% vs previous year</div>
+                  <canvas id="chartYear" class="revenue-chart mt-3"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- end RIGHT -->
+    </div>
+  </div>
+
+  <!-- NEWSLETTER BAR -->
+  <section class="newsletter-bar text-center mt-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-7 mb-2 mb-md-0">
+          <h4 class="fw-bold mb-2">Unlock Your Reading Adventure</h4>
+          <p class="mb-0">Join a community of book lovers. Never miss a great read – get BookVault updates right to your inbox!</p>
+        </div>
+        <div class="col-md-5">
+          <form class="d-flex justify-content-center">
+            <input type="email" class="form-control" placeholder="Enter your email">
+            <button type="submit" class="btn bookvault-btn ms-2">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer mt-4">
+    <div class="container">
+      <div class="row align-items-center mb-3">
+        <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
+          <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
+            <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+            <span>BookVault</span>
+          </a>
+          <span class="ms-2">© 2025 BookVault. All rights reserved.</span>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="#" class="text-reset me-2"><i class="bi bi-facebook"></i></a>
+          <a href="#" class="text-reset me-2"><i class="bi bi-twitter"></i></a>
+          <a href="#" class="text-reset me-2"><i class="bi bi-instagram"></i></a>
+          <a href="#" class="text-reset"><i class="bi bi-linkedin"></i></a>
+        </div>
+      </div>
+      <div class="text-center small text-muted">
+        <a href="#" class="text-reset">Privacy Policy</a> ·
+        <a href="#" class="text-reset">Terms of Use</a>
+      </div>
+    </div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Chart.js revenue demo -->
+  <script>
+    // Simple demo data; replace with backend data
+    if(window.Chart){
+      var ctxM = document.getElementById('chartMonth').getContext('2d');
+      new Chart(ctxM, {
+        type: 'line',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+          datasets: [{
+            label: 'Revenue',
+            data: [120, 210, 280, 240],
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,0.12)',
+            tension: .3,
+            fill: true
+          }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      var ctxY = document.getElementById('chartYear').getContext('2d');
+      new Chart(ctxY, {
+        type: 'bar',
+        data: {
+          labels: ['2021', '2022', '2023', '2024'],
+          datasets: [{
+            label: 'Annual Revenue',
+            data: [2200, 5400, 5970, 7890],
+            backgroundColor: '#f59e0b'
+          }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    }
+  </script>
+</body>
+</html>

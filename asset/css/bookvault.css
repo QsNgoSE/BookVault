@@ -1,0 +1,179 @@
+/* bookvault.css */
+body { background-color: #faf8f5; }
+.navbar-brand span { font-size: 2rem; font-weight: 700; color: #232323; }
+.hero-section {
+    padding: 5rem 0 3rem 0;
+    background: #fff5e4;
+    text-align: center;
+}
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #232323;
+}
+.hero-subtitle {
+    font-size: 1.3rem;
+    color: #636363;
+    margin-top: 1rem;
+}
+.bookvault-btn {
+    background-color: #f59e0b;
+    color: #232323;
+    font-weight: 600;
+    border-radius: 2rem;
+    padding: 0.75rem 2.25rem;
+    border: none;
+    transition: background .2s;
+}
+.bookvault-btn:hover { background: #db8500; color: #fff; }
+
+.feature-icon {
+    font-size: 2.3rem;
+    color: #f59e0b;
+    margin-bottom: 1rem;
+}
+.feature-card {
+    border: none;
+    background: #fff;
+    box-shadow: 0 1px 10px rgba(70,70,70,0.04);
+    border-radius: 1rem;
+    transition: box-shadow .2s;
+}
+.feature-card:hover {
+    box-shadow: 0 4px 24px rgba(70,70,70,0.11);
+}
+.section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+.section-subtitle {
+    font-size: 1.1rem;
+    color: #888;
+    margin-bottom: 1.2rem;
+}
+.faq-accordion .accordion-button:not(.collapsed) {
+    color: #f59e0b;
+    background: #fffbe8;
+    font-weight: bold;
+}
+.team-card {
+    border: none;
+    background: #fff;
+    box-shadow: 0 1px 10px rgba(100,100,100,0.07);
+    border-radius: 1rem;
+    transition: box-shadow .2s;
+    text-align: center;
+    padding: 2rem 1.25rem;
+}
+.team-avatar {
+    border-radius: 50%;
+    width: 86px;
+    height: 86px;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border: 3px solid #f4cf91;
+}
+.team-social a {
+    color: #888; 
+    margin: 0 .3rem;
+    font-size: 1.2rem;
+}
+.newsletter-bar {
+    background: #4b3d2c;
+    color: #fff;
+    padding: 2.2rem 0;
+}
+.newsletter-bar .form-control {
+    border-radius: 2rem;
+    max-width: 240px;
+    display: inline-block;
+    margin-right: 10px;
+}
+.footer {
+    background: #f8e9dd;
+    color: #232323;
+    padding: 2rem 0 1rem 0;
+    font-size: 0.97rem;
+}
+.footer .navbar-brand {
+    color: #232323;
+}
+.footer .navbar-brand img {
+    width: 36px;
+    height: 36px;
+}
+.bookvault-searchbar {
+    background: #fff;
+    border-radius: 2.5rem;
+    box-shadow: 0 4px 16px rgba(90,80,50,0.10);
+    padding: 0.4rem 0.7rem;
+    margin-top: 2rem;
+}
+.bookvault-searchbar .search-input {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 2.5rem;
+    background: transparent;
+    font-size: 1.17rem;
+    padding-left: 1.2rem;
+    padding-right: 1.2rem;
+    height: 48px;
+}
+.bookvault-searchbar .search-btn {
+    background: #f59e0b;
+    color: #212121;
+    border: none;
+    border-radius: 2rem;
+    height: 44px;
+    min-width: 110px;
+    font-weight: 700;
+    font-size: 1.07rem;
+    box-shadow: none;
+    transition: background 0.15s;
+}
+.bookvault-searchbar .search-btn:hover {
+    background: #db8500;
+    color: #fff;
+}
+.bookvault-searchbar .explore-btn {
+    border: 2px solid #f59e0b;
+    color: #f59e0b;
+    background: #fff;
+    border-radius: 2rem;
+    height: 44px;
+    min-width: 130px;
+    font-weight: 700;
+    font-size: 1.07rem;
+    box-shadow: none;
+    transition: color 0.15s, background 0.15s;
+}
+.bookvault-searchbar .explore-btn:hover {
+    background: #fff6e0;
+    color: #c77900;
+    border-color: #c77900;
+}
+
+/* Desktop styles: show navbar-nav (menu links), hide hamburger/mobile menu */
+.navbar-nav,.navbar-toggler
+.navbar {
+  display: flex !important;
+}
+
+.mobile-navbar,
+.mobile-icons {
+  display: none !important;
+}
+
+/* mobile responsive */
+@media (max-width: 600px) {
+    .hero-section .search-bar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .hero-section .btn {
+        width: 100%;
+    }
+}
+

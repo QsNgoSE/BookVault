@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BookVault – Browse Books</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <!-- BookVault Styles -->
+  <link rel="stylesheet" href="/asset/css/bookvault.css">
+  <link rel="stylesheet" href="/asset/css/booklisting.css">
+  <style>
+    
+  </style>
+</head>
+<body>
+ <!-- NAVBAR -->
+ <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
+      <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo" style="height:44px; width:auto;">
+      <span style="font-size:2rem;font-weight:700;color:#232323;">BookVault</span>
+    </a>
+    <div class="mx-auto order-0">
+      <div class="collapse navbar-collapse justify-content-center" id="navbarBookVault">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="booklisting">Explore</a></li>
+          <li class="nav-item"><a class="nav-link" href="about.html">About</a></li>
+          <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+          <li class="nav-item"><a class="nav-link" href="help.html">Help </a></li>
+          <li class="nav-item"><a class="nav-link" href="user.html">User </a></li>
+          <li class="nav-item"><a class="nav-link" href="seller.html">Seller </a></li>
+          <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>
+        </ul>
+      </div>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarBookVault">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+    <div class="d-flex align-items-center gap-2 ms-auto">
+      <a class="nav-link" href="user.html"><i class="bi bi-person"></i></a>
+      <a class="nav-link" href="booklisting.html"><i class="bi bi-cart"></i></a>
+      <a class="btn bookvault-btn" href="login.html">Sign In</a>
+    </div>
+  </div>
+</nav>
+
+  <!-- HERO SECTION -->
+<section class="hero-section py-5" style="background:linear-gradient(120deg,#fff7e6 60%,#ffe9c5 100%);">
+  <div class="container text-center">
+    <h1 class="hero-title mb-3 fw-bold" style="color:#d18e07;">Discover Your Next Favorite Book</h1>
+    <p class="hero-subtitle mb-4" style="max-width:540px;margin:0 auto;color:#6d6554;">
+      Beautifully curated collections, reviews, and the tools to help you find and manage books you love. Experience a new level of discovery with BookVault.
+    </p>
+    <!-- Search Bar with Explore Button -->
+    <form class="bookvault-searchbar d-flex align-items-center mx-auto shadow rounded-pill bg-white p-2" style="max-width:650px;">
+      <input type="text" class="form-control form-control-lg border-0 rounded-pill" placeholder="Search for books, authors, or genres...">
+      <button class="btn bookvault-btn ms-2 rounded-pill px-4 fw-bold" type="submit">Search</button>
+      <a class="btn btn-outline-warning ms-2 rounded-pill px-4 fw-bold" href="booklisting.html" style="white-space:nowrap;">Explore Books</a>
+    </form>
+  </div>
+</section>
+
+  <!-- PRODUCT LISTING MAIN SECTION -->
+  <div class="container mt-5 mb-5">
+    <div class="row">
+      <!-- FILTER SIDEBAR -->
+      <aside class="col-lg-3 mb-4 mb-lg-0">
+        <div class="filters-sidebar">
+          <div class="mb-3">
+            <label class="form-label">Genres</label>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="genre1"><label class="form-check-label" for="genre1">Fiction</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="genre2"><label class="form-check-label" for="genre2">Non-Fiction</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="genre3"><label class="form-check-label" for="genre3">Fantasy</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" id="genre4"><label class="form-check-label" for="genre4">Children's</label></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Author</label>
+            <input type="text" class="form-control form-control-sm" placeholder="Type author...">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Price</label>
+            <input type="range" class="form-range" min="0" max="100" id="priceRange">
+            <div class="d-flex justify-content-between"><span>$0</span><span>$100</span></div>
+          </div>
+          <div>
+            <label class="form-label">Ratings</label>
+            <div class="form-check"><input class="form-check-input" type="radio" name="rating" id="r5"><label class="form-check-label" for="r5">★★★★★</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="rating" id="r4"><label class="form-check-label" for="r4">★★★★☆ & up</label></div>
+            <div class="form-check"><input class="form-check-input" type="radio" name="rating" id="r3"><label class="form-check-label" for="r3">★★★☆☆ & up</label></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- BOOK LISTING GRID -->
+      <main class="col-lg-9">
+        <main class="col-lg-9">
+  <div class="row g-4">
+    <!-- Book card 1 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80" alt="Atomic Habits">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">Atomic Habits</a>
+            <div class="book-author">James Clear</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-half"></i> (4.5)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$16.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 2 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=400&q=80" alt="Educated">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">Educated</a>
+            <div class="book-author">Tara Westover</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> (5.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$13.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 3 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80" alt="The Great Gatsby">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">The Great Gatsby</a>
+            <div class="book-author">F. Scott Fitzgerald</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star"></i> (4.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$10.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 4 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80" alt="To Kill a Mockingbird">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">To Kill a Mockingbird</a>
+            <div class="book-author">Harper Lee</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-half"></i>
+              <i class="bi bi-star"></i> (3.5)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$9.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 5 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80" alt="1984">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">1984</a>
+            <div class="book-author">George Orwell</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star"></i> (4.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$12.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 6 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=400&q=80" alt="Becoming">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">Becoming</a>
+            <div class="book-author">Michelle Obama</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star"></i> (4.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$15.50</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 7 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1476958526483-36efcaa80aa4?auto=format&fit=crop&w=400&q=80" alt="Sapiens">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">Sapiens</a>
+            <div class="book-author">Yuval Noah Harari</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star"></i>
+              <i class="bi bi-star"></i> (3.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$18.25</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 8 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1465101178521-c1a9136a6244?auto=format&fit=crop&w=400&q=80" alt="The Book Thief">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">The Book Thief</a>
+            <div class="book-author">Markus Zusak</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star"></i>
+              <i class="bi bi-star"></i> (3.0)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$11.45</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Book card 9 -->
+    <div class="col-md-6 col-lg-4">
+      <div class="book-card card h-100">
+        <img class="book-cover" src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=400&q=80" alt="Harry Potter and the Sorcerer's Stone">
+        <div class="book-card-body">
+          <div>
+            <a class="book-title" href="#">Harry Potter and the Sorcerer's Stone</a>
+            <div class="book-author">J.K. Rowling</div>
+            <div class="book-rating">
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
+              <i class="bi bi-star-half"></i> (4.5)
+            </div>
+          </div>
+          <div>
+            <div class="book-price">$20.99</div>
+            <button class="add-cart-btn w-100">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Pagination -->
+  <nav class="mt-4 d-flex justify-content-center">
+    <ul class="pagination">
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+      <li class="page-item active"><span class="page-link">1</span></li>
+      <li class="page-item"><a class="page-link" href="#">2</a></li>
+      <li class="page-item"><a class="page-link" href="#">3</a></li>
+      <li class="page-item"><a class="page-link" href="#">&raquo;</a></li>
+    </ul>
+  </nav>
+</main>
+
+  <!-- NEWSLETTER BAR (REUSE FROM INDEX) -->
+  <section class="newsletter-bar text-center">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-7 mb-2 mb-md-0">
+          <h4 class="fw-bold mb-2">Unlock Your Reading Adventure</h4>
+          <p class="mb-0">Join a community of book lovers. Never miss a great read – get BookVault updates right to your inbox!</p>
+        </div>
+        <div class="col-md-5">
+          <form class="d-flex justify-content-center">
+            <input type="email" class="form-control" placeholder="Enter your email">
+            <button type="submit" class="btn bookvault-btn ms-2">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER (REUSE FROM INDEX) -->
+  <footer class="footer mt-4">
+    <div class="container">
+      <div class="row align-items-center mb-3">
+        <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
+          <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+            <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+            <span>BookVault</span>
+          </a>
+          <span class="ms-2">© 2025 BookVault. All rights reserved.</span>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <a href="#" class="text-reset me-2"><i class="bi bi-facebook"></i></a>
+          <a href="#" class="text-reset me-2"><i class="bi bi-twitter"></i></a>
+          <a href="#" class="text-reset me-2"><i class="bi bi-instagram"></i></a>
+          <a href="#" class="text-reset"><i class="bi bi-linkedin"></i></a>
+        </div>
+      </div>
+      <div class="text-center small text-muted">
+        <a href="#" class="text-reset">Privacy Policy</a> ·
+        <a href="#" class="text-reset">Terms of Use</a>
+      </div>
+    </div>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

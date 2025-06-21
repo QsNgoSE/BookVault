@@ -1,0 +1,48 @@
+    .user-hero {
+      background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
+      padding: 2rem 0 1.7rem 0;
+      text-align: center;
+    }
+    .dashboard-card {
+      background: #fff;
+      border-radius: 1.1rem;
+      box-shadow: 0 2px 16px rgba(110,100,70,0.09);
+      padding: 1.7rem 1.3rem 1.2rem 1.3rem;
+      margin-bottom: 2rem;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px; object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #f4cf91;
+    }
+    .profile-edit-btn {
+      border-radius: 2rem;
+      font-weight: 600;
+    }
+    .user-section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #d18e07;
+      margin-bottom: 1.2rem;
+    }
+    .recommend-card {
+      background: #fffbe8;
+      border-radius: 1rem;
+      box-shadow: 0 1px 10px rgba(230,180,80,0.06);
+      text-align: center;
+      padding: 1.2rem .8rem;
+      min-width: 180px;
+      transition: box-shadow .16s, transform .14s;
+      height: 100%;
+    }
+    .recommend-card:hover { box-shadow: 0 4px 24px rgba(220,180,80,0.13); transform: translateY(-2px) scale(1.03);}
+    .recommend-cover { width: 68px; height: 92px; object-fit: cover; border-radius: .6rem; margin-bottom: .5rem; }
+    .recommend-title { font-size: 1.01rem; font-weight: 700; color: #232323;}
+    .recommend-author { font-size: 0.93rem; color: #a48433; margin-bottom: 0.6rem;}
+    .tab-pane { padding-top: 1.1rem; }
+    .table>thead { background: #fff9ee; }
+    .table>tbody tr:hover { background: #fff6e0; }
+    @media (max-width: 600px) {
+      .recommend-card { min-width: 120px; }
+      .recommend-cover { width: 50px; height: 66px; }
+    }

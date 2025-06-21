@@ -1,0 +1,47 @@
+body {
+      min-height: 100vh;
+      background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
+      display: flex;
+      flex-direction: column;
+    }
+    .login-container {
+      flex: 1 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 88vh;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 1.3rem;
+      box-shadow: 0 2px 16px rgba(110,100,70,0.09);
+      padding: 2.2rem 1.8rem 2.2rem 1.8rem;
+      min-width: 340px;
+      max-width: 370px;
+    }
+    .login-logo {
+      display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem;
+    }
+    .login-logo img { width: 44px; height: 44px; }
+    .login-logo span { font-size: 1.7rem; font-weight: 700; color: #d18e07; }
+    .form-label { font-weight: 600; color: #a48433;}
+    .login-card .btn { border-radius: 2rem; font-weight: 700; }
+    .form-text { color: #b4960c;}
+    .login-divider {
+      text-align: center;
+      margin: 1.3rem 0 .9rem 0;
+      color: #d1b26a;
+      font-size: .97rem;
+    }
+    .login-card .btn-outline-secondary {
+      border-radius: 2rem; font-weight: 700;
+      color: #a48433;
+      border: 2px solid #f4cf91;
+      background: #fffbe8;
+    }
+    .login-card .btn-outline-secondary:hover {
+      background: #ffe9c5;
+    }
+    @media (max-width: 600px) {
+      .login-card { min-width: unset; max-width: 99vw; padding: 1.1rem .5rem;}
+    }

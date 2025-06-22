@@ -1,0 +1,3 @@
+# This directory contains third-party libraries and frameworks
+# You can place local copies of Bootstrap, jQuery, or other libraries here
+# This is optional as most dependencies are loaded via CDN 

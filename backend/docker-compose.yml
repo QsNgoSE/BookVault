@@ -1,0 +1,292 @@
+# version: '3.8'  # Version is obsolete in newer Docker Compose
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bookvault-postgres
+    environment:
+      POSTGRES_DB: bookvault
+      POSTGRES_USER: bookvault
+      POSTGRES_PASSWORD: bookvault123
+      POSTGRES_MULTIPLE_DATABASES: bookvault_auth,bookvault_users,bookvault_books,bookvault_orders,bookvault_notifications
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+    networks:
+      - bookvault-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookvault"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: bookvault-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bookvault-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: bookvault-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: bookvault
+      RABBITMQ_DEFAULT_PASS: bookvault123
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - bookvault-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring services commented out - configure monitoring files first
+  # # Zipkin for distributed tracing
+  # zipkin:
+  #   image: openzipkin/zipkin
+  #   container_name: bookvault-zipkin
+  #   ports:
+  #     - "9411:9411"
+  #   networks:
+  #     - bookvault-network
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9411/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  # # Prometheus for metrics
+  # prometheus:
+  #   image: prom/prometheus
+  #   container_name: bookvault-prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #     - '--web.console.libraries=/etc/prometheus/console_libraries'
+  #     - '--web.console.templates=/etc/prometheus/consoles'
+  #     - '--web.enable-lifecycle'
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus_data:/prometheus
+  #   networks:
+  #     - bookvault-network
+
+  # # Grafana for dashboards
+  # grafana:
+  #   image: grafana/grafana
+  #   container_name: bookvault-grafana
+  #   environment:
+  #     GF_SECURITY_ADMIN_PASSWORD: admin123
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #     - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+  #     - ./monitoring/grafana-datasources:/etc/grafana/provisioning/datasources
+  #   networks:
+  #     - bookvault-network
+  #   depends_on:
+  #     - prometheus
+
+  # Service Discovery (Eureka)
+  discovery-service:
+    build:
+      context: ./discovery-service
+      dockerfile: Dockerfile
+    container_name: bookvault-discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Config Service
+  config-service:
+    build:
+      context: ./config-service
+      dockerfile: Dockerfile
+    container_name: bookvault-config
+    ports:
+      - "8888:8888"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: bookvault-auth
+    ports:
+      - "8082:8082"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault_auth
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # User Service
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: bookvault-user
+    ports:
+      - "8085:8085"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault_users
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+
+  # Book Service
+  book-service:
+    build:
+      context: ./book-service
+      dockerfile: Dockerfile
+    container_name: bookvault-book
+    ports:
+      - "8083:8083"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault_books
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+  # Order Service
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: bookvault-order
+    ports:
+      - "8084:8084"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault_orders
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=bookvault
+      - SPRING_RABBITMQ_PASSWORD=bookvault123
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  # prometheus_data:  # Commented out with monitoring services
+  # grafana_data:     # Commented out with monitoring services
+
+networks:
+  bookvault-network:
+    driver: bridge 

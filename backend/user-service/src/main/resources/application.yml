@@ -1,0 +1,42 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: user-service
+  
+  # Disable config server import check for local development
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bookvault_user
+    username: bookvault
+    password: bookvault123
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.bookvault.user: DEBUG
+    org.springframework.web: DEBUG 

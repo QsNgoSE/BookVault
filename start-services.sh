@@ -2,8 +2,8 @@
 
 echo "🚀 Starting BookVault Backend Services..."
 
-# Set correct JAVA_HOME to ensure Maven uses the right Java version
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+# Set correct JAVA_HOME to use Java 17
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
 echo "🔧 JAVA_HOME set to: $JAVA_HOME"
 
 # Check if Java is available
@@ -14,9 +14,7 @@ if ! command -v java &> /dev/null; then
 fi
 
 # Check Java version
-JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 | cut -d'.' -f1-2)
 echo "✅ Java version: $(java -version 2>&1 | head -n 1)"
-# Java version check is optional since we support Java 17+
 
 # Navigate to backend directory
 cd "$(dirname "$0")/backend"
@@ -33,6 +31,11 @@ elif [ -f "./mvnw" ]; then
 else
     echo "❌ Maven not found. Please install Maven first:"
     echo "brew install maven"
+    exit 1
+fi
+
+if [ $? -ne 0 ]; then
+    echo "❌ Build failed. Please check the error messages above."
     exit 1
 fi
 
@@ -58,45 +61,52 @@ start_service() {
     fi
 }
 
-echo "⚠️  Build failed. Let's try to start only the services that built successfully..."
-
-# Start Discovery Service
+# Start Discovery Service first
+echo "🔍 Starting Discovery Service..."
 if start_service "discovery-service" "8761"; then
     DISCOVERY_PID=$(jobs -p | tail -n 1)
+    echo "⏳ Waiting for Discovery Service to start..."
+    sleep 15
 else
     echo "❌ Failed to start Discovery Service"
-    DISCOVERY_PID=""
-fi
-
-# Wait a bit for discovery service to start
-if [ -n "$DISCOVERY_PID" ]; then
-    echo "⏳ Waiting for Discovery Service to start..."
-    sleep 10
+    exit 1
 fi
 
 # Start Auth Service
+echo "🔐 Starting Auth Service..."
 if start_service "auth-service" "8082"; then
     AUTH_PID=$(jobs -p | tail -n 1)
+    echo "⏳ Waiting for Auth Service to start..."
+    sleep 10
 else
     echo "❌ Failed to start Auth Service"
     AUTH_PID=""
 fi
 
 # Start Book Service  
+echo "📚 Starting Book Service..."
 if start_service "book-service" "8083"; then
     BOOK_PID=$(jobs -p | tail -n 1)
+    echo "⏳ Waiting for Book Service to start..."
+    sleep 10
 else
     echo "❌ Failed to start Book Service"
     BOOK_PID=""
 fi
 
 echo ""
-echo "🎉 All services starting!"
+echo "🎉 Services started successfully!"
 echo "📍 Service URLs:"
-echo "   Discovery Service: http://localhost:8761"
-echo "   Auth Service: http://localhost:8082/api/auth/health"
-echo "   Book Service: http://localhost:8083/api/books/categories"
+echo "   🔍 Discovery Service: http://localhost:8761"
+echo "   🔐 Auth Service: http://localhost:8082/api/auth/health"
+echo "   📚 Book Service: http://localhost:8083/api/books/categories"
 echo ""
+echo "🌐 Infrastructure Services:"
+echo "   🐘 PostgreSQL: localhost:5432"
+echo "   🔴 Redis: localhost:6379"
+echo "   🐰 RabbitMQ: localhost:5672 (Management: http://localhost:15672)"
+echo ""
+
 # Create PID list for killing services
 PIDS=""
 [ -n "$DISCOVERY_PID" ] && PIDS="$PIDS $DISCOVERY_PID"
@@ -107,9 +117,26 @@ if [ -n "$PIDS" ]; then
     echo "💡 To stop services, press Ctrl+C or run: kill$PIDS"
 else
     echo "💡 No services started successfully"
+    exit 1
 fi
 echo ""
 echo "🌐 Open your frontend: file://$(pwd)/../index.html"
+
+# Function to cleanup on exit
+cleanup() {
+    echo ""
+    echo "🛑 Stopping services..."
+    if [ -n "$PIDS" ]; then
+        kill $PIDS 2>/dev/null
+        echo "✅ All services stopped"
+    fi
+    exit 0
+}
+
+# Set trap to cleanup on exit
+trap cleanup SIGINT SIGTERM
+
+echo "🔄 Services are running. Press Ctrl+C to stop all services."
 
 # Keep script running
 wait 

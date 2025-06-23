@@ -25,9 +25,9 @@ public class JwtUtil {
     private final long refreshExpirationMs;
     
     public JwtUtil(
-            @Value("${bookvault.jwt.secret:mySecretKey}") String secret,
-            @Value("${bookvault.jwt.expiration:86400000}") long jwtExpirationMs,
-            @Value("${bookvault.jwt.refresh-expiration:604800000}") long refreshExpirationMs) {
+            @Value("${jwt.secret:mySecretKey}") String secret,
+            @Value("${jwt.expiration:86400000}") long jwtExpirationMs,
+            @Value("${jwt.refresh-expiration:604800000}") long refreshExpirationMs) {
         
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.jwtExpirationMs = jwtExpirationMs;
@@ -150,9 +150,9 @@ public class JwtUtil {
      */
     private Claims getClaims(String token) {
         return Jwts.parser()
-                .setSigningKey(secretKey)
+                .verifyWith(secretKey)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 } 

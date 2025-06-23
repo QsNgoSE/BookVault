@@ -2,10 +2,12 @@ package com.bookvault.auth.controller;
 
 import com.bookvault.auth.dto.*;
 import com.bookvault.auth.service.AuthService;
+import com.bookvault.auth.util.ClientIpUtil;
 import com.bookvault.shared.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,9 +40,11 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "User login", description = "Authenticate user and return JWT token")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
-            @Valid @RequestBody LoginRequest request) {
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
         
-        AuthResponse response = authService.login(request);
+        String clientIp = ClientIpUtil.getClientIpAddress(httpRequest);
+        AuthResponse response = authService.login(request, clientIp);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
     }
     

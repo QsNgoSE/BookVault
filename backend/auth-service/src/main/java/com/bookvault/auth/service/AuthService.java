@@ -9,6 +9,7 @@ import com.bookvault.shared.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
     
     // Register new user
     public AuthResponse register(RegisterRequest request) {
@@ -61,23 +63,44 @@ public class AuthService {
     }
     
     // Login user
-    public AuthResponse login(LoginRequest request) {
-        // Authenticate user
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+    public AuthResponse login(LoginRequest request, String clientIpAddress) {
+        // Check if user is banned
+        if (loginAttemptService.isUserBanned(request.getEmail())) {
+            long remainingTime = loginAttemptService.getUserBanTimeRemaining(request.getEmail());
+            throw new BadRequestException("User account is temporarily banned. Try again in " + remainingTime + " minutes.");
+        }
         
-        // Get user details
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new NotFoundException("User not found: " + request.getEmail()));
+        // Check if IP is banned
+        if (loginAttemptService.isIpBanned(clientIpAddress)) {
+            long remainingTime = loginAttemptService.getIpBanTimeRemaining(clientIpAddress);
+            throw new BadRequestException("IP address is temporarily banned. Try again in " + remainingTime + " minutes.");
+        }
         
-        // Generate JWT token
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole());
-        
-        log.info("User logged in: {}", user.getEmail());
-        
-        return AuthResponse.of(token, user.getId(), user.getEmail(), 
-                             user.getFirstName(), user.getLastName(), user.getRole());
+        try {
+            // Authenticate user
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+            
+            // Get user details
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new NotFoundException("User not found: " + request.getEmail()));
+            
+            // Clear failed attempts on successful login
+            loginAttemptService.clearFailedAttempts(request.getEmail(), clientIpAddress);
+            
+            // Generate JWT token
+            String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole());
+            
+            log.info("User logged in: {}", user.getEmail());
+            
+            return AuthResponse.of(token, user.getId(), user.getEmail(), 
+                                 user.getFirstName(), user.getLastName(), user.getRole());
+        } catch (BadCredentialsException e) {
+            // Record failed login attempt
+            loginAttemptService.recordFailedAttempt(request.getEmail(), clientIpAddress);
+            throw new BadRequestException("Invalid email or password");
+        }
     }
     
     // Get user profile

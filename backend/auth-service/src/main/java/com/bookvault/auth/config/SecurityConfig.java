@@ -32,14 +32,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.and()) // Use the CORS configuration from CorsConfig
+            .cors(cors -> {}) // Use the CORS configuration from CorsConfig
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/auth/register",
-                    "/auth/login", 
-                    "/auth/refresh",
+                    "/api/auth/register",
+                    "/api/auth/login", 
+                    "/api/auth/refresh",
+                    "/api/auth/health",
                     "/actuator/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"

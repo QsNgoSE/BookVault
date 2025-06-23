@@ -4,12 +4,6 @@ server:
 spring:
   application:
     name: discovery-service
-  
-  # Security configuration
-  security:
-    user:
-      name: admin
-      password: admin123
 
 eureka:
   instance:

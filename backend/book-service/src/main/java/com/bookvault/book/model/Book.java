@@ -3,7 +3,7 @@ package com.bookvault.book.model;
 import com.bookvault.shared.model.BaseEntity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
+// import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,11 +15,11 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "books")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+// @Getter
+// @Setter
+// @NoArgsConstructor
+// @AllArgsConstructor
+// @Builder
 public class Book extends BaseEntity {
     
     @Column(name = "title", nullable = false, length = 255)
@@ -62,7 +62,7 @@ public class Book extends BaseEntity {
     private UUID sellerId;
     
     @Column(name = "is_active", nullable = false)
-    @Builder.Default
+    // @Builder.Default
     private Boolean isActive = true;
     
     @Column(name = "rating", precision = 3, scale = 2)
@@ -72,7 +72,7 @@ public class Book extends BaseEntity {
     
     @Column(name = "review_count")
     @Min(value = 0, message = "Review count must not be negative")
-    @Builder.Default
+    // @Builder.Default
     private Integer reviewCount = 0;
     
     @Column(name = "language", length = 50)
@@ -90,6 +90,285 @@ public class Book extends BaseEntity {
     
     @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<BookReview> reviews;
+    
+    // Constructors
+    public Book() {}
+    
+    public Book(String title, String author, String isbn, String description, BigDecimal price,
+                LocalDate publishedDate, String coverImageUrl, Integer stockQuantity, UUID sellerId,
+                Boolean isActive, BigDecimal rating, Integer reviewCount, String language,
+                Integer pageCount, String publisher, List<BookCategory> bookCategories, List<BookReview> reviews) {
+        this.title = title;
+        this.author = author;
+        this.isbn = isbn;
+        this.description = description;
+        this.price = price;
+        this.publishedDate = publishedDate;
+        this.coverImageUrl = coverImageUrl;
+        this.stockQuantity = stockQuantity;
+        this.sellerId = sellerId;
+        this.isActive = isActive != null ? isActive : true;
+        this.rating = rating;
+        this.reviewCount = reviewCount != null ? reviewCount : 0;
+        this.language = language;
+        this.pageCount = pageCount;
+        this.publisher = publisher;
+        this.bookCategories = bookCategories;
+        this.reviews = reviews;
+    }
+    
+    // Builder pattern
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    public static class Builder {
+        private String title;
+        private String author;
+        private String isbn;
+        private String description;
+        private BigDecimal price;
+        private LocalDate publishedDate;
+        private String coverImageUrl;
+        private Integer stockQuantity;
+        private UUID sellerId;
+        private Boolean isActive = true;
+        private BigDecimal rating;
+        private Integer reviewCount = 0;
+        private String language;
+        private Integer pageCount;
+        private String publisher;
+        private List<BookCategory> bookCategories;
+        private List<BookReview> reviews;
+        
+        public Builder title(String title) {
+            this.title = title;
+            return this;
+        }
+        
+        public Builder author(String author) {
+            this.author = author;
+            return this;
+        }
+        
+        public Builder isbn(String isbn) {
+            this.isbn = isbn;
+            return this;
+        }
+        
+        public Builder description(String description) {
+            this.description = description;
+            return this;
+        }
+        
+        public Builder price(BigDecimal price) {
+            this.price = price;
+            return this;
+        }
+        
+        public Builder publishedDate(LocalDate publishedDate) {
+            this.publishedDate = publishedDate;
+            return this;
+        }
+        
+        public Builder coverImageUrl(String coverImageUrl) {
+            this.coverImageUrl = coverImageUrl;
+            return this;
+        }
+        
+        public Builder stockQuantity(Integer stockQuantity) {
+            this.stockQuantity = stockQuantity;
+            return this;
+        }
+        
+        public Builder sellerId(UUID sellerId) {
+            this.sellerId = sellerId;
+            return this;
+        }
+        
+        public Builder isActive(Boolean isActive) {
+            this.isActive = isActive;
+            return this;
+        }
+        
+        public Builder rating(BigDecimal rating) {
+            this.rating = rating;
+            return this;
+        }
+        
+        public Builder reviewCount(Integer reviewCount) {
+            this.reviewCount = reviewCount;
+            return this;
+        }
+        
+        public Builder language(String language) {
+            this.language = language;
+            return this;
+        }
+        
+        public Builder pageCount(Integer pageCount) {
+            this.pageCount = pageCount;
+            return this;
+        }
+        
+        public Builder publisher(String publisher) {
+            this.publisher = publisher;
+            return this;
+        }
+        
+        public Builder bookCategories(List<BookCategory> bookCategories) {
+            this.bookCategories = bookCategories;
+            return this;
+        }
+        
+        public Builder reviews(List<BookReview> reviews) {
+            this.reviews = reviews;
+            return this;
+        }
+        
+        public Book build() {
+            return new Book(title, author, isbn, description, price, publishedDate, coverImageUrl,
+                           stockQuantity, sellerId, isActive, rating, reviewCount, language,
+                           pageCount, publisher, bookCategories, reviews);
+        }
+    }
+    
+    // Getters and Setters
+    public String getTitle() {
+        return title;
+    }
+    
+    public void setTitle(String title) {
+        this.title = title;
+    }
+    
+    public String getAuthor() {
+        return author;
+    }
+    
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+    
+    public String getIsbn() {
+        return isbn;
+    }
+    
+    public void setIsbn(String isbn) {
+        this.isbn = isbn;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public BigDecimal getPrice() {
+        return price;
+    }
+    
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+    
+    public LocalDate getPublishedDate() {
+        return publishedDate;
+    }
+    
+    public void setPublishedDate(LocalDate publishedDate) {
+        this.publishedDate = publishedDate;
+    }
+    
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
+    
+    public void setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
+    }
+    
+    public Integer getStockQuantity() {
+        return stockQuantity;
+    }
+    
+    public void setStockQuantity(Integer stockQuantity) {
+        this.stockQuantity = stockQuantity;
+    }
+    
+    public UUID getSellerId() {
+        return sellerId;
+    }
+    
+    public void setSellerId(UUID sellerId) {
+        this.sellerId = sellerId;
+    }
+    
+    public Boolean getIsActive() {
+        return isActive;
+    }
+    
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public BigDecimal getRating() {
+        return rating;
+    }
+    
+    public void setRating(BigDecimal rating) {
+        this.rating = rating;
+    }
+    
+    public Integer getReviewCount() {
+        return reviewCount;
+    }
+    
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
+    }
+    
+    public String getLanguage() {
+        return language;
+    }
+    
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+    
+    public Integer getPageCount() {
+        return pageCount;
+    }
+    
+    public void setPageCount(Integer pageCount) {
+        this.pageCount = pageCount;
+    }
+    
+    public String getPublisher() {
+        return publisher;
+    }
+    
+    public void setPublisher(String publisher) {
+        this.publisher = publisher;
+    }
+    
+    public List<BookCategory> getBookCategories() {
+        return bookCategories;
+    }
+    
+    public void setBookCategories(List<BookCategory> bookCategories) {
+        this.bookCategories = bookCategories;
+    }
+    
+    public List<BookReview> getReviews() {
+        return reviews;
+    }
+    
+    public void setReviews(List<BookReview> reviews) {
+        this.reviews = reviews;
+    }
     
     // Business methods
     public void updateRating(BigDecimal newRating, int newReviewCount) {

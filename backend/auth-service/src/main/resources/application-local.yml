@@ -5,14 +5,7 @@ spring:
   application:
     name: auth-service
   
-  # Disable config server import check for local development
-  cloud:
-    config:
-      enabled: false
-      import-check:
-        enabled: false
-  
-  # Database configuration
+  # Database configuration for local development (Docker)
   datasource:
     url: jdbc:postgresql://localhost:5432/bookvault_auth
     username: bookvault
@@ -23,27 +16,21 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
   
-  # Redis configuration
+  # Redis configuration for local development (Docker)
   redis:
     host: localhost
     port: 6379
     timeout: 2000ms
-    password: # no password for local development
 
-# Eureka client configuration
+# Disable service discovery for local development
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
+    enabled: false
 
 # JWT configuration
 jwt:
@@ -58,27 +45,14 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always
 
 # Logging
 logging:
   level:
     com.bookvault.auth: DEBUG
     org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-
----
-# Docker profile
-spring:
-  config:
-    activate:
-      on-profile: docker
-  
-  datasource:
-    url: jdbc:postgresql://postgres:5432/bookvault_auth
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://discovery-service:8761/eureka/ 
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n" 

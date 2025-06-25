@@ -2,14 +2,14 @@
 
 echo "🚀 Starting BookVault Backend Services..."
 
-# Set correct JAVA_HOME to use Java 17
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
+# Set correct JAVA_HOME to use Java 21
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home
 echo "🔧 JAVA_HOME set to: $JAVA_HOME"
 
 # Check if Java is available
 if ! command -v java &> /dev/null; then
-    echo "❌ Java is not installed. Please install Java 17+ first."
-    echo "Install with: brew install openjdk@17"
+    echo "❌ Java is not installed. Please install Java 21+ first."
+    echo "Install with: brew install openjdk@21"
     exit 1
 fi
 

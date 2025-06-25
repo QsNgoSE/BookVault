@@ -15,36 +15,36 @@
     <description>Modern Online Book Marketplace - Backend Microservices</description>
     
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <java.version>17</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Spring Boot & Cloud versions -->
-        <spring-boot.version>3.2.0</spring-boot.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <spring-boot.version>3.2.4</spring-boot.version>
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
         
         <!-- Database versions -->
-        <postgresql.version>42.7.1</postgresql.version>
+        <postgresql.version>42.7.3</postgresql.version>
         <h2.version>2.2.224</h2.version>
-        <redis.version>4.4.6</redis.version>
+        <redis.version>5.0.2</redis.version>
         
         <!-- Monitoring & Observability -->
-        <micrometer.version>1.12.0</micrometer.version>
+        <micrometer.version>1.12.4</micrometer.version>
         <zipkin.version>2.24.4</zipkin.version>
         
         <!-- Documentation -->
-        <springdoc.version>2.3.0</springdoc.version>
+        <springdoc.version>2.4.0</springdoc.version>
         
         <!-- Security -->
-        <jjwt.version>0.12.3</jjwt.version>
+        <jjwt.version>0.12.5</jjwt.version>
         
         <!-- Testing -->
-        <testcontainers.version>1.19.3</testcontainers.version>
-        <mockito.version>5.7.0</mockito.version>
+        <testcontainers.version>1.19.7</testcontainers.version>
+        <mockito.version>5.11.0</mockito.version>
         
         <!-- Utilities -->
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <mapstruct.version>1.6.2</mapstruct.version>
         <lombok.version>1.18.30</lombok.version>
     </properties>
     
@@ -192,31 +192,21 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.12.1</version>
+                    <version>3.11.0</version>
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
-                        <release>${java.version}</release>
                         <compilerArgs>
                             <arg>-parameters</arg>
                         </compilerArgs>
-                        <annotationProcessorPaths>
+                        <!-- LOMBOK DISABLED DUE TO JAVA 21 COMPATIBILITY ISSUES -->
+                        <!-- annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>
                                 <artifactId>lombok</artifactId>
                                 <version>${lombok.version}</version>
                             </path>
-                            <path>
-                                <groupId>org.mapstruct</groupId>
-                                <artifactId>mapstruct-processor</artifactId>
-                                <version>${mapstruct.version}</version>
-                            </path>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok-mapstruct-binding</artifactId>
-                                <version>0.2.0</version>
-                            </path>
-                        </annotationProcessorPaths>
+                        </annotationProcessorPaths -->
                     </configuration>
                 </plugin>
                 
@@ -238,7 +228,7 @@
                     <version>3.4.0</version>
                     <configuration>
                         <from>
-                            <image>openjdk:17-jre-slim</image>
+                            <image>eclipse-temurin:21-jre-jammy</image>
                         </from>
                         <to>
                             <image>bookvault/${project.artifactId}:${project.version}</image>

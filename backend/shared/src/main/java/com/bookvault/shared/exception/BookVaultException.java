@@ -1,12 +1,12 @@
 package com.bookvault.shared.exception;
 
-import lombok.Getter;
+// import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 /**
  * Base exception class for BookVault application
  */
-@Getter
+// @Getter
 public class BookVaultException extends RuntimeException {
     
     private final String errorCode;
@@ -46,5 +46,14 @@ public class BookVaultException extends RuntimeException {
         super(message, cause);
         this.errorCode = errorCode;
         this.httpStatus = httpStatus;
+    }
+    
+    // Manual getter methods (replacing Lombok)
+    public String getErrorCode() {
+        return errorCode;
+    }
+    
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
     }
 } 

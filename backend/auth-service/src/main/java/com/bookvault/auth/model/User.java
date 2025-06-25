@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,11 +18,6 @@ import java.util.List;
  */
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class User extends BaseEntity implements UserDetails {
     
     @Column(name = "email", nullable = false, unique = true)
@@ -52,16 +46,148 @@ public class User extends BaseEntity implements UserDetails {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
-    @Builder.Default
     private UserRole role = UserRole.USER;
     
     @Column(name = "is_active", nullable = false)
-    @Builder.Default
     private Boolean isActive = true;
     
     @Column(name = "is_verified", nullable = false)
-    @Builder.Default
     private Boolean isVerified = false;
+    
+    // Constructors
+    public User() {}
+    
+    public User(String email, String password, String firstName, String lastName, String phone, UserRole role, Boolean isActive, Boolean isVerified) {
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phone = phone;
+        this.role = role != null ? role : UserRole.USER;
+        this.isActive = isActive != null ? isActive : true;
+        this.isVerified = isVerified != null ? isVerified : false;
+    }
+    
+    // Builder pattern
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    public static class Builder {
+        private String email;
+        private String password;
+        private String firstName;
+        private String lastName;
+        private String phone;
+        private UserRole role = UserRole.USER;
+        private Boolean isActive = true;
+        private Boolean isVerified = false;
+        
+        public Builder email(String email) {
+            this.email = email;
+            return this;
+        }
+        
+        public Builder password(String password) {
+            this.password = password;
+            return this;
+        }
+        
+        public Builder firstName(String firstName) {
+            this.firstName = firstName;
+            return this;
+        }
+        
+        public Builder lastName(String lastName) {
+            this.lastName = lastName;
+            return this;
+        }
+        
+        public Builder phone(String phone) {
+            this.phone = phone;
+            return this;
+        }
+        
+        public Builder role(UserRole role) {
+            this.role = role;
+            return this;
+        }
+        
+        public Builder isActive(Boolean isActive) {
+            this.isActive = isActive;
+            return this;
+        }
+        
+        public Builder isVerified(Boolean isVerified) {
+            this.isVerified = isVerified;
+            return this;
+        }
+        
+        public User build() {
+            return new User(email, password, firstName, lastName, phone, role, isActive, isVerified);
+        }
+    }
+    
+    // Getters and Setters
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    public String getFirstName() {
+        return firstName;
+    }
+    
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    
+    public String getLastName() {
+        return lastName;
+    }
+    
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+    
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+    
+    public UserRole getRole() {
+        return role;
+    }
+    
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+    
+    public Boolean getIsActive() {
+        return isActive;
+    }
+    
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+    
+    public Boolean getIsVerified() {
+        return isVerified;
+    }
+    
+    public void setIsVerified(Boolean isVerified) {
+        this.isVerified = isVerified;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
     
     // UserDetails implementation
     @Override
@@ -72,6 +198,11 @@ public class User extends BaseEntity implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+    
+    @Override
+    public String getPassword() {
+        return password;
     }
     
     @Override

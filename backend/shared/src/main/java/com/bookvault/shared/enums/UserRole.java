@@ -1,11 +1,11 @@
 package com.bookvault.shared.enums;
 
-import lombok.Getter;
+// import lombok.Getter;
 
 /**
  * User role enumeration for role-based security
  */
-@Getter
+// @Getter
 public enum UserRole {
     USER("ROLE_USER", "Regular user with basic permissions"),
     SELLER("ROLE_SELLER", "Seller with book management permissions"),
@@ -26,5 +26,14 @@ public enum UserRole {
             }
         }
         throw new IllegalArgumentException("Unknown authority: " + authority);
+    }
+    
+    // Manual getter methods (replacing Lombok)
+    public String getAuthority() {
+        return authority;
+    }
+    
+    public String getDescription() {
+        return description;
     }
 } 

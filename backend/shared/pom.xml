@@ -73,11 +73,11 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         
-        <!-- Lombok -->
-        <dependency>
+        <!-- Lombok - DISABLED DUE TO JAVA 21 COMPATIBILITY ISSUES -->
+        <!-- dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-        </dependency>
+        </dependency -->
         
         <!-- MapStruct -->
         <dependency>

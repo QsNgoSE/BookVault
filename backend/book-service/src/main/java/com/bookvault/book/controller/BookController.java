@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+// import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,11 +25,16 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/books")
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 @Tag(name = "Books", description = "Book management API")
 public class BookController {
     
     private final BookService bookService;
+    
+    // Constructor (replacing @RequiredArgsConstructor)
+    public BookController(BookService bookService) {
+        this.bookService = bookService;
+    }
     
     @GetMapping
     @Operation(summary = "Get all books", description = "Retrieve paginated list of active books")

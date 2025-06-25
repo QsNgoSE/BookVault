@@ -1,14 +1,35 @@
 #!/bin/bash
 
-echo "Testing BookVault Auth Service Build..."
+echo "🧪 Testing BookVault Backend Services Build..."
+echo "📋 Version Matrix: Java 21, Spring Boot 3.2.4, Maven 3.12.1"
+echo ""
 
+# Check Java version
+echo "☕ Java Version Check:"
+java -version 2>&1 | head -n 3
+echo ""
+
+# Test parent build first
+echo "🏗️ Testing Parent Build..."
+mvn clean compile -q
+
+if [ $? -ne 0 ]; then
+    echo "❌ Parent build failed!"
+    exit 1
+fi
+
+echo "✅ Parent build successful!"
+echo ""
+
+# Test auth-service specifically
+echo "🔐 Testing Auth Service Build..."
 cd auth-service
 
-echo "Cleaning previous build..."
-mvn clean
+echo "🧹 Cleaning previous build..."
+mvn clean -q
 
-echo "Compiling auth-service..."
-mvn compile
+echo "🔨 Compiling auth-service..."
+mvn compile -q
 
 if [ $? -eq 0 ]; then
     echo "✅ Auth service compiled successfully!"

@@ -83,11 +83,11 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
         
-        <!-- Lombok -->
-        <dependency>
+        <!-- Lombok - DISABLED DUE TO JAVA 21 COMPATIBILITY ISSUES -->
+        <!-- dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-        </dependency>
+        </dependency -->
         
         <!-- Shared module -->
         <dependency>
@@ -121,6 +121,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
         </plugins>
     </build>
     

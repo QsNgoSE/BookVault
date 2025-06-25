@@ -1,33 +1,47 @@
 package com.bookvault.shared.security;
 
-import com.bookvault.shared.enums.UserRole;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.crypto.SecretKey;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.bookvault.shared.enums.UserRole;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+
 /**
  * JWT utility class for token generation and validation
  */
-@Slf4j
+// @Slf4j
 @Component
 public class JwtUtil {
+    
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
     
     private final SecretKey secretKey;
     private final long jwtExpirationMs;
     private final long refreshExpirationMs;
     
     public JwtUtil(
-            @Value("${jwt.secret:mySecretKey}") String secret,
+            @Value("${jwt.secret:bookvault-secret-key-that-should-be-very-long-and-secure-in-production-environment}") String secret,
             @Value("${jwt.expiration:86400000}") long jwtExpirationMs,
             @Value("${jwt.refresh-expiration:604800000}") long refreshExpirationMs) {
+        
+        // Ensure the secret is long enough for HMAC-SHA algorithms (at least 256 bits / 32 bytes)
+        if (secret.length() < 32) {
+            secret = secret + "0123456789abcdef0123456789abcdef".substring(secret.length());
+        }
         
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.jwtExpirationMs = jwtExpirationMs;

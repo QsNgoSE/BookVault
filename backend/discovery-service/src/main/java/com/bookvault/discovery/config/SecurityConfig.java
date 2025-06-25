@@ -25,6 +25,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/eureka/css/**", "/eureka/js/**", "/eureka/fonts/**").permitAll()
+                        .requestMatchers("/eureka/apps", "/eureka/apps/**").permitAll()  // Allow service registration
+                        .requestMatchers("/eureka/instances/**").permitAll()  // Allow instance registration
+                        .requestMatchers("/eureka/v2/**").permitAll()  // Allow Eureka v2 API
                         .anyRequest().authenticated()
                 )
                 .httpBasic(httpBasic -> {});

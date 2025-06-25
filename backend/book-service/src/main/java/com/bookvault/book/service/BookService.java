@@ -5,8 +5,10 @@ import com.bookvault.book.model.*;
 import com.bookvault.book.repository.*;
 import com.bookvault.shared.dto.PagedResponse;
 import com.bookvault.shared.exception.NotFoundException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+// import lombok.RequiredArgsConstructor;
+// import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,13 +23,21 @@ import java.util.stream.Collectors;
  * Simple Book Service - Core functionality only
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
+// @RequiredArgsConstructor
+// @Slf4j
 @Transactional
 public class BookService {
     
+    private static final Logger log = LoggerFactory.getLogger(BookService.class);
+    
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
+    
+    // Constructor (replacing @RequiredArgsConstructor)
+    public BookService(BookRepository bookRepository, CategoryRepository categoryRepository) {
+        this.bookRepository = bookRepository;
+        this.categoryRepository = categoryRepository;
+    }
     
     // Get all books (paginated)
     @Transactional(readOnly = true)

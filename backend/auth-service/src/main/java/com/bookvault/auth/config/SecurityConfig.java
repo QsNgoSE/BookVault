@@ -37,12 +37,10 @@ public class SecurityConfig {
             .cors(cors -> {}) // Use the existing CorsConfig
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/api/auth/register").permitAll()
-                .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/auth/health").permitAll()
-                .requestMatchers("/api/auth/validate").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
+                // Public endpoints - allow all HTTP methods
+                .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                .requestMatchers("/api/auth/health", "/api/auth/validate", "/api/auth/clear-bans").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 
                 // Protected endpoints

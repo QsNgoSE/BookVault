@@ -117,7 +117,20 @@ public class AuthService {
         } catch (BadCredentialsException e) {
             // Record failed login attempt
             loginAttemptService.recordFailedAttempt(request.getEmail(), clientIpAddress);
-            throw new BadRequestException("Invalid email or password");
+            
+            // Get current attempt counts for better error message
+            int userAttempts = loginAttemptService.getUserFailedAttempts(request.getEmail());
+            int ipAttempts = loginAttemptService.getIpFailedAttempts(clientIpAddress);
+            
+            // Provide informative error message
+            String errorMessage = "Invalid email or password.";
+            if (userAttempts >= 3) {
+                errorMessage += " Warning: Your account will be temporarily locked after 5 failed attempts.";
+            } else if (ipAttempts >= 7) {
+                errorMessage += " Warning: This IP address will be temporarily blocked after 10 failed attempts.";
+            }
+            
+            throw new BadRequestException(errorMessage);
         }
     }
     
@@ -194,5 +207,11 @@ public class AuthService {
                 .isVerified(user.getIsVerified())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+    
+    // Clear all login attempts (for development/testing)
+    public void clearAllLoginAttempts() {
+        loginAttemptService.clearAllBans();
+        log.info("All login attempts and bans cleared");
     }
 } 

@@ -22,11 +22,11 @@ public class LoginAttemptService {
         this.redisTemplate = redisTemplate;
     }
     
-    // Constants for ban policies
-    private static final int MAX_USER_ATTEMPTS = 3;
-    private static final int MAX_IP_ATTEMPTS = 5;
-    private static final long USER_BAN_DURATION_MINUTES = 15;
-    private static final long IP_BAN_DURATION_MINUTES = 30;
+    // Constants for ban policies - More user-friendly durations
+    private static final int MAX_USER_ATTEMPTS = 5;
+    private static final int MAX_IP_ATTEMPTS = 10;
+    private static final long USER_BAN_DURATION_MINUTES = 5;  // Reduced from 15 to 5 minutes
+    private static final long IP_BAN_DURATION_MINUTES = 10;   // Reduced from 30 to 10 minutes
     
     // Redis key prefixes
     private static final String USER_ATTEMPTS_PREFIX = "user_attempts:";
@@ -82,6 +82,36 @@ public class LoginAttemptService {
         String key = IP_BAN_PREFIX + ipAddress;
         Long expireTime = redisTemplate.getExpire(key, TimeUnit.MINUTES);
         return expireTime != null ? expireTime : 0;
+    }
+    
+    /**
+     * Get current failed attempt count for user
+     */
+    public int getUserFailedAttempts(String email) {
+        String key = USER_ATTEMPTS_PREFIX + email;
+        String attempts = redisTemplate.opsForValue().get(key);
+        return attempts != null ? Integer.parseInt(attempts) : 0;
+    }
+    
+    /**
+     * Get current failed attempt count for IP
+     */
+    public int getIpFailedAttempts(String ipAddress) {
+        String key = IP_ATTEMPTS_PREFIX + ipAddress;
+        String attempts = redisTemplate.opsForValue().get(key);
+        return attempts != null ? Integer.parseInt(attempts) : 0;
+    }
+    
+    /**
+     * Clear all bans for development/testing purposes
+     */
+    public void clearAllBans() {
+        // This method should only be used in development
+        redisTemplate.delete(redisTemplate.keys(USER_BAN_PREFIX + "*"));
+        redisTemplate.delete(redisTemplate.keys(IP_BAN_PREFIX + "*"));
+        redisTemplate.delete(redisTemplate.keys(USER_ATTEMPTS_PREFIX + "*"));
+        redisTemplate.delete(redisTemplate.keys(IP_ATTEMPTS_PREFIX + "*"));
+        logger.info("All bans and failed attempts cleared");
     }
     
     private void recordUserFailedAttempt(String email) {

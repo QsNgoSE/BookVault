@@ -12,7 +12,7 @@ const BookVaultConfig = {
         ORDER_SERVICE_URL: 'http://localhost:8084/api',
         
         // Legacy base URL for compatibility
-        BASE_URL: process.env.NODE_ENV === 'production' 
+        BASE_URL: (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') 
             ? 'https://api.bookvault.com/api' 
             : 'http://localhost:8082/api',
         
@@ -201,7 +201,7 @@ const BookVaultConfig = {
     INTEGRATIONS: {
         // Google Maps (for contact page)
         GOOGLE_MAPS: {
-            API_KEY: process.env.GOOGLE_MAPS_API_KEY || '',
+            API_KEY: (typeof process !== 'undefined' && process.env && process.env.GOOGLE_MAPS_API_KEY) || '',
             DEFAULT_LOCATION: {
                 lat: 40.7128,
                 lng: -74.0060,
@@ -211,14 +211,14 @@ const BookVaultConfig = {
         
         // Analytics
         ANALYTICS: {
-            GOOGLE_ANALYTICS_ID: process.env.GOOGLE_ANALYTICS_ID || '',
-            ENABLE_TRACKING: process.env.NODE_ENV === 'production'
+            GOOGLE_ANALYTICS_ID: (typeof process !== 'undefined' && process.env && process.env.GOOGLE_ANALYTICS_ID) || '',
+            ENABLE_TRACKING: (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') || false
         },
         
         // Payment gateways (for future implementation)
         PAYMENT: {
-            STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY || '',
-            PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || ''
+            STRIPE_PUBLIC_KEY: (typeof process !== 'undefined' && process.env && process.env.STRIPE_PUBLIC_KEY) || '',
+            PAYPAL_CLIENT_ID: (typeof process !== 'undefined' && process.env && process.env.PAYPAL_CLIENT_ID) || ''
         }
     },
     

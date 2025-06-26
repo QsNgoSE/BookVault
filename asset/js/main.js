@@ -58,7 +58,7 @@ const Utils = {
     showLoading: (elementId) => {
         const element = document.getElementById(elementId);
         if (element) {
-            element.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            element.innerHTML = '<div class="text-center"><div class="spinner-border text-warning" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading books...</p></div>';
         }
     },
 
@@ -71,13 +71,18 @@ const Utils = {
     },
 
     // Show error message
-    showError: (message, containerId = 'error-container') => {
+    showError: (message, containerId = 'books-container') => {
         const container = document.getElementById(containerId);
         if (container) {
             container.innerHTML = `
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="col-12">
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Error Loading Books</h4>
+                        <p>${message}</p>
+                        <hr>
+                        <button class="btn btn-warning" onclick="window.location.reload()">Try Again</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
                 </div>
             `;
         }
@@ -104,12 +109,15 @@ const APIService = {
         // Determine service URL based on endpoint
         let baseUrl = serviceUrl;
         if (!baseUrl) {
-            if (endpoint.includes('/auth/')) {
+            if (endpoint.includes('/api/auth/')) {
                 baseUrl = CONFIG.AUTH_SERVICE_URL;
-            } else if (endpoint.includes('/books/')) {
+                console.log('🔐 Using AUTH service for:', endpoint);
+            } else if (endpoint.includes('/api/books')) {
                 baseUrl = CONFIG.BOOK_SERVICE_URL;
+                console.log('📚 Using BOOK service for:', endpoint);
             } else {
                 baseUrl = CONFIG.API_BASE_URL;
+                console.log('🔧 Using DEFAULT service for:', endpoint);
             }
         }
         
@@ -223,7 +231,7 @@ const BookManager = {
         const booksHTML = books.map(book => `
             <div class="col-md-4 col-sm-6 mb-4">
                 <div class="card h-100">
-                    <img src="${book.coverImageUrl || '/asset/img/books/placeholder.jpg'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
+                    <img src="${book.coverImageUrl || '/asset/img/books/the-great-gatsby.png'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">${book.title}</h5>
                         <p class="card-text text-muted">by ${book.author}</p>
@@ -306,6 +314,168 @@ const BookManager = {
             Utils.showError('Search failed. Please try again.');
             console.error('Error searching books:', error);
         }
+    },
+
+    // Load books with filters applied
+    async loadBooksWithFilters(containerId = 'books-container', filters = {}) {
+        try {
+            console.log('🔍 Loading books with filters:', filters);
+            
+            // Show loading state
+            const container = document.getElementById(containerId);
+            const loadingElement = document.getElementById('loading-placeholder');
+            const errorElement = document.getElementById('error-container');
+            
+            if (loadingElement) {
+                loadingElement.style.display = 'block';
+                loadingElement.innerHTML = `
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Filtering books...</span>
+                    </div>
+                    <p class="mt-2">Filtering books...</p>
+                `;
+            }
+            if (errorElement) errorElement.style.display = 'none';
+
+            // Load all books first (since we don't have backend filtering yet)
+            const response = await APIService.books.getAll();
+            let books = response.content || response.data || response;
+            
+            if (!Array.isArray(books)) {
+                books = [];
+            }
+
+            // Apply client-side filtering
+            let filteredBooks = books.filter(book => {
+                // Genre filter
+                if (filters.genres && filters.genres.length > 0) {
+                    const bookGenres = book.category || book.genre || '';
+                    const hasMatchingGenre = filters.genres.some(genre => 
+                        bookGenres.toLowerCase().includes(genre.toLowerCase())
+                    );
+                    if (!hasMatchingGenre) return false;
+                }
+
+                // Author filter
+                if (filters.author) {
+                    const bookAuthor = book.author || '';
+                    if (!bookAuthor.toLowerCase().includes(filters.author.toLowerCase())) {
+                        return false;
+                    }
+                }
+
+                // Price filter
+                if (filters.maxPrice !== undefined && filters.maxPrice < 100) {
+                    const bookPrice = parseFloat(book.price) || 0;
+                    if (bookPrice > filters.maxPrice) return false;
+                }
+
+                // Rating filter
+                if (filters.minRating > 0) {
+                    const bookRating = parseFloat(book.rating) || 0;
+                    if (bookRating < filters.minRating) return false;
+                }
+
+                return true;
+            });
+
+            console.log(`✅ Filtered ${filteredBooks.length} books from ${books.length} total`);
+
+            // Hide loading
+            if (loadingElement) loadingElement.style.display = 'none';
+
+            // Display filtered results
+            this.displayBooks(filteredBooks, containerId);
+
+            // Show filter results summary
+            this.showFilterSummary(filteredBooks.length, books.length, filters);
+
+        } catch (error) {
+            console.error('❌ Error loading filtered books:', error);
+            
+            const loadingElement = document.getElementById('loading-placeholder');
+            const errorElement = document.getElementById('error-container');
+            
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (errorElement) {
+                errorElement.style.display = 'block';
+                errorElement.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning" role="alert">
+                            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Filter Error</h4>
+                            <p>Unable to apply filters. Please try again or clear filters.</p>
+                            <button class="btn btn-warning" onclick="PageManager.clearAllFilters()">Clear Filters</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    },
+
+    // Show filter results summary
+    showFilterSummary(filteredCount, totalCount, filters) {
+        // Remove existing summary
+        const existingSummary = document.getElementById('filter-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        // Create filter summary
+        const container = document.getElementById('books-container');
+        if (container && (filteredCount < totalCount || this.hasActiveFilters(filters))) {
+            const summary = document.createElement('div');
+            summary.id = 'filter-summary';
+            summary.className = 'col-12 mb-3';
+            
+            const activeFiltersText = this.getActiveFiltersText(filters);
+            
+            summary.innerHTML = `
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-funnel me-2"></i>
+                        Showing <strong>${filteredCount}</strong> of <strong>${totalCount}</strong> books
+                        ${activeFiltersText ? ` • ${activeFiltersText}` : ''}
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="PageManager.clearAllFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                    </button>
+                </div>
+            `;
+            
+            container.insertBefore(summary, container.firstChild);
+        }
+    },
+
+    // Check if any filters are active
+    hasActiveFilters(filters) {
+        return (filters.genres && filters.genres.length > 0) ||
+               (filters.author && filters.author.trim()) ||
+               (filters.maxPrice < 100) ||
+               (filters.minRating > 0);
+    },
+
+    // Get text description of active filters
+    getActiveFiltersText(filters) {
+        const activeFilters = [];
+        
+        if (filters.genres && filters.genres.length > 0) {
+            activeFilters.push(`Genres: ${filters.genres.join(', ')}`);
+        }
+        
+        if (filters.author && filters.author.trim()) {
+            activeFilters.push(`Author: ${filters.author}`);
+        }
+        
+        if (filters.maxPrice < 100) {
+            activeFilters.push(`Max Price: $${filters.maxPrice}`);
+        }
+        
+        if (filters.minRating > 0) {
+            const stars = '★'.repeat(filters.minRating);
+            activeFilters.push(`Min Rating: ${stars}`);
+        }
+        
+        return activeFilters.join(' • ');
     }
 };
 
@@ -419,6 +589,7 @@ const AuthManager = {
             if (response.token) {
                 // Store auth data with proper keys
                 localStorage.setItem('bookvault_auth_token', response.token);
+                localStorage.setItem('bookvault_user_role', response.role);
                 localStorage.setItem('bookvault_user_profile', JSON.stringify({
                     id: response.userId,
                     email: response.email,
@@ -483,6 +654,7 @@ const AuthManager = {
             // Auto-login after successful registration
             if (response.token) {
                 localStorage.setItem('bookvault_auth_token', response.token);
+                localStorage.setItem('bookvault_user_role', response.role);
                 localStorage.setItem('bookvault_user_profile', JSON.stringify({
                     id: response.userId,
                     email: response.email,
@@ -517,6 +689,7 @@ const AuthManager = {
         try {
             // Clear all stored data
             localStorage.removeItem('bookvault_auth_token');
+            localStorage.removeItem('bookvault_user_role');
             localStorage.removeItem('bookvault_user_profile');
             localStorage.removeItem('bookvault_cart');
             localStorage.removeItem('bookvault_wishlist');
@@ -597,6 +770,139 @@ const PageManager = {
         } else {
             BookManager.loadBooks('books-container');
         }
+
+        // Initialize filters
+        this.initFilters();
+    },
+
+    // Initialize filter functionality
+    initFilters() {
+        // Genre checkboxes
+        const genreCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="genre"]');
+        genreCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', this.applyFilters.bind(this));
+        });
+
+        // Author search input
+        const authorInput = document.querySelector('input[placeholder="Type author..."]');
+        if (authorInput) {
+            let authorTimeout;
+            authorInput.addEventListener('input', () => {
+                clearTimeout(authorTimeout);
+                authorTimeout = setTimeout(() => {
+                    this.applyFilters();
+                }, 500); // Debounce for 500ms
+            });
+        }
+
+        // Price range slider
+        const priceRange = document.getElementById('priceRange');
+        if (priceRange) {
+            priceRange.addEventListener('input', (e) => {
+                // Update price display
+                const priceDisplay = document.getElementById('price-max-display');
+                if (priceDisplay) {
+                    priceDisplay.textContent = `$${e.target.value}`;
+                }
+                this.applyFilters();
+            });
+        }
+
+        // Rating radio buttons
+        const ratingRadios = document.querySelectorAll('input[name="rating"]');
+        ratingRadios.forEach(radio => {
+            radio.addEventListener('change', this.applyFilters.bind(this));
+        });
+
+        // Add clear filters button
+        this.addClearFiltersButton();
+    },
+
+    // Add clear filters button
+    addClearFiltersButton() {
+        const sidebar = document.querySelector('.filters-sidebar');
+        if (sidebar && !document.getElementById('clear-filters-btn')) {
+            const clearButton = document.createElement('button');
+            clearButton.id = 'clear-filters-btn';
+            clearButton.className = 'btn btn-outline-secondary btn-sm w-100 mt-3';
+            clearButton.innerHTML = '<i class="bi bi-x-circle me-1"></i>Clear All Filters';
+            clearButton.addEventListener('click', this.clearAllFilters.bind(this));
+            sidebar.appendChild(clearButton);
+        }
+    },
+
+    // Apply all active filters
+    applyFilters() {
+        const filters = this.getActiveFilters();
+        console.log('🔍 Applying filters:', filters);
+        BookManager.loadBooksWithFilters('books-container', filters);
+    },
+
+    // Get currently active filters
+    getActiveFilters() {
+        const filters = {
+            genres: [],
+            author: '',
+            maxPrice: 100,
+            minRating: 0
+        };
+
+        // Get selected genres
+        const genreCheckboxes = document.querySelectorAll('input[type="checkbox"][id^="genre"]:checked');
+        genreCheckboxes.forEach(checkbox => {
+            const label = document.querySelector(`label[for="${checkbox.id}"]`);
+            if (label) {
+                filters.genres.push(label.textContent.trim());
+            }
+        });
+
+        // Get author search
+        const authorInput = document.querySelector('input[placeholder="Type author..."]');
+        if (authorInput && authorInput.value.trim()) {
+            filters.author = authorInput.value.trim();
+        }
+
+        // Get price range
+        const priceRange = document.getElementById('priceRange');
+        if (priceRange) {
+            filters.maxPrice = parseInt(priceRange.value);
+        }
+
+        // Get rating filter
+        const selectedRating = document.querySelector('input[name="rating"]:checked');
+        if (selectedRating) {
+            switch(selectedRating.id) {
+                case 'r5': filters.minRating = 5; break;
+                case 'r4': filters.minRating = 4; break;
+                case 'r3': filters.minRating = 3; break;
+            }
+        }
+
+        return filters;
+    },
+
+    // Clear all filters
+    clearAllFilters() {
+        // Clear genre checkboxes
+        document.querySelectorAll('input[type="checkbox"][id^="genre"]').forEach(cb => cb.checked = false);
+        
+        // Clear author input
+        const authorInput = document.querySelector('input[placeholder="Type author..."]');
+        if (authorInput) authorInput.value = '';
+        
+        // Reset price range
+        const priceRange = document.getElementById('priceRange');
+        if (priceRange) {
+            priceRange.value = 100;
+            const priceDisplay = document.getElementById('price-max-display');
+            if (priceDisplay) priceDisplay.textContent = '$100';
+        }
+        
+        // Clear rating selection
+        document.querySelectorAll('input[name="rating"]').forEach(radio => radio.checked = false);
+        
+        // Reload all books
+        BookManager.loadBooks('books-container');
     },
 
     // Initialize book details page
@@ -653,24 +959,100 @@ const PageManager = {
     // Update navigation based on authentication
     updateNavigation() {
         const isLoggedIn = AuthManager.isLoggedIn();
-        const userRole = localStorage.getItem('userRole');
+        const userRole = localStorage.getItem('bookvault_user_role');
+        const userProfile = AuthManager.getCurrentUser();
+
+        console.log('🔄 Updating navigation - isLoggedIn:', isLoggedIn, 'role:', userRole);
 
         // Show/hide navigation items based on auth status
         const authNavItems = document.querySelectorAll('.auth-nav');
         const guestNavItems = document.querySelectorAll('.guest-nav');
 
         authNavItems.forEach(item => {
-            item.style.display = isLoggedIn ? 'block' : 'none';
+            if (isLoggedIn) {
+                item.classList.remove('d-none');
+                item.style.display = 'block';
+            } else {
+                item.classList.add('d-none');
+                item.style.display = 'none';
+            }
         });
 
         guestNavItems.forEach(item => {
-            item.style.display = isLoggedIn ? 'none' : 'block';
+            if (isLoggedIn) {
+                item.classList.add('d-none');
+                item.style.display = 'none';
+            } else {
+                item.classList.remove('d-none');
+                item.style.display = 'block';
+            }
         });
+
+        // Hide specific links for logged-in users
+        if (isLoggedIn) {
+            // Hide login and register links for all logged-in users
+            const loginLinks = document.querySelectorAll('a[href="login.html"]');
+            const registerLinks = document.querySelectorAll('a[href="register.html"]');
+            
+            loginLinks.forEach(link => {
+                const listItem = link.closest('li');
+                if (listItem) {
+                    listItem.style.display = 'none';
+                } else {
+                    link.style.display = 'none';
+                }
+            });
+            
+            registerLinks.forEach(link => {
+                const listItem = link.closest('li');
+                if (listItem) {
+                    listItem.style.display = 'none';
+                } else {
+                    link.style.display = 'none';
+                }
+            });
+
+            // Hide admin links for USER role
+            if (userRole === 'USER') {
+                const adminLinks = document.querySelectorAll('a[href="admin.html"]');
+                adminLinks.forEach(link => {
+                    const listItem = link.closest('li');
+                    if (listItem) {
+                        listItem.style.display = 'none';
+                    } else {
+                        link.style.display = 'none';
+                    }
+                });
+            }
+        } else {
+            // Show all links for guests
+            const loginLinks = document.querySelectorAll('a[href="login.html"]');
+            const registerLinks = document.querySelectorAll('a[href="register.html"]');
+            const adminLinks = document.querySelectorAll('a[href="admin.html"]');
+            
+            [...loginLinks, ...registerLinks, ...adminLinks].forEach(link => {
+                const listItem = link.closest('li');
+                if (listItem) {
+                    listItem.style.display = 'block';
+                } else {
+                    link.style.display = 'block';
+                }
+            });
+        }
+
+        // Update user name in navigation
+        if (isLoggedIn && userProfile) {
+            const userNameElement = document.getElementById('user-name');
+            if (userNameElement) {
+                userNameElement.textContent = userProfile.firstName || userProfile.email || 'User';
+            }
+        }
 
         // Show role-specific navigation
         if (isLoggedIn && userRole) {
             const roleNavItems = document.querySelectorAll(`.${userRole.toLowerCase()}-nav`);
             roleNavItems.forEach(item => {
+                item.classList.remove('d-none');
                 item.style.display = 'block';
             });
         }

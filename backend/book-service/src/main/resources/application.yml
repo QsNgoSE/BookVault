@@ -27,7 +27,7 @@ spring:
       connection-timeout: 20000
       pool-name: BookServiceHikariCP
   
-  # OPTIMIZED JPA configuration
+  # JPA configuration - Fixed autoCommit issue
   jpa:
     hibernate:
       ddl-auto: update
@@ -35,13 +35,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        # OPTIMIZATION: Enable batch processing (removed JCache to fix startup)
+        # OPTIMIZATION: Enable batch processing
         jdbc:
           batch_size: 25
           order_inserts: true
           order_updates: true
-        connection:
-          provider_disables_autocommit: true
         # OPTIMIZATION: Database dialect optimizations
         dialect: org.hibernate.dialect.PostgreSQLDialect
         temp:

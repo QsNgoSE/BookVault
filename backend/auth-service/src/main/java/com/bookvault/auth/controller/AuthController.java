@@ -104,4 +104,11 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> healthCheck() {
         return ResponseEntity.ok(ApiResponse.success("Auth service is running"));
     }
+    
+    @PostMapping("/clear-bans")
+    @Operation(summary = "Clear all login bans", description = "Clear all login bans and failed attempts (for development)")
+    public ResponseEntity<ApiResponse<String>> clearAllBans() {
+        authService.clearAllLoginAttempts();
+        return ResponseEntity.ok(ApiResponse.success("All login bans cleared", "All bans and failed attempts have been cleared"));
+    }
 } 

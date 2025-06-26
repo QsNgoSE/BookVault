@@ -26,15 +26,12 @@
       <div class="collapse navbar-collapse justify-content-center" id="navbarBookVault">
         <ul class="navbar-nav">
           <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="booklisting">Explore</a></li>
+          <li class="nav-item"><a class="nav-link" href="booklisting.html">Explore</a></li>
           <li class="nav-item"><a class="nav-link" href="about.html">About</a></li>
           <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
           <li class="nav-item"><a class="nav-link" href="help.html">Help </a></li>
           <li class="nav-item"><a class="nav-link" href="user.html">User </a></li>
           <li class="nav-item"><a class="nav-link" href="seller.html">Seller </a></li>
-          <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
-          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
-          <li class="nav-item"><a class="nav-link" href="register.html">Register</a></li>
         </ul>
       </div>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarBookVault">
@@ -42,9 +39,31 @@
       </button>
     </div>
     <div class="d-flex align-items-center gap-2 ms-auto">
-      <a class="nav-link" href="user.html"><i class="bi bi-person"></i></a>
       <a class="nav-link" href="booklisting.html"><i class="bi bi-cart"></i></a>
-      <a class="btn bookvault-btn" href="login.html">Sign In</a>
+      
+      <!-- Authenticated User Navigation -->
+      <div class="auth-nav d-none d-flex align-items-center gap-2">
+        <div class="dropdown">
+          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle me-1"></i>
+            <span id="user-name">User</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="user.html"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item user-nav" href="user.html"><i class="bi bi-book me-2"></i>My Books</a></li>
+            <li><a class="dropdown-item seller-nav d-none" href="seller.html"><i class="bi bi-shop me-2"></i>Seller Dashboard</a></li>
+            <li><a class="dropdown-item admin-nav d-none" href="admin.html"><i class="bi bi-gear me-2"></i>Admin Panel</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item logout-btn" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Guest Navigation -->
+      <div class="guest-nav d-flex align-items-center gap-2">
+        <a class="nav-link" href="user.html"><i class="bi bi-person"></i></a>
+        <a class="btn bookvault-btn" href="login.html">Sign In</a>
+      </div>
     </div>
   </div>
 </nav>
@@ -84,8 +103,8 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Price</label>
-            <input type="range" class="form-range" min="0" max="100" id="priceRange">
-            <div class="d-flex justify-content-between"><span>$0</span><span>$100</span></div>
+            <input type="range" class="form-range" min="0" max="100" id="priceRange" value="100">
+            <div class="d-flex justify-content-between"><span>$0</span><span id="price-max-display">$100</span></div>
           </div>
           <div>
             <label class="form-label">Ratings</label>
@@ -98,203 +117,40 @@
 
       <!-- BOOK LISTING GRID -->
       <main class="col-lg-9">
-        <main class="col-lg-9">
-  <div class="row g-4">
-    <!-- Book card 1 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80" alt="Atomic Habits">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">Atomic Habits</a>
-            <div class="book-author">James Clear</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-half"></i> (4.5)
+        <!-- BOOK GRID - Dynamic Loading from Backend -->
+        <div id="books-container" class="row g-4">
+          <!-- Loading placeholder -->
+          <div class="col-12 text-center" id="loading-placeholder">
+            <div class="spinner-border text-warning" role="status">
+              <span class="visually-hidden">Loading books...</span>
             </div>
-          </div>
-          <div>
-            <div class="book-price">$16.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
+            <p class="mt-2">Loading books from BookVault...</p>
           </div>
         </div>
-      </div>
-    </div>
-    <!-- Book card 2 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=400&q=80" alt="Educated">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">Educated</a>
-            <div class="book-author">Tara Westover</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> (5.0)
+
+        <!-- Error container -->
+        <div id="error-container" class="row g-4" style="display: none;">
+          <div class="col-12">
+            <div class="alert alert-warning" role="alert">
+              <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Unable to Load Books</h4>
+              <p>We're having trouble connecting to our book database. Please check that the backend services are running:</p>
+              <ul>
+                <li>Auth Service: <a href="http://localhost:8082/api/auth/health" target="_blank">http://localhost:8082/api/auth/health</a></li>
+                <li>Book Service: <a href="http://localhost:8083/api/books/categories" target="_blank">http://localhost:8083/api/books/categories</a></li>
+              </ul>
+              <hr>
+              <button class="btn btn-warning" onclick="window.location.reload()">Try Again</button>
             </div>
           </div>
-          <div>
-            <div class="book-price">$13.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
         </div>
-      </div>
-    </div>
-    <!-- Book card 3 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80" alt="The Great Gatsby">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">The Great Gatsby</a>
-            <div class="book-author">F. Scott Fitzgerald</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star"></i> (4.0)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$10.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
+
+        <!-- Pagination - Dynamic from backend -->
+        <div id="books-container-pagination" class="mt-4 d-flex justify-content-center">
+          <!-- Pagination will be added dynamically -->
         </div>
-      </div>
-    </div>
-    <!-- Book card 4 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80" alt="To Kill a Mockingbird">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">To Kill a Mockingbird</a>
-            <div class="book-author">Harper Lee</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-half"></i>
-              <i class="bi bi-star"></i> (3.5)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$9.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Book card 5 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80" alt="1984">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">1984</a>
-            <div class="book-author">George Orwell</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star"></i> (4.0)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$12.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Book card 6 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=400&q=80" alt="Becoming">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">Becoming</a>
-            <div class="book-author">Michelle Obama</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star"></i> (4.0)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$15.50</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Book card 7 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1476958526483-36efcaa80aa4?auto=format&fit=crop&w=400&q=80" alt="Sapiens">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">Sapiens</a>
-            <div class="book-author">Yuval Noah Harari</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star"></i>
-              <i class="bi bi-star"></i> (3.0)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$18.25</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Book card 8 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1465101178521-c1a9136a6244?auto=format&fit=crop&w=400&q=80" alt="The Book Thief">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">The Book Thief</a>
-            <div class="book-author">Markus Zusak</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star"></i>
-              <i class="bi bi-star"></i> (3.0)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$11.45</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Book card 9 -->
-    <div class="col-md-6 col-lg-4">
-      <div class="book-card card h-100">
-        <img class="book-cover" src="https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=400&q=80" alt="Harry Potter and the Sorcerer's Stone">
-        <div class="book-card-body">
-          <div>
-            <a class="book-title" href="#">Harry Potter and the Sorcerer's Stone</a>
-            <div class="book-author">J.K. Rowling</div>
-            <div class="book-rating">
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-fill"></i> <i class="bi bi-star-fill"></i>
-              <i class="bi bi-star-half"></i> (4.5)
-            </div>
-          </div>
-          <div>
-            <div class="book-price">$20.99</div>
-            <button class="add-cart-btn w-100">Add to Cart</button>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   </div>
-  <!-- Pagination - Dynamic from backend -->
-  <div id="books-container-pagination" class="mt-4 d-flex justify-content-center">
-    <!-- Pagination will be added dynamically -->
-  </div>
-</main>
 
   <!-- NEWSLETTER BAR (REUSE FROM INDEX) -->
   <section class="newsletter-bar text-center">
@@ -342,16 +198,176 @@
   <script src="/config.js"></script>
   <script src="/asset/js/main.js"></script>
   <script>
-    // Initialize book listing page when DOM is loaded
+    // Initialize BookVault App on Book Listing Page
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('Book listing page loaded');
+      console.log('📚 BookVault Book Listing - Initializing...');
       
-      // Initialize page
-      PageManager.initBookListingPage();
+      // Initialize PageManager which will handle navigation updates
+      if (typeof PageManager !== 'undefined') {
+        PageManager.init();
+        console.log('✅ BookVault PageManager initialized successfully');
+      } else if (typeof window.BookVault !== 'undefined') {
+        window.BookVault.PageManager.init();
+        console.log('✅ BookVault App initialized successfully');
+      }
       
-      // Load books from backend
-      BookManager.loadBooks('books-container');
+      // Load books using BookManager from main.js
+      if (typeof window.BookVault !== 'undefined' && window.BookVault.BookManager) {
+        window.BookVault.BookManager.loadBooks('books-container');
+      } else if (typeof BookManager !== 'undefined') {
+        BookManager.loadBooks('books-container');
+      } else {
+        // Fallback to custom loading
+        loadBooksFromBackend();
+      }
     });
+
+    async function loadBooksFromBackend() {
+      try {
+        console.log('🔄 Loading books from Book Service...');
+        
+        // Show loading spinner
+        const loadingElement = document.getElementById('loading-placeholder');
+        const errorElement = document.getElementById('error-container');
+        
+        if (loadingElement) loadingElement.style.display = 'block';
+        if (errorElement) errorElement.style.display = 'none';
+        
+        // Make API call to Book Service
+        const response = await fetch('http://localhost:8083/api/books?page=0&size=12');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Books loaded successfully:', data);
+        
+        // Hide loading spinner
+        const loadingEl = document.getElementById('loading-placeholder');
+        if (loadingEl) loadingEl.style.display = 'none';
+        
+        // Display books
+        displayBooks(data.success ? data.data : data);
+        
+      } catch (error) {
+        console.error('❌ Error loading books:', error);
+        
+        // Hide loading spinner and show error
+        const loadingElem = document.getElementById('loading-placeholder');
+        const errorElem = document.getElementById('error-container');
+        
+        if (loadingElem) loadingElem.style.display = 'none';
+        if (errorElem) errorElem.style.display = 'block';
+      }
+    }
+
+    function displayBooks(booksResponse) {
+      const container = document.getElementById('books-container');
+      
+      // Handle paginated response format
+      const books = booksResponse.content || booksResponse;
+      
+      if (!books || books.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center"><p>No books found.</p></div>';
+        return;
+      }
+      
+      container.innerHTML = books.map(book => `
+        <div class="col-md-6 col-lg-4">
+          <div class="book-card card h-100">
+            <img class="book-cover" src="${book.coverImageUrl || '/asset/img/books/placeholder.jpg'}" 
+                 alt="${book.title}" onerror="this.src='/asset/img/books/placeholder.jpg'">
+            <div class="book-card-body">
+              <div>
+                <a class="book-title" href="book-details.html?id=${book.id}">${book.title}</a>
+                <div class="book-author">by ${book.author}</div>
+                <div class="book-rating">
+                  ${generateStarRating(book.rating || 0)}
+                  <span class="text-muted">(${book.reviewCount || 0} reviews)</span>
+                </div>
+                <div class="book-isbn">
+                  <small class="text-muted">ISBN: ${book.isbn}</small>
+                </div>
+              </div>
+              <div>
+                <div class="book-price">$${book.price ? book.price.toFixed(2) : '0.00'}</div>
+                <button class="btn btn-warning w-100" onclick="addToCart('${book.id}')">Add to Cart</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      // Display pagination if available
+      if (booksResponse.totalPages > 1) {
+        displayPagination(booksResponse);
+      }
+    }
+
+    function generateStarRating(rating) {
+      const fullStars = Math.floor(rating);
+      const hasHalfStar = rating % 1 >= 0.5;
+      const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+      
+      return '★'.repeat(fullStars) + 
+             (hasHalfStar ? '☆' : '') + 
+             '☆'.repeat(emptyStars);
+    }
+
+    function displayPagination(booksResponse) {
+      const paginationContainer = document.getElementById('books-container-pagination');
+      
+      if (!booksResponse.totalPages || booksResponse.totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+      }
+      
+      let paginationHTML = '<nav><ul class="pagination">';
+      
+      // Previous button
+      if (booksResponse.number > 0) {
+        paginationHTML += `<li class="page-item">
+          <a class="page-link" href="#" onclick="loadPage(${booksResponse.number - 1})">Previous</a>
+        </li>`;
+      }
+      
+      // Page numbers
+      for (let i = 0; i < booksResponse.totalPages; i++) {
+        paginationHTML += `<li class="page-item ${i === booksResponse.number ? 'active' : ''}">
+          <a class="page-link" href="#" onclick="loadPage(${i})">${i + 1}</a>
+        </li>`;
+      }
+      
+      // Next button
+      if (booksResponse.number < booksResponse.totalPages - 1) {
+        paginationHTML += `<li class="page-item">
+          <a class="page-link" href="#" onclick="loadPage(${booksResponse.number + 1})">Next</a>
+        </li>`;
+      }
+      
+      paginationHTML += '</ul></nav>';
+      paginationContainer.innerHTML = paginationHTML;
+    }
+
+    async function loadPage(pageNumber) {
+      try {
+        const response = await fetch(`http://localhost:8083/api/books?page=${pageNumber}&size=12`);
+        const data = await response.json();
+        displayBooks(data.success ? data.data : data);
+        
+        // Scroll to top of books section
+        document.getElementById('books-container').scrollIntoView({ behavior: 'smooth' });
+      } catch (error) {
+        console.error('Error loading page:', error);
+      }
+    }
+
+    function addToCart(bookId) {
+      console.log('Adding book to cart:', bookId);
+      // TODO: Implement cart functionality
+      alert('Cart functionality will be implemented soon!');
+    }
   </script>
 </body>
 </html>

@@ -27,7 +27,7 @@ spring:
       connection-timeout: 20000
       pool-name: AuthServiceHikariCP
   
-  # OPTIMIZED JPA configuration
+  # JPA configuration - Fixed autoCommit issue
   jpa:
     hibernate:
       ddl-auto: update
@@ -35,11 +35,9 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        # OPTIMIZATION: Enable batch processing (removed JCache to prevent issues)
+        # OPTIMIZATION: Enable batch processing
         jdbc:
           batch_size: 20
-        connection:
-          provider_disables_autocommit: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
   
   # OPTIMIZED Redis configuration

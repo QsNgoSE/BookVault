@@ -15,13 +15,27 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.Arrays;
 
 /**
- * JWT Authentication Filter for Book Service
+ * OPTIMIZED JWT Authentication Filter for Book Service
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     
     private final JwtUtil jwtUtil;
+    
+    // OPTIMIZATION: Define public endpoints to skip JWT processing
+    private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
+        "/api/books/categories",
+        "/api/books/search",
+        "/api/books/featured", 
+        "/api/books/bestsellers",
+        "/api/books/new-releases",
+        "/api/books/filter",
+        "/actuator/health",
+        "/v3/api-docs",
+        "/swagger-ui"
+    );
     
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -30,6 +44,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
+        
+        String requestPath = request.getRequestURI();
+        String method = request.getMethod();
+        
+        // OPTIMIZATION: Skip JWT processing for public GET endpoints
+        if ("GET".equals(method) && isPublicEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        // OPTIMIZATION: Skip JWT processing for public book browsing
+        if ("GET".equals(method) && (requestPath.equals("/api/books") || 
+            requestPath.matches("/api/books/[a-fA-F0-9-]{36}") ||
+            requestPath.startsWith("/api/books/category/") ||
+            requestPath.startsWith("/api/books/author/") ||
+            requestPath.startsWith("/api/books/isbn/"))) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         
         String authHeader = request.getHeader("Authorization");
         
@@ -41,6 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = authHeader.substring(7);
             
+            // OPTIMIZATION: Quick token validation before expensive operations
             if (jwtUtil.validateToken(token) && !jwtUtil.isTokenExpired(token)) {
                 UUID userId = jwtUtil.getUserIdFromToken(token);
                 String email = jwtUtil.getEmailFromToken(token);
@@ -57,9 +91,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         } catch (Exception e) {
-            logger.error("JWT authentication failed: " + e.getMessage());
+            // OPTIMIZATION: Reduce logging noise for invalid tokens
+            if (logger.isDebugEnabled()) {
+                logger.debug("JWT authentication failed: " + e.getMessage());
+            }
         }
         
         filterChain.doFilter(request, response);
+    }
+    
+    /**
+     * OPTIMIZATION: Check if endpoint is public to skip JWT processing
+     */
+    private boolean isPublicEndpoint(String requestPath) {
+        return PUBLIC_ENDPOINTS.stream().anyMatch(requestPath::startsWith);
     }
 } 

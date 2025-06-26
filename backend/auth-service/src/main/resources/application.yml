@@ -12,27 +12,46 @@ spring:
       import-check:
         enabled: false
   
-  # Database configuration
+  # OPTIMIZED Database configuration with connection pooling
   datasource:
     url: jdbc:postgresql://localhost:5432/bookvault_auth
     username: bookvault
     password: bookvault123
     driver-class-name: org.postgresql.Driver
+    # OPTIMIZATION: Connection pooling for better performance
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+      pool-name: AuthServiceHikariCP
   
-  # JPA configuration
+  # OPTIMIZED JPA configuration
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
+        # OPTIMIZATION: Enable batch processing (removed JCache to prevent issues)
+        jdbc:
+          batch_size: 20
+        connection:
+          provider_disables_autocommit: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
   
-  # Redis configuration
+  # OPTIMIZED Redis configuration
   redis:
     host: localhost
     port: 6379
     timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
     password: # no password for local development
 
 # Eureka client configuration
@@ -50,23 +69,29 @@ jwt:
   secret: bookvault-secret-key-that-should-be-very-long-and-secure-in-production
   expiration: 86400000 # 24 hours in milliseconds
 
-# Actuator endpoints
+# OPTIMIZED Actuator endpoints
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
-# Logging
+# OPTIMIZED Logging - Reduce noise, improve performance
 logging:
   level:
-    com.bookvault.auth: DEBUG
-    org.springframework.security: DEBUG
+    com.bookvault.auth: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    com.zaxxer.hikari: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
 ---
 # Docker profile

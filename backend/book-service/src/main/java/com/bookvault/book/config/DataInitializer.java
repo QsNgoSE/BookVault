@@ -112,19 +112,16 @@ public class DataInitializer implements CommandLineRunner {
     
     private Category createCategory(String name, String description) {
         Category category = new Category();
-        category.setId(UUID.randomUUID());
         category.setName(name);
         category.setDescription(description);
         category.setIsActive(true);
-        category.setCreatedAt(LocalDateTime.now());
-        category.setUpdatedAt(LocalDateTime.now());
+        category.setVersion(0L);
         return category;
     }
     
     private Book createBook(String title, String author, String isbn, String description, 
                            BigDecimal price, Category category, UUID sellerId) {
         Book book = new Book();
-        book.setId(UUID.randomUUID());
         book.setTitle(title);
         book.setAuthor(author);
         book.setIsbn(isbn);
@@ -135,8 +132,7 @@ public class DataInitializer implements CommandLineRunner {
         book.setIsActive(true);
         book.setRating(BigDecimal.valueOf(3.5 + Math.random() * 1.5)); // Random rating 3.5-5.0
         book.setReviewCount((int) (Math.random() * 100)); // Random review count
-        book.setCreatedAt(LocalDateTime.now());
-        book.setUpdatedAt(LocalDateTime.now());
+        book.setVersion(0L);
         
         return book;
     }

@@ -45,6 +45,7 @@ public class SecurityConfig {
                 
                 // Protected endpoints
                 .requestMatchers("/api/auth/profile/**").authenticated()
+                .requestMatchers("/api/auth/admin/**").authenticated() // Admin endpoints (role-based authorization in controller)
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()

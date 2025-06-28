@@ -14,7 +14,7 @@ spring:
   
   # OPTIMIZED Database configuration with connection pooling
   datasource:
-    url: jdbc:postgresql://localhost:5432/bookvault_auth
+    url: jdbc:postgresql://localhost:5432/bookvault
     username: bookvault
     password: bookvault123
     driver-class-name: org.postgresql.Driver
@@ -99,7 +99,7 @@ spring:
       on-profile: docker
   
   datasource:
-    url: jdbc:postgresql://postgres:5432/bookvault_auth
+    url: jdbc:postgresql://postgres:5432/bookvault
 
 eureka:
   client:

@@ -1,36 +1,303 @@
+/* Admin Dashboard Styles */
+.admin-hero {
+    background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
+    padding: 2rem 0 1.7rem 0;
+    margin-bottom: 2rem;
+}
+
+.admin-welcome-badge {
+    border: 2px solid rgba(209, 142, 7, 0.2);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* Dashboard Statistics Cards */
+.stats-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0;
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-icon {
+    opacity: 0.8;
+}
+
+/* Admin Section Styling */
+.admin-section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #d18e07;
+    margin-bottom: 1rem;
+}
+
+/* Enhanced Table Styling */
+.table-hover tbody tr:hover {
+    background-color: #fff9f0;
+    transition: background-color 0.15s ease;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+}
+
+.table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* User/Seller Avatar Styling */
+.user-avatar, .seller-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 50%;
+}
+
+/* Button Group Styling */
+.btn-group .btn {
+    border-radius: 0.375rem !important;
+    margin-right: 0.25rem;
+    font-size: 0.8rem;
+    padding: 0.375rem 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.btn-group .btn:last-child {
+    margin-right: 0;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Admin Controls */
+.admin-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-controls .form-control {
+    border-radius: 0.5rem;
+    border: 1px solid #d1d5db;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-controls .form-control:focus {
+    border-color: #d18e07;
+    box-shadow: 0 0 0 0.2rem rgba(209, 142, 7, 0.25);
+}
+
+/* Tab Navigation */
+.nav-tabs {
+    border-bottom: 2px solid #e9ecef;
+    margin-bottom: 2rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 0.75rem 1.5rem;
+    margin-right: 0.25rem;
+    transition: all 0.15s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #d18e07;
+    background-color: #fff9f0;
+}
+
+.nav-tabs .nav-link.active {
+    background: #d18e07;
+    color: white !important;
+    border: none;
+    box-shadow: 0 2px 8px rgba(209, 142, 7, 0.3);
+}
+
+/* Badge Styling */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+}
+
+/* Order Status Select */
+.form-select-sm {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+/* Loading States */
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Table Responsive */
+.table-responsive {
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Empty State Styling */
+.table tbody tr td .display-4 {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+/* Action Buttons */
+.action-btns .btn {
+    margin-right: 0.35rem;
+    font-size: 0.8rem;
+    padding: 0.375rem 0.5rem;
+}
+
+.search-bar-admin {
+    max-width: 260px;
+    margin-bottom: 0.9rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+}
+
+.search-bar-admin:focus {
+    border-color: #d18e07;
+    box-shadow: 0 0 0 0.2rem rgba(209, 142, 7, 0.25);
+}
+
+/* Tab Content */
+.tab-pane {
+    padding-top: 1rem;
+}
+
+/* Admin Card Container */
+.admin-card {
+    background: #fff;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 16px rgba(110, 100, 70, 0.07);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stats-number {
+        font-size: 2rem;
+    }
+    
     .admin-hero {
-      background: linear-gradient(120deg, #fff7e6 60%, #ffe9c5 100%);
-      padding: 2rem 0 1.7rem 0;
-      text-align: center;
-      margin-bottom: 2rem;
+        padding: 1.5rem 0;
     }
-    .admin-section-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #d18e07;
-      margin-bottom: 1rem;
+    
+    .admin-welcome-badge {
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem !important;
     }
-    .table thead { background: #fff9ee; }
-    .table tbody tr:hover { background: #fff6e0; }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin-right: 0;
+        margin-bottom: 0.25rem;
+        border-radius: 0.375rem !important;
+    }
+    
+    .admin-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .admin-controls .form-control {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 600px) {
     .admin-card {
-      background: #fff;
-      border-radius: 1.1rem;
-      box-shadow: 0 2px 16px rgba(110,100,70,0.07);
-      padding: 1.7rem 1.3rem 1.2rem 1.3rem;
-      margin-bottom: 2.2rem;
+        padding: 1rem;
     }
-    .action-btns .btn { margin-right: 0.35rem; }
-    .search-bar-admin {
-      max-width: 260px;
-      margin-bottom: .9rem;
-      border-radius: 1.5rem;
-      font-size: 1.04rem;
-      padding-left: 1.2rem;
+    
+    .admin-section-title {
+        font-size: 1rem;
     }
-    .nav-tabs .nav-link.active { background: #f59e0b; color: #232323 !important; border: none; }
-    .nav-tabs .nav-link { border-radius: 1.2rem 1.2rem 0 0; font-weight: 600; color: #b88712; }
-    .tab-pane { padding-top: 1.4rem; }
-    @media (max-width: 600px) {
-      .admin-card { padding: 1.1rem .7rem; }
-      .admin-section-title { font-size: 1.04rem;}
+    
+    .table thead th {
+        font-size: 0.8rem;
+        padding: 0.75rem 0.5rem;
     }
+    
+    .table tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .stats-card {
+        background: #1f2937;
+        color: #f9fafb;
+        border-color: #374151;
+    }
+    
+    .table thead th {
+        background: #374151;
+        color: #f9fafb;
+        border-color: #4b5563;
+    }
+    
+    .table tbody td {
+        border-color: #4b5563;
+    }
+    
+    .admin-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+} 

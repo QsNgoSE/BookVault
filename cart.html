@@ -2,18 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Contact Us – BookVault</title>
+  <title>Shopping Cart – BookVault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap 5 + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="/asset/css/bookvault.css">
-  <link rel="stylesheet" href="/asset/css/contact.css">
-
-  </style>
+  <link rel="stylesheet" href="asset/css/bookvault.css">
+  <link rel="stylesheet" href="asset/css/user.css">
+  <link rel="stylesheet" href="asset/css/cart.css">
 </head>
 <body>
-     <!-- NAVBAR -->
+    <!-- NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
       <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
@@ -87,82 +85,71 @@
   </nav>
 
   <!-- HERO SECTION -->
-<section class="hero-section py-5" style="background:linear-gradient(120deg,#fff7e6 60%,#ffe9c5 100%);">
-  <div class="container text-center">
-    <h1 class="hero-title mb-3 fw-bold" style="color:#d18e07;">Discover Your Next Favorite Book</h1>
-    <p class="hero-subtitle mb-4" style="max-width:540px;margin:0 auto;color:#6d6554;">
-      Beautifully curated collections, reviews, and the tools to help you find and manage books you love. Experience a new level of discovery with BookVault.
-    </p>
-    <!-- Search Bar with Explore Button -->
-    <form class="bookvault-searchbar d-flex align-items-center mx-auto shadow rounded-pill bg-white p-2" style="max-width:650px;">
-      <input type="text" class="form-control form-control-lg border-0 rounded-pill" placeholder="Search for books, authors, or genres...">
-      <button class="btn bookvault-btn ms-2 rounded-pill px-4 fw-bold" type="submit">Search</button>
-      <a class="btn btn-outline-warning ms-2 rounded-pill px-4 fw-bold" href="booklisting.html" style="white-space:nowrap;">Explore Books</a>
-    </form>
-  </div>
-</section>
-
-
-  <!-- HERO -->
-  <section class="contact-hero">
-    <div class="container">
-      <h1>Contact BookVault</h1>
-      <p>
-        Have a question, feedback, or just want to say hello? <br>
-        We'd love to hear from you! Fill out the form below or find us on the map.<br>
-        Our team usually replies within 1 business day.
+  <section class="hero-section py-4" style="background:linear-gradient(120deg,#fff7e6 60%,#ffe9c5 100%);">
+    <div class="container text-center">
+      <h1 class="hero-title mb-2 fw-bold" style="color:#d18e07;">Shopping Cart</h1>
+      <p class="hero-subtitle mb-0" style="color:#6d6554;">
+        Review your selected books before checkout
       </p>
     </div>
   </section>
 
-  <!-- CONTACT FORM SECTION -->
-  <section class="contact-form-section">
-    <div class="container">
-      <div class="row justify-content-center g-4">
-        <div class="col-lg-6">
-          <form class="contact-form card shadow-sm p-4">
-            <div class="mb-3">
-              <label for="contactName" class="form-label">Your Name</label>
-              <input type="text" class="form-control" id="contactName" placeholder="Enter your name" required>
-            </div>
-            <div class="mb-3">
-              <label for="contactEmail" class="form-label">Your Email</label>
-              <input type="email" class="form-control" id="contactEmail" placeholder="Enter your email" required>
-            </div>
-            <div class="mb-3">
-              <label for="contactSubject" class="form-label">Subject</label>
-              <input type="text" class="form-control" id="contactSubject" placeholder="What’s this about?">
-            </div>
-            <div class="mb-3">
-              <label for="contactMessage" class="form-label">Message</label>
-              <textarea class="form-control" id="contactMessage" rows="5" placeholder="How can we help you?" required></textarea>
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn bookvault-btn btn-lg">Send Message <i class="bi bi-envelope-paper ms-1"></i></button>
-            </div>
-          </form>
-        </div>
-        <div class="col-lg-6 mt-4 mt-lg-0 d-flex flex-column justify-content-center">
-          <div class="mb-4">
-            <h5 class="fw-bold mb-2"><i class="bi bi-geo-alt-fill text-warning"></i> Our Headquarters</h5>
-            <p class="mb-0">BookVault Co.<br>123 Reading Lane<br>Novel City, 56789<br>support@bookvault.com</p>
-            <p class="text-muted mb-1"><i class="bi bi-telephone"></i> +1 (555) 123-BOOK</p>
-            <p class="text-muted mb-1"><i class="bi bi-clock"></i> Mon–Fri: 9am – 6pm</p>
+  <!-- CART CONTENT -->
+  <div class="container mt-5 mb-5">
+    <div class="row">
+      <div class="col-12">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+            <li class="breadcrumb-item"><a href="booklisting.html">Books</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Shopping Cart</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Cart Container -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <h4 class="mb-0">
+              <i class="bi bi-cart3 me-2"></i>Your Shopping Cart
+            </h4>
           </div>
-          <!-- MAP SECTION -->
-          <div class="contact-map-section">
-            <iframe class="contact-map-frame"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.1298003125746!2d-122.40641738468085!3d37.78512387975757!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085808b934c6d85%3A0x6a0793c0b0e8f7e2!2sSan%20Francisco%20Public%20Library!5e0!3m2!1sen!2sus!4v1629646793226!5m2!1sen!2sus"
-              allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-              title="BookVault Office Location"></iframe>
+          <div class="card-body">
+            <div id="cart-container">
+              <!-- Cart items will be loaded here dynamically -->
+              <div class="text-center py-5">
+                <div class="spinner-border text-warning" role="status">
+                  <span class="visually-hidden">Loading cart...</span>
+                </div>
+                <p class="mt-2">Loading your cart...</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+
+    <!-- Continue Shopping -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <a href="booklisting.html" class="btn btn-outline-warning">
+            <i class="bi bi-arrow-left me-2"></i>Continue Shopping
+          </a>
+          <div class="text-muted small">
+            <i class="bi bi-shield-check me-1"></i>
+            Secure checkout powered by BookVault
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- NEWSLETTER BAR -->
-  <section class="newsletter-bar text-center">
+  <section class="newsletter-bar text-center mt-5">
     <div class="container">
       <div class="row align-items-center">
         <div class="col-md-7 mb-2 mb-md-0">
@@ -185,7 +172,7 @@
       <div class="row align-items-center mb-3">
         <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
           <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
-            <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+            <img src="asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
             <span>BookVault</span>
           </a>
           <span class="ms-2">© 2025 BookVault. All rights reserved.</span>
@@ -203,23 +190,17 @@
       </div>
     </div>
   </footer>
+
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="/config.js"></script>
-  <script src="/asset/js/main.js"></script>
+  <script src="config.js"></script>
+  <script src="asset/js/main.js"></script>
   <script>
-    // Initialize BookVault App on Contact Page
+    // Initialize cart page when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-      console.log('📧 BookVault Contact - Initializing...');
-      
-      // Initialize PageManager which will handle navigation updates
-      if (typeof PageManager !== 'undefined') {
+        console.log('Initializing cart page...');
         PageManager.init();
-        console.log('✅ BookVault PageManager initialized successfully');
-      } else if (typeof window.BookVault !== 'undefined') {
-        window.BookVault.PageManager.init();
-        console.log('✅ BookVault App initialized successfully');
-      }
     });
   </script>
 </body>
-</html>
+</html> 

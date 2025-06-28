@@ -94,12 +94,24 @@ else
     BOOK_PID=""
 fi
 
+# Start Order Service
+echo "📦 Starting Order Service..."
+if start_service "order-service" "8084"; then
+    ORDER_PID=$(jobs -p | tail -n 1)
+    echo "⏳ Waiting for Order Service to start..."
+    sleep 10
+else
+    echo "❌ Failed to start Order Service"
+    ORDER_PID=""
+fi
+
 echo ""
 echo "🎉 Services started successfully!"
 echo "📍 Service URLs:"
 echo "   🔍 Discovery Service: http://localhost:8761"
 echo "   🔐 Auth Service: http://localhost:8082/api/auth/health"
 echo "   📚 Book Service: http://localhost:8083/api/books/categories"
+echo "   📦 Order Service: http://localhost:8084/api/orders/health"
 echo ""
 echo "🌐 Infrastructure Services:"
 echo "   🐘 PostgreSQL: localhost:5432"
@@ -112,6 +124,7 @@ PIDS=""
 [ -n "$DISCOVERY_PID" ] && PIDS="$PIDS $DISCOVERY_PID"
 [ -n "$AUTH_PID" ] && PIDS="$PIDS $AUTH_PID"
 [ -n "$BOOK_PID" ] && PIDS="$PIDS $BOOK_PID"
+[ -n "$ORDER_PID" ] && PIDS="$PIDS $ORDER_PID"
 
 if [ -n "$PIDS" ]; then
     echo "💡 To stop services, press Ctrl+C or run: kill$PIDS"

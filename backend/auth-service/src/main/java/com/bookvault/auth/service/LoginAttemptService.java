@@ -103,6 +103,19 @@ public class LoginAttemptService {
     }
     
     /**
+     * Clear user attempts and ban (for admin password reset)
+     */
+    public void clearUserAttempts(String email) {
+        String attemptsKey = USER_ATTEMPTS_PREFIX + email;
+        String banKey = USER_BAN_PREFIX + email;
+        
+        redisTemplate.delete(attemptsKey);
+        redisTemplate.delete(banKey);
+        
+        logger.info("Cleared all attempts and bans for user: {}", email);
+    }
+    
+    /**
      * Clear all bans for development/testing purposes
      */
     public void clearAllBans() {

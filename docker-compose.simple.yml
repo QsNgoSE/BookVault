@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (Single database for simplicity)
+  postgres:
+    image: postgres:15-alpine
+    container_name: bookvault-postgres-simple
+    environment:
+      POSTGRES_DB: bookvault
+      POSTGRES_USER: bookvault
+      POSTGRES_PASSWORD: bookvault123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bookvault-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookvault"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Combined Auth + User Service (Resource optimization)
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: bookvault-auth
+    ports:
+      - "8082:8082"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=simple
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - JWT_SECRET=your-secret-key-here
+      - SERVER_PORT=8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Book Service
+  book-service:
+    build:
+      context: ./book-service
+      dockerfile: Dockerfile
+    container_name: bookvault-book
+    ports:
+      - "8083:8083"
+    networks:
+      - bookvault-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=simple
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bookvault
+      - SPRING_DATASOURCE_USERNAME=bookvault
+      - SPRING_DATASOURCE_PASSWORD=bookvault123
+      - AUTH_SERVICE_URL=http://auth-service:8082
+      - SERVER_PORT=8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+
+networks:
+  bookvault-network:
+    driver: bridge 

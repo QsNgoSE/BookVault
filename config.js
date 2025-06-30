@@ -60,15 +60,16 @@ const BookVaultConfig = {
                 PROFILE: '/sellers/profile'
             },
             
-            // Admin
+            // Admin - Updated to match backend endpoints
             ADMIN: {
-                DASHBOARD: '/admin/dashboard',
-                USERS: '/admin/users',
-                SELLERS: '/admin/sellers',
-                BOOKS: '/admin/books',
-                ORDERS: '/admin/orders',
-                ANALYTICS: '/admin/analytics',
-                SETTINGS: '/admin/settings'
+                STATS: '/auth/admin/dashboard/stats',
+                DASHBOARD: '/auth/admin/dashboard',
+                USERS: '/auth/admin/users',
+                SELLERS: '/auth/admin/sellers',
+                BOOKS: '/auth/admin/books',
+                ORDERS: '/auth/admin/orders',
+                ANALYTICS: '/auth/admin/analytics',
+                SETTINGS: '/auth/admin/settings'
             },
             
             // Orders

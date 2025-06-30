@@ -33,10 +33,10 @@ const CONFIG = {
             FILTER: '/api/books/filter'
         },
         ADMIN: {
-            USERS: '/api/admin/users',
-            SELLERS: '/api/admin/sellers',
-            DASHBOARD: '/api/admin/dashboard',
-            STATS: '/api/admin/dashboard/stats'
+            USERS: '/api/auth/admin/users',
+            SELLERS: '/api/auth/admin/sellers',
+            DASHBOARD: '/api/auth/admin/dashboard',
+            STATS: '/api/auth/admin/dashboard/stats'
         },
         ORDERS: {
             BASE: '/api/orders',
@@ -51,7 +51,32 @@ const CartManager = {
     // Get cart from localStorage
     getCart() {
         const cart = localStorage.getItem('bookvault_cart');
-        return cart ? JSON.parse(cart) : [];
+        const rawCart = cart ? JSON.parse(cart) : [];
+        
+        // Clean up corrupted cart items
+        const cleanCart = rawCart.filter(item => {
+            const isValid = item && 
+                           item.id && 
+                           item.title && 
+                           item.author && 
+                           item.price != null && 
+                           item.price > 0 && 
+                           item.quantity > 0;
+            
+            if (!isValid) {
+                console.warn('🧹 Removing corrupted cart item:', item);
+            }
+            
+            return isValid;
+        });
+        
+        // If cart was cleaned up, save the clean version
+        if (cleanCart.length !== rawCart.length) {
+            console.log(`🧹 Cleaned cart: ${rawCart.length} -> ${cleanCart.length} items`);
+            localStorage.setItem('bookvault_cart', JSON.stringify(cleanCart));
+        }
+        
+        return cleanCart;
     },
 
     // Save cart to localStorage
@@ -67,10 +92,25 @@ const CartManager = {
             quantity 
         });
         
+        // Validate required book data
+        if (!book || !book.id || !book.title || !book.author || book.price == null || book.price <= 0) {
+            console.error('❌ Invalid book data provided to addToCart:', book);
+            console.error('❌ Validation details:', {
+                hasBook: !!book,
+                hasId: !!(book?.id),
+                hasTitle: !!(book?.title),
+                hasAuthor: !!(book?.author),
+                hasValidPrice: book?.price != null && book?.price > 0,
+                actualPrice: book?.price
+            });
+            Utils.showError('Unable to add book to cart. Missing book information.');
+            return false;
+        }
+        
         const cart = this.getCart();
         console.log('📦 Current cart before add:', cart);
         
-        const existingItem = cart.find(item => item.id === book.id);
+        const existingItem = cart.find(item => String(item.id) === String(book.id));
         
         if (existingItem) {
             console.log(`📝 Found existing item: ${existingItem.title}, current qty: ${existingItem.quantity}, adding: ${quantity}`);
@@ -80,16 +120,17 @@ const CartManager = {
         } else {
             console.log(`🆕 Adding new item to cart`);
             const newItem = {
-                id: book.id,
-                title: book.title,
-                author: book.author,
-                price: book.price,
+                id: String(book.id),
+                title: String(book.title).trim(),
+                author: String(book.author).trim(),
+                price: parseFloat(book.price),
                 imageUrl: book.imageUrl || 'asset/img/books/placeholder.jpg',
-                quantity: quantity
+                quantity: parseInt(quantity),
+                addedAt: new Date().toISOString()
             };
             console.log('🆕 New item:', newItem);
             cart.push(newItem);
-            this.showCartNotification('Item added to cart!');
+            this.showCartNotification(`Added "${book.title}" to cart!`);
         }
         
         console.log('📦 Cart after add:', cart);
@@ -100,7 +141,8 @@ const CartManager = {
 
     // Remove item from cart
     removeFromCart(bookId) {
-        const cart = this.getCart().filter(item => item.id !== bookId);
+        const searchId = String(bookId);
+        const cart = this.getCart().filter(item => String(item.id) !== searchId);
         this.saveCart(cart);
         this.updateCartUI();
         this.showCartNotification('Item removed from cart!');
@@ -122,19 +164,22 @@ const CartManager = {
         console.log(`🔄 UpdateQuantity called: item ${bookId} (type: ${typeof bookId}), new quantity ${quantity}`);
         const cart = this.getCart();
         
+        // Ensure bookId is treated as string for consistency
+        const searchId = String(bookId);
+        
         // Debug cart search
-        console.log(`🔍 Looking for item ${bookId} in cart with ${cart.length} items`);
+        console.log(`🔍 Looking for item ${searchId} in cart with ${cart.length} items`);
         cart.forEach((item, index) => {
-            console.log(`  Cart item ${index}: id=${item.id} (type: ${typeof item.id}), matches: ${item.id === bookId}`);
+            console.log(`  Cart item ${index}: id=${item.id} (type: ${typeof item.id}), matches: ${String(item.id) === searchId}`);
         });
         
-        const item = cart.find(item => item.id === bookId);
+        const item = cart.find(item => String(item.id) === searchId);
         
         if (item) {
             console.log(`📝 Found item: ${item.title}, current quantity: ${item.quantity}`);
             if (quantity <= 0) {
                 console.log('🗑️ Quantity <= 0, removing item');
-                this.removeFromCart(bookId);
+                this.removeFromCart(searchId);
             } else {
                 item.quantity = quantity;
                 this.saveCart(cart);
@@ -157,7 +202,7 @@ const CartManager = {
                 }, 50);
             }
         } else {
-            console.log(`❌ Item ${bookId} not found in cart`);
+            console.log(`❌ Item ${searchId} not found in cart`);
             console.log(`❌ Available item IDs:`, cart.map(item => `${item.id} (${typeof item.id})`));
         }
     },
@@ -166,6 +211,21 @@ const CartManager = {
     clearCart() {
         localStorage.removeItem('bookvault_cart');
         this.updateCartUI();
+    },
+
+    // Manual cart cleanup method
+    cleanupCart() {
+        console.log('🧹 Manual cart cleanup initiated...');
+        const cart = this.getCart(); // This will automatically clean up
+        console.log('✅ Cart cleanup completed');
+        
+        // Refresh cart display if currently shown
+        const cartContainer = document.getElementById('cart-container');
+        if (cartContainer) {
+            this.displayCart('cart-container');
+        }
+        
+        return cart;
     },
 
     // Get cart total
@@ -316,75 +376,94 @@ const CartManager = {
     attachCartEventListeners(container) {
         console.log('🔗 Attaching cart event listeners...');
         
-        // Quantity decrease buttons
-        const decreaseBtns = container.querySelectorAll('.decrease-qty');
-        console.log(`Found ${decreaseBtns.length} decrease buttons`);
-        decreaseBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Decrease button clicked!');
-                const itemId = btn.dataset.id;
-                console.log('🆔 Item ID from button:', itemId);
-                
-                // Get current quantity from cart data, not from stale data attribute
-                const cart = this.getCart();
-                const item = cart.find(item => item.id === itemId);
-                const currentQty = item ? item.quantity : 0;
-                
-                console.log(`Decreasing quantity for item ${itemId} from ${currentQty} to ${currentQty - 1}`);
-                this.updateQuantity(itemId, currentQty - 1);
-            });
-        });
-
-        // Quantity increase buttons
-        const increaseBtns = container.querySelectorAll('.increase-qty');
-        console.log(`Found ${increaseBtns.length} increase buttons`);
-        increaseBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Increase button clicked!');
-                const itemId = btn.dataset.id; // Keep as string, don't use parseInt for UUIDs
-                console.log('🆔 Item ID from button:', itemId);
-                
-                // Get current quantity from cart data, not from stale data attribute
-                const cart = this.getCart();
-                const item = cart.find(item => item.id === itemId);
-                const currentQty = item ? item.quantity : 0;
-                
-                console.log(`Increasing quantity for item ${itemId} from ${currentQty} to ${currentQty + 1}`);
-                this.updateQuantity(itemId, currentQty + 1);
-            });
-        });
-
-        // Remove item buttons
-        container.querySelectorAll('.remove-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const itemId = btn.dataset.id; // Keep as string, don't use parseInt for UUIDs
-                console.log('🗑️ Remove button clicked for item ID:', itemId);
-                this.removeFromCart(itemId);
-            });
-        });
-
-        // Checkout button
-        const checkoutBtn = container.querySelector('.checkout-btn');
-        if (checkoutBtn) {
-            checkoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                CheckoutManager.startCheckout();
-            });
+        // Check if listeners are already attached to prevent duplicates
+        if (container.hasAttribute('data-cart-listeners-attached')) {
+            console.log('🔄 Cart listeners already attached to this container');
+            return;
         }
-
-        // Clear cart button
-        const clearBtn = container.querySelector('.clear-cart-btn');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', (e) => {
+        
+        // Mark container as having listeners attached
+        container.setAttribute('data-cart-listeners-attached', 'true');
+        
+        // Use event delegation for better reliability
+        container.addEventListener('click', (e) => {
+            // Handle decrease quantity buttons
+            if (e.target.matches('.decrease-qty') || e.target.closest('.decrease-qty')) {
                 e.preventDefault();
+                const btn = e.target.closest('.decrease-qty');
+                const itemId = btn.dataset.id;
+                console.log('🔽 Decrease button clicked for item:', itemId);
+                
+                // Get current quantity from cart data
+                const cart = this.getCart();
+                const item = cart.find(item => String(item.id) === String(itemId));
+                const currentQty = item ? item.quantity : 0;
+                
+                // Prevent quantity from going below 1
+                if (currentQty <= 1) {
+                    console.log('⚠️ Cannot decrease quantity below 1');
+                    return;
+                }
+                
+                const newQty = currentQty - 1;
+                console.log(`Decreasing quantity for item ${itemId} from ${currentQty} to ${newQty}`);
+                this.updateQuantity(itemId, newQty);
+                return;
+            }
+            
+            // Handle increase quantity buttons
+            if (e.target.matches('.increase-qty') || e.target.closest('.increase-qty')) {
+                e.preventDefault();
+                const btn = e.target.closest('.increase-qty');
+                const itemId = btn.dataset.id;
+                console.log('🔼 Increase button clicked for item:', itemId);
+                
+                // Get current quantity from cart data
+                const cart = this.getCart();
+                const item = cart.find(item => String(item.id) === String(itemId));
+                const currentQty = item ? item.quantity : 0;
+                
+                const newQty = currentQty + 1;
+                console.log(`Increasing quantity for item ${itemId} from ${currentQty} to ${newQty}`);
+                this.updateQuantity(itemId, newQty);
+                return;
+            }
+            
+            // Handle remove item buttons
+            if (e.target.matches('.remove-item') || e.target.closest('.remove-item')) {
+                e.preventDefault();
+                const btn = e.target.closest('.remove-item');
+                const itemId = btn.dataset.id;
+                console.log('🗑️ Remove button clicked for item ID:', itemId);
+                
+                if (confirm('Are you sure you want to remove this item from your cart?')) {
+                    this.removeFromCart(itemId);
+                }
+                return;
+            }
+            
+            // Handle checkout button
+            if (e.target.matches('.checkout-btn') || e.target.closest('.checkout-btn')) {
+                e.preventDefault();
+                console.log('💳 Checkout button clicked');
+                CheckoutManager.startCheckout();
+                return;
+            }
+            
+            // Handle clear cart button
+            if (e.target.matches('.clear-cart-btn') || e.target.closest('.clear-cart-btn')) {
+                e.preventDefault();
+                console.log('🗑️ Clear cart button clicked');
                 if (confirm('Are you sure you want to clear your cart?')) {
                     this.clearCart();
+                    // Refresh display
+                    this.displayCart(container.id);
                 }
-            });
-        }
+                return;
+            }
+        });
+        
+        console.log('✅ Event listeners attached via delegation');
     }
 };
 
@@ -475,6 +554,10 @@ const CheckoutManager = {
                                         </select>
                                     </div>
                                     <div class="mb-3">
+                                        <label class="form-label">Phone (Optional)</label>
+                                        <input type="tel" class="form-control" name="phone" placeholder="+1 (555) 123-4567">
+                                    </div>
+                                    <div class="mb-3">
                                         <label class="form-label">Card Number</label>
                                         <input type="text" class="form-control" name="cardNumber" placeholder="1234 5678 9012 3456" required>
                                     </div>
@@ -545,6 +628,7 @@ const CheckoutManager = {
 
         const formData = new FormData(form);
         const cart = CartManager.getCart();
+        const user = AuthManager.getCurrentUser();
         
         if (cart.length === 0) {
             Utils.showError('Your cart is empty!');
@@ -558,26 +642,36 @@ const CheckoutManager = {
         button.disabled = true;
 
         try {
-            // Create order data matching backend CreateOrderRequest format
+            // Create order data matching backend CreateOrderRequest format exactly
             const orderData = {
                 items: cart.map(item => ({
-                    bookId: item.id,
-                    quantity: item.quantity,
-                    unitPrice: item.price
+                    bookId: String(item.id), // Ensure string format
+                    bookTitle: item.title,
+                    bookAuthor: item.author,
+                    bookIsbn: item.isbn || null,
+                    bookImageUrl: item.imageUrl,
+                    quantity: parseInt(item.quantity),
+                    unitPrice: parseFloat(item.price),
+                    discountAmount: 0.0
                 })),
-                shippingAddress: {
-                    fullName: `${formData.get('firstName')} ${formData.get('lastName')}`,
-                    addressLine1: formData.get('address'),
-                    city: formData.get('city'),
-                    postalCode: formData.get('zipCode'),
-                    country: formData.get('country') || 'United States'
-                },
+                shippingAddress: formData.get('address'),
+                shippingCity: formData.get('city'),
+                shippingState: formData.get('state') || '',
+                shippingPostalCode: formData.get('zipCode'),
+                shippingCountry: formData.get('country') || 'United States',
                 paymentMethod: formData.get('paymentMethod') || 'CREDIT_CARD',
-                notes: formData.get('notes') || ''
+                customerEmail: user.email,
+                customerPhone: formData.get('phone') || '',
+                customerName: `${formData.get('firstName')} ${formData.get('lastName')}`,
+                orderNotes: formData.get('notes') || ''
             };
+
+            console.log('📦 Submitting order data:', orderData);
 
             // Submit order to backend
             const response = await APIService.order.create(orderData);
+
+            console.log('✅ Order created successfully:', response);
 
             // Clear cart
             CartManager.clearCart();
@@ -587,7 +681,7 @@ const CheckoutManager = {
             this.showOrderConfirmation(response);
             
         } catch (error) {
-            console.error('Order processing failed:', error);
+            console.error('❌ Order processing failed:', error);
             Utils.showError(error.message || 'Order processing failed. Please try again.');
         } finally {
             button.innerHTML = originalText;
@@ -653,20 +747,24 @@ const AdminManager = {
             }
             
             // Load dashboard statistics
-            const stats = await APIService.admin.getDashboardStats();
+            const statsResponse = await APIService.admin.getDashboardStats();
+            const stats = statsResponse.data || statsResponse;
             this.displayDashboardStats(stats);
             
             // Load users
-            const users = await APIService.admin.getUsers();
-            this.displayUsers(users.content || users);
+            const usersResponse = await APIService.admin.getUsers();
+            const users = usersResponse.data?.content || usersResponse.data || usersResponse.content || usersResponse;
+            this.displayUsers(users);
             
             // Load sellers
-            const sellers = await APIService.admin.getSellers();
-            this.displaySellers(sellers.content || sellers);
+            const sellersResponse = await APIService.admin.getSellers();
+            const sellers = sellersResponse.data?.content || sellersResponse.data || sellersResponse.content || sellersResponse;
+            this.displaySellers(sellers);
             
             // Load books
-            const books = await APIService.books.getAll();
-            this.displayBooks(books.content || books);
+            const booksResponse = await APIService.books.getAll();
+            const books = booksResponse.data?.content || booksResponse.data || booksResponse.content || booksResponse;
+            this.displayBooks(books);
             
             // Load orders if orders tab exists
             const ordersContainer = document.querySelector('#orders-tbody');
@@ -711,6 +809,30 @@ const AdminManager = {
             return;
         }
         console.log('📊 Displaying users:', users);
+
+        // Handle cases where users might not be an array
+        if (!Array.isArray(users)) {
+            console.warn('Users data is not an array:', users);
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No users data available</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        if (users.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No users found</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
 
         container.innerHTML = users.map(user => `
             <tr data-user-id="${user.id}">
@@ -771,6 +893,30 @@ const AdminManager = {
         }
         console.log('📊 Displaying sellers:', sellers);
 
+        // Handle cases where sellers might not be an array
+        if (!Array.isArray(sellers)) {
+            console.warn('Sellers data is not an array:', sellers);
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No sellers data available</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        if (sellers.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No sellers found</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         container.innerHTML = sellers.map(seller => `
             <tr data-seller-id="${seller.id}">
                 <td>
@@ -822,6 +968,30 @@ const AdminManager = {
             return;
         }
         console.log('📊 Displaying books:', books);
+
+        // Handle cases where books might not be an array
+        if (!Array.isArray(books)) {
+            console.warn('Books data is not an array:', books);
+            container.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <div class="text-muted">No books data available</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        if (books.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <div class="text-muted">No books found</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
 
         container.innerHTML = books.map(book => `
             <tr data-book-id="${book.id}">
@@ -1628,7 +1798,7 @@ const APIService = {
         // Determine service URL based on endpoint
         let baseUrl = serviceUrl;
         if (!baseUrl) {
-            if (endpoint.includes('/api/auth/') || endpoint.includes('/api/admin/')) {
+            if (endpoint.includes('/auth/') || endpoint.includes('/api/auth/') || endpoint.includes('/api/admin/')) {
                 baseUrl = CONFIG.AUTH_SERVICE_URL;
                 console.log('🔐 Using AUTH service for:', endpoint);
             } else if (endpoint.includes('/api/books')) {
@@ -2633,46 +2803,57 @@ const PageManager = {
         // Initialize navigation IMMEDIATELY to prevent flickering
         this.initImmediateNavigation();
         
-        // Wait for DOM to be fully loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM Content Loaded - Page:', this.getCurrentPage());
-            
-            // Initialize common features for all pages
-            this.initCommonFeatures();
-            
-            // Initialize page-specific features
-            const currentPage = this.getCurrentPage();
-            switch (currentPage) {
-                case 'home':
-                    this.initHomePage();
-                    break;
-                case 'booklisting':
-                    this.initBookListingPage();
-                    break;
-                case 'book-details':
-                    this.initBookDetailsPage();
-                    break;
-                case 'user':
-                    this.initUserDashboard();
-                    break;
-                case 'admin':
-                    this.initAdminPage();
-                    break;
-                case 'login':
-                    this.initLoginPage();
-                    break;
-                case 'register':
-                    this.initRegisterPage();
-                    break;
-                case 'cart':
-                    this.initCartPage();
-                    break;
-                default:
-                    console.log('ℹ️ No specific initialization for page:', currentPage);
-            }
-            
-            console.log('✅ PageManager initialization complete');
-        });
+        // Check if DOM is already loaded
+        if (document.readyState === 'loading') {
+            // DOM still loading, wait for it
+            document.addEventListener('DOMContentLoaded', () => {
+                this.performPageInitialization();
+            });
+        } else {
+            // DOM already loaded, initialize immediately
+            this.performPageInitialization();
+        }
+    },
+
+    // Perform the actual page initialization
+    performPageInitialization() {
+        console.log('📄 DOM Ready - Initializing page:', this.getCurrentPage());
+        
+        // Initialize common features for all pages
+        this.initCommonFeatures();
+        
+        // Initialize page-specific features
+        const currentPage = this.getCurrentPage();
+        switch (currentPage) {
+            case 'home':
+                this.initHomePage();
+                break;
+            case 'booklisting':
+                this.initBookListingPage();
+                break;
+            case 'book-details':
+                this.initBookDetailsPage();
+                break;
+            case 'user':
+                this.initUserDashboard();
+                break;
+            case 'admin':
+                this.initAdminPage();
+                break;
+            case 'login':
+                this.initLoginPage();
+                break;
+            case 'register':
+                this.initRegisterPage();
+                break;
+            case 'cart':
+                this.initCartPage();
+                break;
+            default:
+                console.log('ℹ️ No specific initialization for page:', currentPage);
+        }
+        
+        console.log('✅ PageManager initialization complete');
     },
 
     // Initialize navigation immediately to prevent auth state flickering
@@ -2883,27 +3064,25 @@ const PageManager = {
         }, true); // Use capture phase
 
         // Method 2: Direct event binding with Bootstrap dropdown prevention
+        // Simple, non-interfering logout button handler
         const bindLogoutEvents = () => {
-            const logoutButtons = document.querySelectorAll('.logout-btn');
-            console.log(`🔍 Found ${logoutButtons.length} logout buttons for direct binding`);
+            const logoutButtons = document.querySelectorAll('.logout-btn:not([data-logout-bound])');
             
-            logoutButtons.forEach((btn, index) => {
-                console.log(`🔗 Binding events to logout button ${index + 1}:`, btn);
+            if (logoutButtons.length > 0) {
+                console.log(`🔍 Found ${logoutButtons.length} unbound logout buttons for binding`);
                 
-                // Remove any existing listeners by cloning
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-                
-                // Multiple event types for maximum compatibility
-                ['click', 'mousedown', 'touchstart'].forEach(eventType => {
-                    newBtn.addEventListener(eventType, (e) => {
-                        console.log(`🚪 Logout triggered via ${eventType} (Method 2)!`);
+                logoutButtons.forEach((btn, index) => {
+                    console.log(`🔗 Binding events to logout button ${index + 1}:`, btn);
+                    
+                    // Simple click handler without cloning (which triggers MutationObserver)
+                    btn.addEventListener('click', (e) => {
+                        console.log(`🚪 Logout triggered via click!`);
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         e.stopPropagation();
                         
-                        // Close dropdown immediately to prevent Bootstrap interference
-                        const dropdown = newBtn.closest('.dropdown');
+                        // Close dropdown immediately
+                        const dropdown = btn.closest('.dropdown');
                         if (dropdown) {
                             const dropdownToggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
                             if (dropdownToggle && bootstrap && bootstrap.Dropdown) {
@@ -2918,71 +3097,24 @@ const PageManager = {
                         this.performLogout();
                         return false;
                     }, { capture: true, passive: false });
+                    
+                    // Mark as bound to avoid re-binding
+                    btn.setAttribute('data-logout-bound', 'true');
+                    btn.href = 'javascript:void(0)';
                 });
                 
-                // Also handle href="#" clicks by changing the href
-                newBtn.href = 'javascript:void(0)';
-            });
+                console.log(`✅ Successfully bound ${logoutButtons.length} logout buttons`);
+            }
         };
 
-        // Method 3: MutationObserver to handle dynamically added logout buttons
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    const addedLogoutButtons = [];
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.classList && node.classList.contains('logout-btn')) {
-                                addedLogoutButtons.push(node);
-                            }
-                            const childLogoutButtons = node.querySelectorAll ? node.querySelectorAll('.logout-btn') : [];
-                            addedLogoutButtons.push(...childLogoutButtons);
-                        }
-                    });
-                    
-                    if (addedLogoutButtons.length > 0) {
-                        console.log(`🔄 Found ${addedLogoutButtons.length} new logout buttons, binding events...`);
-                        setTimeout(bindLogoutEvents, 100);
-                    }
-                }
-            });
-        });
-        
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Initial binding
+        // Initial binding only - no observers or intervals to prevent infinite loops
         setTimeout(bindLogoutEvents, 100);
         
-        // Method 4: Keyboard shortcut (Ctrl/Cmd + Shift + L)
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
-                e.preventDefault();
-                console.log('⌨️ Logout keyboard shortcut triggered (Ctrl+Shift+L)!');
-                this.performLogout();
-            }
-        });
+        // Single fallback check after navigation updates
+        setTimeout(bindLogoutEvents, 2000);
 
-        // Method 5: Fallback timer-based rebinding
-        setInterval(() => {
-            const logoutButtons = document.querySelectorAll('.logout-btn');
-            if (logoutButtons.length > 0) {
-                logoutButtons.forEach(btn => {
-                    if (!btn.hasAttribute('data-logout-bound')) {
-                        console.log('🔄 Found unbound logout button, fixing...');
-                        btn.setAttribute('data-logout-bound', 'true');
-                        bindLogoutEvents();
-                    }
-                });
-            }
-        }, 3000);
-
-        // Handle cart button clicks
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.add-to-cart-btn') || e.target.closest('.add-to-cart-btn')) {
-                e.preventDefault();
-                this.handleAddToCart(e.target.closest('.add-to-cart-btn'));
-            }
-        });
+        // Note: Add-to-cart buttons are handled by specific event listeners in setupBookActions()
+        // to ensure proper book data context. Global handler removed to prevent duplication.
 
         // Handle wishlist button clicks
         document.addEventListener('click', (e) => {
@@ -3190,16 +3322,57 @@ const PageManager = {
     initCartPage() {
         console.log('🛒 Initializing Cart Page...');
         
-        // Wait a moment to ensure DOM is ready
-        setTimeout(() => {
-            const container = document.getElementById('cart-container');
-            if (container) {
-                console.log('Cart container found, displaying cart...');
-                CartManager.displayCart('cart-container');
-            } else {
-                console.error('Cart container not found!');
-            }
-        }, 100);
+        // Ensure CartManager and Utils are available
+        if (typeof CartManager === 'undefined') {
+            console.error('❌ CartManager not available');
+            return;
+        }
+        
+        if (typeof Utils === 'undefined') {
+            console.error('❌ Utils not available');
+            return;
+        }
+        
+        // Wait for DOM to be fully ready, then initialize cart
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.performCartInit();
+            });
+        } else {
+            // DOM already loaded
+            this.performCartInit();
+        }
+    },
+
+    // Perform actual cart initialization
+    performCartInit() {
+        console.log('🚀 Performing cart initialization...');
+        
+        // Find cart container
+        const container = document.getElementById('cart-container');
+        if (!container) {
+            console.error('❌ Cart container not found!');
+            return;
+        }
+        
+        console.log('✅ Cart container found, displaying cart...');
+        
+        try {
+            // Display cart contents
+            CartManager.displayCart('cart-container');
+            console.log('🎉 Cart displayed successfully!');
+        } catch (error) {
+            console.error('❌ Error displaying cart:', error);
+            // Show fallback error message
+            container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                    <h4>Unable to load cart</h4>
+                    <p class="text-muted">There was an error loading your cart. Please try refreshing the page.</p>
+                    <button class="btn bookvault-btn" onclick="location.reload()">Refresh Page</button>
+                </div>
+            `;
+        }
     },
 
     // Handle login form submission
@@ -3938,17 +4111,37 @@ const PageManager = {
         modal.addEventListener('hidden.bs.modal', () => modal.remove());
     },
 
-    // Handle add to cart
+    // Handle add to cart with duplicate prevention
     handleAddToCart(button, book = null) {
+        // Prevent duplicate calls within short timeframe
+        const now = Date.now();
+        const lastCall = button.dataset.lastAddToCartCall || 0;
+        if (now - lastCall < 1000) { // 1 second cooldown
+            console.log('🚫 Duplicate add-to-cart call prevented');
+            return;
+        }
+        button.dataset.lastAddToCartCall = now;
+        
         console.log('🛒 HandleAddToCart called', { button, book });
         console.log('🛒 CartManager available:', typeof CartManager);
         console.log('🛒 Utils available:', typeof Utils);
         
-        // Use provided book data or extract from page
-        const bookData = book || this.extractBookDataFromPage();
-        console.log('📖 Book data for cart:', bookData);
+        let bookData = book;
         
-        if (bookData) {
+        // Handle API response structure {success: true, data: {...}}
+        if (book && book.success && book.data) {
+            console.log('📦 Unwrapping API response structure...');
+            bookData = book.data;
+            console.log('📖 Extracted book data from API response:', bookData);
+        } else if (!book) {
+            // Fallback to page extraction
+            console.log('📖 No book provided, extracting from page...');
+            bookData = this.extractBookDataFromPage();
+        }
+        
+        console.log('📖 Final book data for cart:', bookData);
+        
+        if (bookData && bookData.id && bookData.title && bookData.author && bookData.price != null) {
             console.log('✅ Adding book to cart...');
             try {
                 CartManager.addToCart(bookData);
@@ -3956,42 +4149,88 @@ const PageManager = {
                 
                 // Show notification
                 if (CartManager.showCartNotification) {
-                    CartManager.showCartNotification('Book added to cart!');
+                    CartManager.showCartNotification(`Added "${bookData.title}" to cart!`);
                 } else {
                     console.log('📢 No CartManager.showCartNotification method found');
-                    Utils.showSuccess('Book added to cart!');
+                    Utils.showSuccess(`Added "${bookData.title}" to cart!`);
                 }
             } catch (error) {
                 console.error('❌ Error adding book to cart:', error);
                 Utils.showError('Unable to add book to cart. Please try again.');
             }
         } else {
-            console.log('❌ No book data found');
-            Utils.showError('Unable to add book to cart. Please try again.');
+            console.error('❌ Invalid book data for cart:', bookData);
+            Utils.showError('Unable to add book to cart. Missing book information.');
         }
     },
 
     // Extract book data from current page
     extractBookDataFromPage() {
-        // For book details page
+        console.log('📖 Extracting book data from page...');
+        
+        // First, try to get book ID from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlBookId = urlParams.get('id');
+        console.log('🔗 URL Book ID:', urlBookId);
+        
+        // Extract elements from page
         const titleElement = document.querySelector('.book-title-main');
         const authorElement = document.querySelector('.book-author-main');
         const priceElement = document.querySelector('.book-price-main');
         const imageElement = document.querySelector('.book-cover-main');
         
+        console.log('🔍 Page elements found:');
+        console.log('  - Title element:', !!titleElement, titleElement?.textContent?.trim());
+        console.log('  - Author element:', !!authorElement, authorElement?.textContent?.trim());
+        console.log('  - Price element:', !!priceElement, priceElement?.textContent?.trim());
+        console.log('  - Image element:', !!imageElement, imageElement?.src);
+        
         if (titleElement && authorElement && priceElement) {
             const title = titleElement.textContent.trim();
             const author = authorElement.textContent.trim();
+            const priceText = priceElement.textContent.trim();
             
-            return {
-                id: this.generateBookId(title, author), // Use consistent ID based on book content
+            // Better price extraction - handle currency symbols
+            let price = 0;
+            if (priceText) {
+                // Remove currency symbols and non-numeric characters except dots
+                const cleanPriceText = priceText.replace(/[$£€¥,\s]/g, '');
+                price = parseFloat(cleanPriceText);
+                // If still NaN, try to extract just numbers
+                if (isNaN(price)) {
+                    const numberMatch = priceText.match(/\d+\.?\d*/);
+                    price = numberMatch ? parseFloat(numberMatch[0]) : 0;
+                }
+            }
+            
+            console.log('💰 Price extraction debug:', {
+                original: priceText,
+                extracted: price,
+                isValid: !isNaN(price) && price > 0
+            });
+            
+            // Validate extracted data
+            if (!title || !author || isNaN(price) || price <= 0) {
+                console.error('❌ Invalid extracted data:', { title, author, price });
+                return null;
+            }
+            
+            // Use URL ID if available, otherwise generate from title/author
+            const bookId = urlBookId || this.generateBookId(title, author);
+            
+            const bookData = {
+                id: bookId,
                 title: title,
                 author: author,
-                price: parseFloat(priceElement.textContent.replace(/[^0-9.]/g, '')),
+                price: price,
                 imageUrl: imageElement ? imageElement.src : '/asset/img/books/placeholder.jpg'
             };
+            
+            console.log('✅ Successfully extracted book data:', bookData);
+            return bookData;
         }
         
+        console.error('❌ Unable to extract book data from page - missing required elements');
         return null;
     },
 
@@ -4011,79 +4250,67 @@ const PageManager = {
     // Load book details
     async loadBookDetails(bookId) {
         try {
+            console.log('📚 Loading book details for ID:', bookId);
             const book = await APIService.books.getById(bookId);
+            console.log('📚 Book details loaded successfully:', book);
+            
             this.displayBookDetails(book);
             this.setupBookActions(book);
         } catch (error) {
-            console.error('Error loading book details:', error);
+            console.error('❌ Error loading book details:', error);
             Utils.showError('Failed to load book details.');
             // Setup interactive buttons even if API fails
             this.setupBookActions();
         }
     },
 
-    // Setup book action buttons
+    // Setup book action buttons with improved event management
     setupBookActions(book = null) {
         console.log('🔧 setupBookActions called with book:', book);
         console.log('🔧 Current DOM state:', document.readyState);
         
         // Wait a moment for DOM to be fully ready
         setTimeout(() => {
-            // Add to Cart buttons
-            const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-            console.log(`🔘 Found ${addToCartBtns.length} Add to Cart buttons`);
-            console.log('🔘 Add to Cart buttons:', addToCartBtns);
+            // Add to Cart buttons - improved approach without cloning
+            const addToCartBtns = document.querySelectorAll('.add-to-cart-btn:not([data-events-bound])');
+            console.log(`🔘 Found ${addToCartBtns.length} unbound Add to Cart buttons`);
             
-            // Remove existing listeners first to prevent duplicates
             addToCartBtns.forEach((btn, index) => {
-                console.log(`🔧 Processing Add to Cart button ${index + 1}:`, btn);
-                // Clone the button to remove all event listeners
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-            });
-            
-            // Re-select buttons after cloning
-            const freshAddToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-            console.log(`🔘 Re-selected ${freshAddToCartBtns.length} fresh Add to Cart buttons`);
-            
-            freshAddToCartBtns.forEach((btn, index) => {
                 console.log(`🔧 Adding event listener to Add to Cart button ${index + 1}`);
+                
+                // Mark as bound to prevent duplicate binding
+                btn.setAttribute('data-events-bound', 'true');
+                
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation(); // Prevent event bubbling
                     console.log('🛒 Add to Cart button clicked!', book);
                     this.handleAddToCart(btn, book);
                 });
                 
-                // Also add visual feedback on hover
+                // Visual feedback
                 btn.style.cursor = 'pointer';
                 btn.title = 'Add this book to your cart';
             });
 
-            // Buy Now buttons
-            const buyNowBtns = document.querySelectorAll('.buy-now-btn');
-            console.log(`🔘 Found ${buyNowBtns.length} Buy Now buttons`);
-            console.log('🔘 Buy Now buttons:', buyNowBtns);
+            // Buy Now buttons - improved approach without cloning
+            const buyNowBtns = document.querySelectorAll('.buy-now-btn:not([data-events-bound])');
+            console.log(`🔘 Found ${buyNowBtns.length} unbound Buy Now buttons`);
             
-            // Remove existing listeners first to prevent duplicates
             buyNowBtns.forEach((btn, index) => {
-                console.log(`🔧 Processing Buy Now button ${index + 1}:`, btn);
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-            });
-            
-            // Re-select buttons after cloning
-            const freshBuyNowBtns = document.querySelectorAll('.buy-now-btn');
-            console.log(`🔘 Re-selected ${freshBuyNowBtns.length} fresh Buy Now buttons`);
-            
-            freshBuyNowBtns.forEach((btn, index) => {
                 console.log(`🔧 Adding event listener to Buy Now button ${index + 1}`);
+                
+                // Mark as bound to prevent duplicate binding
+                btn.setAttribute('data-events-bound', 'true');
+                
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation(); // Prevent event bubbling
                     console.log('⚡ Buy Now button clicked!', book);
                     this.handleBuyNow(book);
                 });
                 
-                // Also add visual feedback on hover
+                // Visual feedback
                 btn.style.cursor = 'pointer';
                 btn.title = 'Buy this book now';
             });
@@ -4098,10 +4325,22 @@ const PageManager = {
         console.log('⚡ CartManager available:', typeof CartManager);
         console.log('⚡ CheckoutManager available:', typeof CheckoutManager);
         
-        const bookData = book || this.extractBookDataFromPage();
-        console.log('📖 Book data for buy now:', bookData);
+        let bookData = book;
         
-        if (bookData) {
+        // Handle API response structure {success: true, data: {...}}
+        if (book && book.success && book.data) {
+            console.log('📦 Unwrapping API response structure for buy now...');
+            bookData = book.data;
+            console.log('📖 Extracted book data from API response:', bookData);
+        } else if (!book) {
+            // Fallback to page extraction
+            console.log('📖 No book provided, extracting from page...');
+            bookData = this.extractBookDataFromPage();
+        }
+        
+        console.log('📖 Final book data for buy now:', bookData);
+        
+        if (bookData && bookData.id && bookData.title && bookData.author && bookData.price != null) {
             console.log('✅ Adding book to cart and starting checkout...');
             try {
                 CartManager.addToCart(bookData);
@@ -4113,24 +4352,50 @@ const PageManager = {
                 Utils.showError('Unable to process purchase. Please try again.');
             }
         } else {
-            console.log('❌ No book data found for buy now');
+            console.error('❌ Invalid book data for buy now:', bookData);
             Utils.showError('Unable to process purchase. Please try again.');
         }
     },
 
     // Display book details
     displayBookDetails(book) {
+        console.log('📄 Displaying book details:', book);
+        
+        // Handle API response structure
+        let bookData = book;
+        if (book && book.success && book.data) {
+            console.log('📦 Unwrapping API response for display...');
+            bookData = book.data;
+        }
+        
+        console.log('📄 Final book data for display:', bookData);
+        
         const titleElement = document.querySelector('.book-title-main');
         const authorElement = document.querySelector('.book-author-main');
         const priceElement = document.querySelector('.book-price-main');
         const imageElement = document.querySelector('.book-cover-main');
         const descriptionElement = document.querySelector('.book-description');
         
-        if (titleElement) titleElement.textContent = book.title;
-        if (authorElement) authorElement.textContent = book.author;
-        if (priceElement) priceElement.textContent = Utils.formatCurrency(book.price);
-        if (imageElement) imageElement.src = book.imageUrl || '/asset/img/books/placeholder.jpg';
-        if (descriptionElement) descriptionElement.textContent = book.description;
+        if (titleElement && bookData.title) {
+            titleElement.textContent = bookData.title;
+            console.log('📄 Updated title:', bookData.title);
+        }
+        if (authorElement && bookData.author) {
+            authorElement.textContent = bookData.author;
+            console.log('📄 Updated author:', bookData.author);
+        }
+        if (priceElement && bookData.price != null) {
+            priceElement.textContent = Utils.formatCurrency(bookData.price);
+            console.log('📄 Updated price:', bookData.price);
+        }
+        if (imageElement) {
+            imageElement.src = bookData.imageUrl || '/asset/img/books/placeholder.jpg';
+            console.log('📄 Updated image:', bookData.imageUrl);
+        }
+        if (descriptionElement && bookData.description) {
+            descriptionElement.textContent = bookData.description;
+            console.log('📄 Updated description:', bookData.description);
+        }
     },
 
     // Get current page identifier

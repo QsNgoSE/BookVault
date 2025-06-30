@@ -1243,22 +1243,125 @@ const Utils = {
         }
     },
 
-    // Show error message
-    showError: (message, containerId = 'books-container') => {
-        const container = document.getElementById(containerId);
-        if (container) {
-            container.innerHTML = `
-                <div class="col-12">
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Error Loading Books</h4>
-                        <p>${message}</p>
-                        <hr>
-                        <button class="btn btn-warning" onclick="window.location.reload()">Try Again</button>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                </div>
-            `;
+    // Show error message - IMPROVED VERSION
+    showError: (message, options = {}) => {
+        const { 
+            containerId = null, 
+            formId = null, 
+            fieldId = null,
+            position = 'top-right',
+            title = null,
+            type = 'error'
+        } = options;
+
+        // Handle form-specific errors
+        if (formId) {
+            const form = document.getElementById(formId);
+            if (form) {
+                // Remove existing form errors
+                const existingErrors = form.querySelectorAll('.auth-error-message');
+                existingErrors.forEach(error => error.remove());
+                
+                // Create form error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'auth-error-message alert alert-danger alert-dismissible fade show mb-3';
+                errorDiv.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    ${title ? `<strong>${title}</strong><br>` : ''}
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                form.insertBefore(errorDiv, form.firstChild);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
+                return;
+            }
         }
+
+        // Handle field-specific errors
+        if (fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                // Add error styling to field
+                field.classList.add('is-invalid');
+                
+                // Remove existing field error
+                const existingError = field.parentNode.querySelector('.invalid-feedback');
+                if (existingError) existingError.remove();
+                
+                // Add error message below field
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback';
+                errorDiv.textContent = message;
+                field.parentNode.appendChild(errorDiv);
+                
+                // Clear error styling when user starts typing
+                field.addEventListener('input', function clearError() {
+                    field.classList.remove('is-invalid');
+                    const feedback = field.parentNode.querySelector('.invalid-feedback');
+                    if (feedback) feedback.remove();
+                    field.removeEventListener('input', clearError);
+                }, { once: true });
+                return;
+            }
+        }
+
+        // Handle container-specific errors
+        if (containerId) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> ${title || 'Error'}</h4>
+                            <p>${message}</p>
+                            <hr>
+                            <button class="btn btn-warning" onclick="window.location.reload()">Try Again</button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+        }
+
+        // Default: Show floating notification
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+        
+        let positionStyles = 'z-index: 9999; min-width: 300px; max-width: 500px;';
+        switch (position) {
+            case 'top-right':
+                positionStyles += 'top: 20px; right: 20px;';
+                break;
+            case 'top-center':
+                positionStyles += 'top: 20px; left: 50%; transform: translateX(-50%);';
+                break;
+            case 'bottom-right':
+                positionStyles += 'bottom: 20px; right: 20px;';
+                break;
+        }
+        
+        alert.style.cssText = positionStyles;
+        alert.innerHTML = `
+            <i class="bi bi-${type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            ${title ? `<strong>${title}</strong><br>` : ''}
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alert);
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, type === 'error' ? 6000 : 4000);
     },
 
     // Show success message
@@ -1334,18 +1437,33 @@ const AuthManager = {
 
     // Logout user
     logout() {
+        console.log('🚪 Starting logout process...');
+        
+        // Store current user info for logging
+        const currentUser = this.getCurrentUser();
+        console.log('🚪 Logging out user:', currentUser?.email || 'Unknown');
+        
+        // Clear authentication data
         localStorage.removeItem('bookvault_auth_token');
         localStorage.removeItem('bookvault_user_role'); 
         localStorage.removeItem('bookvault_user_profile');
+        console.log('🚪 Authentication data cleared from localStorage');
         
         // Clear cart
         CartManager.clearCart();
+        console.log('🚪 Shopping cart cleared');
         
-        // Update navigation
+        // Update navigation immediately
         this.updateNavigation();
+        console.log('🚪 Navigation updated to guest state');
         
-        // Redirect to home
-        window.location.href = 'index.html';
+        // Show success message
+        console.log('🚪 Logout successful, redirecting to home page...');
+        
+        // Use a small delay to ensure all operations complete
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 100);
     },
 
     // Update navigation based on authentication state and user roles
@@ -1487,7 +1605,7 @@ const AuthManager = {
 
 // API Service - Updated for Real Backend Integration
 const APIService = {
-    // Generic API call method with service-specific URLs
+    // Generic API call method with service-specific URLs - IMPROVED VERSION
     async makeRequest(endpoint, options = {}, serviceUrl = null) {
         // Determine service URL based on endpoint
         let baseUrl = serviceUrl;
@@ -1508,35 +1626,140 @@ const APIService = {
         }
         
         const url = `${baseUrl}${endpoint}`;
-        const token = localStorage.getItem('bookvault_auth_token');
         
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token && { 'Authorization': `Bearer ${token}` })
-            }
+        // Set default headers
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
         };
-
+        
+        // Add auth token if available
+        const token = localStorage.getItem('bookvault_auth_token');
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+        
+        const requestOptions = {
+            ...options,
+            headers
+        };
+        
+        console.log(`🌐 Making ${requestOptions.method || 'GET'} request to:`, url);
+        
         try {
-            console.log(`Making API request to: ${url}`);
-            const response = await fetch(url, { ...defaultOptions, ...options });
+            const response = await fetch(url, requestOptions);
             
+            // Handle different response statuses
+            if (response.status === 401) {
+                // Unauthorized - token might be expired
+                console.warn('🔒 Authentication failed - clearing tokens');
+                localStorage.removeItem('bookvault_auth_token');
+                localStorage.removeItem('bookvault_user_role');
+                localStorage.removeItem('bookvault_user_profile');
+                
+                // Only redirect to login if not already on login/register pages
+                const currentPage = window.location.pathname;
+                if (!currentPage.includes('login') && !currentPage.includes('register') && !currentPage.includes('index')) {
+                    window.location.href = 'login.html';
+                }
+                
+                throw new Error('Your session has expired. Please log in again.');
+            }
+            
+            if (response.status === 403) {
+                // Forbidden - Enhanced ban handling
+                const errorText = await response.text();
+                
+                if (endpoint.includes('/api/auth/login')) {
+                    if (errorText.includes('permanently banned') || errorText.includes('PERMANENT')) {
+                        throw new Error('Your account has been permanently banned due to multiple failed login attempts. Please contact the administrator for assistance.');
+                    } else if (errorText.includes('temporarily locked') || errorText.includes('15 minutes')) {
+                        throw new Error('Your account has been temporarily locked for 15 minutes due to failed login attempts. Please try again later.');
+                    } else if (errorText.includes('IP') || errorText.includes('location')) {
+                        throw new Error('Too many failed login attempts from this location. Please try again in 30 minutes.');
+                    } else {
+                        throw new Error('Your account has been temporarily locked due to multiple failed login attempts. Please try again later.');
+                    }
+                } else if (endpoint.includes('/api/auth/register')) {
+                    throw new Error('Registration is currently unavailable. Please try again later.');
+                } else {
+                    throw new Error('You do not have permission to perform this action.');
+                }
+            }
+            
+            if (response.status === 404) {
+                throw new Error('The requested resource was not found.');
+            }
+            
+            if (response.status === 429) {
+                throw new Error('Too many requests. Please wait a moment before trying again.');
+            }
+            
+            if (response.status >= 500) {
+                throw new Error('Server error. Please try again later.');
+            }
+            
+            // Try to parse response as JSON
+            let data;
+            const contentType = response.headers.get('Content-Type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    console.warn('⚠️ Failed to parse JSON response:', parseError);
+                    data = {};
+                }
+            } else {
+                // Handle non-JSON responses
+                const text = await response.text();
+                data = { message: text || 'Unknown response format' };
+            }
+            
+            // Handle unsuccessful responses with data
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                // Extract error message from various possible formats
+                let errorMessage = 'Request failed';
+                
+                if (data.message) {
+                    errorMessage = data.message;
+                } else if (data.error) {
+                    errorMessage = data.error;
+                } else if (data.errors && Array.isArray(data.errors)) {
+                    errorMessage = data.errors.join(', ');
+                } else if (data.errors && typeof data.errors === 'object') {
+                    // Handle validation errors object
+                    const errorFields = Object.keys(data.errors);
+                    if (errorFields.length > 0) {
+                        errorMessage = Object.values(data.errors).flat().join(', ');
+                    }
+                } else if (typeof data === 'string') {
+                    errorMessage = data;
+                }
+                
+                // Add status code for debugging
+                errorMessage += ` (${response.status})`;
+                
+                throw new Error(errorMessage);
             }
             
-            const data = await response.json();
-            console.log('API response:', data);
-            
-            // Handle our backend's ApiResponse format
-            if (data.success !== undefined) {
-                return data.success ? data.data : Promise.reject(new Error(data.message));
-            }
-            
+            console.log('✅ Request successful:', { url, status: response.status, data });
             return data;
+            
         } catch (error) {
-            console.error('API request failed:', error);
+            // Handle network errors
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                console.error('🌐 Network error:', error);
+                throw new Error('Unable to connect to the server. Please check your internet connection and try again.');
+            }
+            
+            // Handle timeout errors
+            if (error.name === 'AbortError') {
+                console.error('⏱️ Request timeout:', error);
+                throw new Error('The request timed out. Please try again.');
+            }
+            
+            console.error(`❌ API Request failed for ${url}:`, error);
             throw error;
         }
     },
@@ -1679,13 +1902,19 @@ const BookManager = {
                 ? await APIService.books.getByCategory(category, page, size)
                 : await APIService.books.getAll(page, size);
             
-            // Handle paginated response from backend
-            const books = response.content || response;
+            console.log('📚 Book API response:', response);
+            
+            // Handle response structure from backend API
+            const responseData = response.data || response;
+            const books = responseData.content || responseData;
+            
+            console.log(`📚 Found ${books.length} books to display`);
             this.displayBooks(books, containerId);
             
             // Display pagination if available
-            if (response.totalPages && response.totalPages > 1) {
-                this.displayPagination(response, containerId + '-pagination', category);
+            const paginationData = responseData.totalPages ? responseData : response;
+            if (paginationData.totalPages && paginationData.totalPages > 1) {
+                this.displayPagination(paginationData, containerId + '-pagination', category);
             }
         } catch (error) {
             Utils.showError('Failed to load books. Please try again later.');
@@ -1706,7 +1935,7 @@ const BookManager = {
         const booksHTML = books.map(book => `
             <div class="col-md-4 col-sm-6 mb-4">
                 <div class="card h-100">
-                    <img src="${book.coverImageUrl || '/asset/img/books/the-great-gatsby.png'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
+                    <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
                     <div class="card-body d-flex flex-column">
                         <h5 class="card-title">${book.title}</h5>
                         <p class="card-text text-muted">by ${book.author}</p>
@@ -1717,13 +1946,16 @@ const BookManager = {
                         </div>` : ''}
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between">
-                                <a href="book-details.html?id=${book.id}" class="btn btn-primary">View Details</a>
-                                <button class="btn btn-outline-secondary" onclick="BookManager.addToWishlist('${book.id}')">
+                                <a href="book-details.html?id=${book.id}" class="btn btn-primary btn-sm">View Details</a>
+                                <button class="btn btn-outline-warning btn-sm" onclick="BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
                                     <i class="bi bi-heart"></i>
                                 </button>
                             </div>
-                            ${book.stockQuantity <= 0 ? '<small class="text-danger">Out of Stock</small>' : 
-                              book.stockQuantity < 10 ? `<small class="text-warning">${book.stockQuantity} left</small>` : ''}
+                            <div class="mt-2">
+                                ${book.stockQuantity <= 0 ? '<small class="text-danger"><i class="bi bi-x-circle"></i> Out of Stock</small>' : 
+                                  book.stockQuantity < 10 ? `<small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Only ${book.stockQuantity} left</small>` : 
+                                  '<small class="text-success"><i class="bi bi-check-circle"></i> In Stock</small>'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1786,7 +2018,14 @@ const BookManager = {
         Utils.showLoading(containerId);
         
         try {
-            const books = await APIService.books.search(query);
+            const response = await APIService.books.search(query);
+            console.log('🔍 Search API response:', response);
+            
+            // Handle response structure from backend API
+            const responseData = response.data || response;
+            const books = responseData.content || responseData;
+            
+            console.log(`🔍 Found ${books.length} books for search: "${query}"`);
             this.displayBooks(books, containerId);
         } catch (error) {
             Utils.showError('Search failed. Please try again.');
@@ -1817,7 +2056,11 @@ const BookManager = {
 
             // Load all books first (since we don't have backend filtering yet)
             const response = await APIService.books.getAll();
-            let books = response.content || response.data || response;
+            console.log('🔍 Filter API response:', response);
+            
+            // Handle response structure from backend API
+            const responseData = response.data || response;
+            let books = responseData.content || responseData;
             
             if (!Array.isArray(books)) {
                 books = [];
@@ -2034,75 +2277,375 @@ const UserManager = {
 
 // Page Manager - Enhanced with E-commerce Features
 const PageManager = {
-    // Initialize page based on current location
+    // Initialize the entire page management system
     init() {
-        console.log('🚀 BookVault PageManager - Initializing...');
+        console.log('🚀 Initializing PageManager...');
         
-        // Initialize common features for all pages
-        this.initCommonFeatures();
+        // Initialize navigation IMMEDIATELY to prevent flickering
+        this.initImmediateNavigation();
         
-        // Page-specific initialization
-        const currentPage = window.location.pathname.split('/').pop().toLowerCase();
-        
-        switch (currentPage) {
-            case 'index.html':
-            case '':
-                this.initHomePage();
-                break;
-            case 'booklisting.html':
-                this.initBookListingPage();
-                break;
-            case 'book-details.html':
-                this.initBookDetailsPage();
-                break;
-            case 'user.html':
-                this.initUserDashboard();
-                break;
-            case 'admin.html':
-                this.initAdminPage();
-                break;
-            case 'login.html':
-                this.initLoginPage();
-                break;
-            case 'register.html':
-                this.initRegisterPage();
-                break;
-            case 'cart.html':
-                this.initCartPage();
-                break;
-            default:
-                console.log('No specific initialization for:', currentPage);
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM Content Loaded - Page:', this.getCurrentPage());
+            
+            // Initialize common features for all pages
+            this.initCommonFeatures();
+            
+            // Initialize page-specific features
+            const currentPage = this.getCurrentPage();
+            switch (currentPage) {
+                case 'home':
+                    this.initHomePage();
+                    break;
+                case 'booklisting':
+                    this.initBookListingPage();
+                    break;
+                case 'book-details':
+                    this.initBookDetailsPage();
+                    break;
+                case 'user':
+                    this.initUserDashboard();
+                    break;
+                case 'admin':
+                    this.initAdminPage();
+                    break;
+                case 'login':
+                    this.initLoginPage();
+                    break;
+                case 'register':
+                    this.initRegisterPage();
+                    break;
+                case 'cart':
+                    this.initCartPage();
+                    break;
+                default:
+                    console.log('ℹ️ No specific initialization for page:', currentPage);
+            }
+            
+            console.log('✅ PageManager initialization complete');
+        });
+    },
+
+    // Initialize navigation immediately to prevent auth state flickering
+    initImmediateNavigation() {
+        // Check if user is already authenticated and update navigation immediately
+        if (AuthManager.isLoggedIn()) {
+            console.log('🔐 User already logged in - updating navigation immediately');
+            
+            // Hide guest navigation immediately with smooth transition
+            const guestNav = document.querySelector('.guest-nav');
+            if (guestNav) {
+                guestNav.classList.add('d-none');
+                guestNav.classList.remove('d-flex');
+            }
+            
+            // Show authenticated navigation with smooth transition
+            const authNav = document.querySelector('.auth-nav');
+            if (authNav) {
+                authNav.classList.remove('d-none');
+                authNav.classList.add('d-flex');
+            }
+            
+            // Update user name if possible
+            const user = AuthManager.getCurrentUser();
+            const userNameSpan = document.getElementById('user-name');
+            if (userNameSpan && user) {
+                const displayName = user.firstName ? 
+                    `${user.firstName} ${user.lastName || ''}`.trim() :
+                    user.name || user.email?.split('@')[0] || 'User';
+                userNameSpan.textContent = displayName;
+            }
+            
+            // Show cart link
+            const cartLink = document.getElementById('cart-link');
+            if (cartLink) {
+                cartLink.classList.remove('d-none');
+            }
+            
+            // Handle role-specific navigation
+            const role = AuthManager.getUserRole();
+            if (role) {
+                // Show/hide role-specific navigation items
+                const roleSelectors = {
+                    'ADMIN': '.admin-nav',
+                    'SELLER': '.seller-nav', 
+                    'USER': '.user-only-nav'
+                };
+                
+                Object.entries(roleSelectors).forEach(([userRole, selector]) => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(element => {
+                        if (role === userRole || (userRole === 'SELLER' && role === 'ADMIN') || 
+                            (userRole === 'USER' && ['USER', 'SELLER', 'ADMIN'].includes(role))) {
+                            element.classList.remove('d-none');
+                        } else {
+                            element.classList.add('d-none');
+                        }
+                    });
+                });
+            }
+        } else {
+            console.log('🔓 User not logged in - showing guest navigation');
+            
+            // Show guest navigation with smooth transition
+            const guestNav = document.querySelector('.guest-nav');
+            if (guestNav) {
+                guestNav.classList.remove('d-none');
+                guestNav.classList.add('d-flex');
+            }
+            
+            // Hide authenticated navigation with smooth transition
+            const authNav = document.querySelector('.auth-nav');
+            if (authNav) {
+                authNav.classList.add('d-none');
+                authNav.classList.remove('d-flex');
+            }
+            
+            // Hide cart for guests
+            const cartLink = document.getElementById('cart-link');
+            if (cartLink) {
+                cartLink.classList.add('d-none');
+            }
+            
+            // Hide all role-specific items
+            const roleSpecificSelectors = ['.admin-nav', '.seller-nav', '.user-only-nav', '.role-nav-item'];
+            roleSpecificSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(item => {
+                    item.classList.add('d-none');
+                });
+            });
         }
         
-        console.log('✅ BookVault PageManager initialized successfully');
+        // Update cart UI immediately
+        CartManager.updateCartUI();
     },
 
     // Initialize common features for all pages
     initCommonFeatures() {
-        // Update navigation based on authentication state
-        AuthManager.updateNavigation();
-        
         // Initialize cart functionality
         CartManager.updateCartUI();
         
-        // Add logout functionality
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('logout-btn')) {
-                e.preventDefault();
-                AuthManager.logout();
-            }
-        });
+        // Update navigation with full authentication state
+        AuthManager.updateNavigation();
         
-        // Add cart icon click functionality
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.bi-cart')) {
-                e.preventDefault();
-                this.showCartModal();
-            }
-        });
+        // Handle page-specific authentication requirements
+        this.handleAuthenticationRequirements();
         
-        // Initialize search functionality
+        // Initialize search functionality if search elements exist
         this.initSearchFunctionality();
+        
+        // Initialize any global event listeners
+        this.initGlobalEventListeners();
+        
+        console.log('✅ Common features initialized');
+    },
+    
+    // Handle authentication requirements for different pages
+    handleAuthenticationRequirements() {
+        const currentPage = this.getCurrentPage();
+        const isLoggedIn = AuthManager.isLoggedIn();
+        const userRole = AuthManager.getUserRole();
+        
+        // Pages that require authentication
+        const protectedPages = ['user', 'admin', 'seller'];
+        
+        // Pages that admins only can access
+        const adminOnlyPages = ['admin'];
+        
+        // Pages that sellers and admins can access
+        const sellerPages = ['seller'];
+        
+        // Check if current page requires authentication
+        if (protectedPages.includes(currentPage) && !isLoggedIn) {
+            console.warn('🔒 Page requires authentication, redirecting to login');
+            Utils.showError('Please log in to access this page.', { 
+                title: 'Authentication Required',
+                position: 'top-center' 
+            });
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return;
+        }
+        
+        // Check admin-only access
+        if (adminOnlyPages.includes(currentPage) && userRole !== 'ADMIN') {
+            console.warn('🚫 Admin access required');
+            Utils.showError('You do not have permission to access this page.', { 
+                title: 'Access Denied',
+                position: 'top-center' 
+            });
+            setTimeout(() => {
+                window.location.href = isLoggedIn ? 'user.html' : 'index.html';
+            }, 2000);
+            return;
+        }
+        
+        // Check seller access
+        if (sellerPages.includes(currentPage) && !['SELLER', 'ADMIN'].includes(userRole)) {
+            console.warn('🏪 Seller access required');
+            Utils.showError('This page is only available to sellers and administrators.', { 
+                title: 'Access Denied',
+                position: 'top-center' 
+            });
+            setTimeout(() => {
+                window.location.href = isLoggedIn ? 'user.html' : 'index.html';
+            }, 2000);
+            return;
+        }
+        
+        // Redirect authenticated users away from login/register pages
+        if (['login', 'register'].includes(currentPage) && isLoggedIn) {
+            console.log('🔄 User already logged in, redirecting to dashboard');
+            setTimeout(() => {
+                switch (userRole) {
+                    case 'ADMIN':
+                        window.location.href = 'admin.html';
+                        break;
+                    case 'SELLER':
+                        window.location.href = 'seller.html';
+                        break;
+                    default:
+                        window.location.href = 'user.html';
+                }
+            }, 1000);
+        }
+    },
+    
+    // Initialize global event listeners
+    initGlobalEventListeners() {
+        // Handle logout clicks - ENHANCED FOR DROPDOWN COMPATIBILITY
+        document.addEventListener('click', (e) => {
+            const logoutBtn = e.target.matches('.logout-btn') ? e.target : e.target.closest('.logout-btn');
+            if (logoutBtn) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent dropdown from interfering
+                console.log('🚪 Logout button clicked!');
+                
+                // Add confirmation dialog for better UX
+                if (confirm('Are you sure you want to log out?')) {
+                    console.log('🚪 User confirmed logout, proceeding...');
+                    AuthManager.logout();
+                } else {
+                    console.log('🚪 User cancelled logout');
+                }
+            }
+        }, true); // Use capture phase for better dropdown compatibility
+        
+        // Alternative: Direct logout handler for better compatibility
+        const logoutButtons = document.querySelectorAll('.logout-btn');
+        console.log(`🔍 Found ${logoutButtons.length} logout buttons on page`);
+        
+        logoutButtons.forEach((btn, index) => {
+            console.log(`🔗 Binding logout handler to button ${index + 1}:`, btn);
+            
+            // Force visibility check bypass for dropdown items
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚪 Direct logout button clicked via direct handler!');
+                
+                if (confirm('Are you sure you want to log out?')) {
+                    console.log('🚪 User confirmed logout via direct handler, proceeding...');
+                    AuthManager.logout();
+                } else {
+                    console.log('🚪 User cancelled logout via direct handler');
+                }
+            }, true); // Use capture phase
+            
+            // Also add a mousedown handler as backup
+            btn.addEventListener('mousedown', (e) => {
+                console.log('🖱️ Mousedown detected on logout button');
+            });
+        });
+        
+        // Add keyboard shortcut for logout (Ctrl/Cmd + Shift + L)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+                e.preventDefault();
+                console.log('⌨️ Logout keyboard shortcut triggered!');
+                if (AuthManager.isLoggedIn() && confirm('Logout with keyboard shortcut?\n\nPress Ctrl+Shift+L to logout from anywhere on the site.')) {
+                    AuthManager.logout();
+                }
+            }
+        });
+        
+        // Handle cart button clicks
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.add-to-cart-btn') || e.target.closest('.add-to-cart-btn')) {
+                e.preventDefault();
+                this.handleAddToCart(e.target.closest('.add-to-cart-btn'));
+            }
+        });
+        
+        // Handle wishlist button clicks
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.wishlist-btn') || e.target.closest('.wishlist-btn')) {
+                e.preventDefault();
+                const button = e.target.closest('.wishlist-btn');
+                const bookId = button.dataset.bookId;
+                if (bookId) {
+                    BookManager.addToWishlist(bookId);
+                }
+            }
+        });
+        
+        // Final fallback: Force fix logout buttons after a delay
+        setTimeout(() => {
+            this.forceFixLogoutButtons();
+        }, 1000);
+        
+        console.log('🎯 Global event listeners initialized');
+        console.log(`🎯 Found ${document.querySelectorAll('.logout-btn').length} logout buttons on page`);
+    },
+    
+    // Force fix logout buttons as final fallback
+    forceFixLogoutButtons() {
+        const logoutButtons = document.querySelectorAll('.logout-btn');
+        console.log(`🔧 Force fixing ${logoutButtons.length} logout buttons...`);
+        
+        logoutButtons.forEach((logoutBtn, index) => {
+            console.log(`🔧 Fixing logout button ${index + 1}`);
+            
+            // Clone to remove all existing event listeners
+            const newLogoutBtn = logoutBtn.cloneNode(true);
+            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+            
+            // Add reliable click handler
+            newLogoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🚪 FORCE FIXED logout button clicked!');
+                
+                if (confirm('Are you sure you want to log out?')) {
+                    console.log('🚪 User confirmed logout, proceeding...');
+                    
+                    // Clear auth data
+                    localStorage.removeItem('bookvault_auth_token');
+                    localStorage.removeItem('bookvault_user_role'); 
+                    localStorage.removeItem('bookvault_user_profile');
+                    
+                    // Clear cart
+                    if (window.CartManager) {
+                        CartManager.clearCart();
+                    }
+                    
+                    // Redirect
+                    window.location.href = 'index.html';
+                } else {
+                    console.log('🚪 User cancelled logout');
+                }
+            });
+            
+            // Also handle mousedown as backup
+            newLogoutBtn.addEventListener('mousedown', function() {
+                console.log('🖱️ Mousedown detected on fixed logout button');
+            });
+        });
+        
+        if (logoutButtons.length > 0) {
+            console.log('✅ All logout buttons have been force-fixed!');
+        }
     },
 
     // Initialize home page
@@ -2241,8 +2784,28 @@ const PageManager = {
         event.preventDefault();
         
         const form = event.target;
-        const email = form.email.value;
+        const email = form.email.value.trim();
         const password = form.password.value;
+        
+        // Clear previous errors
+        const existingErrors = form.querySelectorAll('.auth-error-message');
+        existingErrors.forEach(error => error.remove());
+        
+        // Validate inputs
+        if (!email) {
+            Utils.showError('Please enter your email address.', { fieldId: 'loginEmail' });
+            return;
+        }
+        
+        if (!password) {
+            Utils.showError('Please enter your password.', { fieldId: 'loginPassword' });
+            return;
+        }
+        
+        if (!this.isValidEmail(email)) {
+            Utils.showError('Please enter a valid email address.', { fieldId: 'loginEmail' });
+            return;
+        }
         
         // Show loading state
         const submitButton = form.querySelector('button[type="submit"]');
@@ -2254,7 +2817,7 @@ const PageManager = {
             const result = await AuthManager.login({ email, password });
             
             if (result.success) {
-                Utils.showSuccess('Login successful! Redirecting...');
+                Utils.showSuccess('Login successful! Redirecting...', { position: 'top-center' });
                 
                 // Redirect based on user role
                 setTimeout(() => {
@@ -2271,14 +2834,56 @@ const PageManager = {
                     }
                 }, 1500);
             } else {
-                Utils.showError(result.message || 'Login failed. Please check your credentials.');
+                // Handle specific error cases
+                this.handleLoginError(result.message || 'Login failed', form);
             }
         } catch (error) {
             console.error('Login error:', error);
-            Utils.showError('Login failed. Please try again.');
+            this.handleLoginError(error.message || 'Login failed. Please check your connection and try again.', form);
         } finally {
             submitButton.textContent = originalText;
             submitButton.disabled = false;
+        }
+    },
+    
+    // Handle specific login errors - UPDATED FOR NEW RATE LIMITING
+    handleLoginError(errorMessage, form) {
+        let title = 'Login Failed';
+        let message = errorMessage;
+        let fieldId = null;
+        
+        // Enhanced error categorization for new rate limiting
+        if (errorMessage.toLowerCase().includes('permanently banned')) {
+            title = '🚫 Account Permanently Banned';
+            message = 'Your account has been permanently banned due to multiple failed login attempts. Please contact the administrator for assistance.';
+        } else if (errorMessage.toLowerCase().includes('temporarily locked') || errorMessage.toLowerCase().includes('15 minutes')) {
+            title = '⏱️ Account Temporarily Locked';
+            message = 'Your account has been temporarily locked for 15 minutes due to failed login attempts. Please try again later.';
+        } else if (errorMessage.toLowerCase().includes('ip') || errorMessage.toLowerCase().includes('location') || errorMessage.toLowerCase().includes('30 minutes')) {
+            title = '🌐 IP Address Blocked';
+            message = 'Too many failed login attempts from this location. Please try again in 30 minutes.';
+        } else if (errorMessage.toLowerCase().includes('warning') && errorMessage.toLowerCase().includes('3 failed attempts')) {
+            title = '⚠️ Warning - Account Security';
+            message = 'Invalid login credentials. Your account will be locked for 15 minutes after 3 failed attempts, and permanently banned after 5 attempts.';
+        } else if (errorMessage.toLowerCase().includes('warning') && errorMessage.toLowerCase().includes('5 failed attempts')) {
+            title = '⚠️ Warning - IP Security';
+            message = 'Invalid login credentials. This IP address will be blocked for 30 minutes after 5 failed attempts.';
+        } else if (errorMessage.toLowerCase().includes('email')) {
+            title = 'Invalid Email';
+            fieldId = 'loginEmail';
+        } else if (errorMessage.toLowerCase().includes('password')) {
+            title = 'Incorrect Password';
+            fieldId = 'loginPassword';
+        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
+            title = 'Connection Error';
+            message = 'Unable to connect to the server. Please check your internet connection and try again.';
+        }
+        
+        // Show error in form or as notification based on specificity
+        if (fieldId) {
+            Utils.showError(message, { fieldId });
+        } else {
+            Utils.showError(message, { formId: 'loginForm', title });
         }
     },
 
@@ -2290,25 +2895,24 @@ const PageManager = {
         const password = form.password.value;
         const confirmPassword = form.confirmPassword?.value;
 
-        // Validation
-        if (confirmPassword && password !== confirmPassword) {
-            Utils.showError('Passwords do not match.');
-            return;
-        }
-
-        if (password.length < 6) {
-            Utils.showError('Password must be at least 6 characters long.');
-            return;
-        }
-
+        // Clear previous errors
+        const existingErrors = form.querySelectorAll('.auth-error-message');
+        existingErrors.forEach(error => error.remove());
+        
+        // Get form data
         const userData = {
-            firstName: form.firstName.value,
-            lastName: form.lastName.value,
-            email: form.email.value,
+            firstName: form.firstName.value.trim(),
+            lastName: form.lastName.value.trim(),
+            email: form.email.value.trim(),
             password: password,
-            phone: form.phone?.value || '',
+            phone: form.phone?.value.trim() || '',
             role: form.role ? form.role.value : 'USER'
         };
+
+        // Comprehensive validation
+        if (!this.validateRegistrationForm(userData, confirmPassword, form)) {
+            return;
+        }
         
         // Show loading state
         const submitButton = form.querySelector('button[type="submit"]');
@@ -2325,7 +2929,8 @@ const PageManager = {
                 localStorage.setItem('bookvault_user_role', response.role);
                 localStorage.setItem('bookvault_user_profile', JSON.stringify(response));
                 
-                Utils.showSuccess('Registration successful! Redirecting...');
+                Utils.showSuccess(`Welcome to BookVault, ${userData.firstName}! Your account has been created successfully.`, 
+                    { position: 'top-center' });
                 
                 setTimeout(() => {
                     switch (response.role) {
@@ -2342,11 +2947,125 @@ const PageManager = {
             }
         } catch (error) {
             console.error('Registration error:', error);
-            Utils.showError(error.message || 'Registration failed. Please try again.');
+            this.handleRegistrationError(error.message || 'Registration failed. Please try again.', form);
         } finally {
             submitButton.textContent = originalText;
             submitButton.disabled = false;
         }
+    },
+    
+    // Validate registration form
+    validateRegistrationForm(userData, confirmPassword, form) {
+        // First Name validation
+        if (!userData.firstName) {
+            Utils.showError('Please enter your first name.', { fieldId: 'regFirstName' });
+            return false;
+        }
+        
+        if (userData.firstName.length < 2) {
+            Utils.showError('First name must be at least 2 characters long.', { fieldId: 'regFirstName' });
+            return false;
+        }
+        
+        // Last Name validation
+        if (!userData.lastName) {
+            Utils.showError('Please enter your last name.', { fieldId: 'regLastName' });
+            return false;
+        }
+        
+        if (userData.lastName.length < 2) {
+            Utils.showError('Last name must be at least 2 characters long.', { fieldId: 'regLastName' });
+            return false;
+        }
+        
+        // Email validation
+        if (!userData.email) {
+            Utils.showError('Please enter your email address.', { fieldId: 'regEmail' });
+            return false;
+        }
+        
+        if (!this.isValidEmail(userData.email)) {
+            Utils.showError('Please enter a valid email address.', { fieldId: 'regEmail' });
+            return false;
+        }
+        
+        // Password validation
+        if (!userData.password) {
+            Utils.showError('Please enter a password.', { fieldId: 'regPassword' });
+            return false;
+        }
+        
+        if (userData.password.length < 8) {
+            Utils.showError('Password must be at least 8 characters long.', { fieldId: 'regPassword' });
+            return false;
+        }
+        
+        if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(userData.password)) {
+            Utils.showError('Password must contain at least one uppercase letter, one lowercase letter, and one number.', 
+                { fieldId: 'regPassword' });
+            return false;
+        }
+        
+        // Confirm password validation
+        if (confirmPassword && userData.password !== confirmPassword) {
+            Utils.showError('Passwords do not match.', { fieldId: 'regConfirm' });
+            return false;
+        }
+        
+        // Role validation
+        if (!userData.role) {
+            Utils.showError('Please select your account type.', { fieldId: 'regRole' });
+            return false;
+        }
+        
+        return true;
+    },
+    
+    // Handle specific registration errors
+    handleRegistrationError(errorMessage, form) {
+        let title = 'Registration Failed';
+        let message = errorMessage;
+        let fieldId = null;
+        
+        // Categorize errors for better UX
+        if (errorMessage.toLowerCase().includes('email')) {
+            if (errorMessage.toLowerCase().includes('already exists') || errorMessage.toLowerCase().includes('taken')) {
+                title = 'Email Already Registered';
+                message = 'An account with this email already exists. Please use a different email or try logging in.';
+                fieldId = 'regEmail';
+            } else {
+                title = 'Invalid Email';
+                fieldId = 'regEmail';
+            }
+        } else if (errorMessage.toLowerCase().includes('password')) {
+            title = 'Password Issue';
+            fieldId = 'regPassword';
+        } else if (errorMessage.toLowerCase().includes('name')) {
+            title = 'Invalid Name';
+            if (errorMessage.toLowerCase().includes('first')) {
+                fieldId = 'regFirstName';
+            } else if (errorMessage.toLowerCase().includes('last')) {
+                fieldId = 'regLastName';
+            }
+        } else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
+            title = 'Connection Error';
+            message = 'Unable to connect to the server. Please check your internet connection and try again.';
+        } else if (errorMessage.toLowerCase().includes('validation')) {
+            title = 'Validation Error';
+        }
+        
+        // Show error in form or as notification based on specificity
+        if (fieldId) {
+            Utils.showError(message, { fieldId });
+        } else {
+            Utils.showError(message, { formId: 'registerForm', title });
+        }
+    },
+    
+    // Email validation helper
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     },
 
     // Load user dashboard data
@@ -2861,6 +3580,37 @@ const PageManager = {
         if (priceElement) priceElement.textContent = Utils.formatCurrency(book.price);
         if (imageElement) imageElement.src = book.imageUrl || '/asset/img/books/placeholder.jpg';
         if (descriptionElement) descriptionElement.textContent = book.description;
+    },
+
+    // Get current page identifier
+    getCurrentPage() {
+        const pathname = window.location.pathname;
+        const filename = pathname.split('/').pop().toLowerCase();
+        
+        // Handle different filename formats
+        if (!filename || filename === 'index.html') {
+            return 'home';
+        }
+        
+        // Remove .html extension if present
+        const pageName = filename.replace('.html', '');
+        
+        // Map specific pages
+        const pageMapping = {
+            'booklisting': 'booklisting',
+            'book-details': 'book-details',
+            'user': 'user',
+            'admin': 'admin',
+            'login': 'login',
+            'register': 'register',
+            'cart': 'cart',
+            'seller': 'seller',
+            'about': 'about',
+            'contact': 'contact',
+            'help': 'help'
+        };
+        
+        return pageMapping[pageName] || pageName;
     }
 };
 
@@ -2907,5 +3657,71 @@ window.debugCart = {
     clearCart: () => {
         CartManager.clearCart();
         console.log("Cart cleared");
+    }
+};
+
+// Debug helpers for authentication (remove in production)
+window.debugAuth = {
+    testLogout: () => {
+        console.log('🧪 Testing logout function directly...');
+        AuthManager.logout();
+    },
+    
+    checkAuthState: () => {
+        console.log('🧪 Current auth state:');
+        console.log('- Logged in:', AuthManager.isLoggedIn());
+        console.log('- Token:', localStorage.getItem('bookvault_auth_token'));
+        console.log('- Role:', AuthManager.getUserRole());
+        console.log('- User:', AuthManager.getCurrentUser());
+    },
+    
+    findLogoutButtons: () => {
+        const buttons = document.querySelectorAll('.logout-btn');
+        console.log(`🧪 Found ${buttons.length} logout buttons:`);
+        buttons.forEach((btn, index) => {
+            console.log(`- Button ${index + 1}:`, btn);
+            console.log(`  - Text:`, btn.textContent);
+            console.log(`  - Classes:`, btn.className);
+            console.log(`  - Visible:`, btn.offsetParent !== null);
+        });
+        return buttons;
+    },
+    
+    simulateLogoutClick: () => {
+        const buttons = document.querySelectorAll('.logout-btn');
+        if (buttons.length > 0) {
+            console.log('🧪 Simulating click on first logout button...');
+            buttons[0].click();
+        } else {
+            console.log('🧪 No logout buttons found!');
+        }
+    },
+    
+    forceLogout: () => {
+        console.log('🧪 Force logout - no confirmation dialog');
+        localStorage.removeItem('bookvault_auth_token');
+        localStorage.removeItem('bookvault_user_role'); 
+        localStorage.removeItem('bookvault_user_profile');
+        CartManager.clearCart();
+        window.location.href = 'index.html';
+    },
+    
+    showDropdown: () => {
+        console.log('🧪 Trying to show dropdown for logout button access...');
+        const dropdown = document.querySelector('.dropdown-toggle');
+        if (dropdown) {
+            dropdown.click();
+            setTimeout(() => {
+                console.log('🧪 Dropdown should now be visible - try logout button');
+                const logoutBtn = document.querySelector('.logout-btn');
+                if (logoutBtn && logoutBtn.offsetParent !== null) {
+                    console.log('✅ Logout button is now visible!');
+                } else {
+                    console.log('❌ Logout button still not visible');
+                }
+            }, 200);
+        } else {
+            console.log('❌ No dropdown toggle found');
+        }
     }
 }; 

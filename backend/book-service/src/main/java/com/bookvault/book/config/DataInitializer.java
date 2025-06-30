@@ -39,7 +39,8 @@ public class DataInitializer implements CommandLineRunner {
             initializeBooks();
             log.info("Sample data initialization completed!");
         } else {
-            log.info("Sample data already exists, skipping initialization.");
+            log.info("Sample data already exists, checking for image updates...");
+            updateBookImages();
         }
     }
     
@@ -110,6 +111,17 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Created {} sample books", books.size());
     }
     
+    private void updateBookImages() {
+        bookRepository.findAll().forEach(book -> {
+            if (book.getCoverImageUrl() == null || book.getCoverImageUrl().isEmpty()) {
+                book.setCoverImageUrl("asset/img/books/the-great-gatsby.png");
+                bookRepository.save(book);
+                log.info("Updated cover image for: {}", book.getTitle());
+            }
+        });
+        log.info("Book image updates completed!");
+    }
+    
     private Category createCategory(String name, String description) {
         Category category = new Category();
         category.setName(name);
@@ -121,6 +133,11 @@ public class DataInitializer implements CommandLineRunner {
     
     private Book createBook(String title, String author, String isbn, String description, 
                            BigDecimal price, Category category, UUID sellerId) {
+        return createBook(title, author, isbn, description, price, category, sellerId, null);
+    }
+    
+    private Book createBook(String title, String author, String isbn, String description, 
+                           BigDecimal price, Category category, UUID sellerId, String coverImageUrl) {
         Book book = new Book();
         book.setTitle(title);
         book.setAuthor(author);
@@ -133,6 +150,9 @@ public class DataInitializer implements CommandLineRunner {
         book.setRating(BigDecimal.valueOf(3.5 + Math.random() * 1.5)); // Random rating 3.5-5.0
         book.setReviewCount((int) (Math.random() * 100)); // Random review count
         book.setVersion(0L);
+        if (coverImageUrl != null) {
+            book.setCoverImageUrl(coverImageUrl);
+        }
         
         return book;
     }

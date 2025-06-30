@@ -166,6 +166,100 @@ body { background-color: #faf8f5; }
   display: none !important;
 }
 
+/* Navigation State Management - Prevent Flickering */
+.auth-nav {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.guest-nav {
+    opacity: 1; /* Default visible for no-JS users */
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Show navigation states with smooth transition */
+.auth-nav.d-flex {
+    opacity: 1;
+}
+
+.guest-nav.d-flex {
+    opacity: 1;
+}
+
+/* Ensure auth nav is hidden by default */
+.auth-nav.d-none {
+    opacity: 0;
+}
+
+/* Cart badge styling */
+.cart-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+/* Role-based navigation items - smooth transitions */
+.admin-nav, .seller-nav, .user-only-nav, .role-nav-item {
+    transition: opacity 0.15s ease-in-out;
+}
+
+.admin-nav.d-none, .seller-nav.d-none, .user-only-nav.d-none, .role-nav-item.d-none {
+    opacity: 0;
+}
+
+/* Error message styling improvements */
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.error-message.field-error {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Success message styling */
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+/* Loading state for better UX */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
 /* mobile responsive */
 @media (max-width: 600px) {
     .hero-section .search-bar {
@@ -174,6 +268,11 @@ body { background-color: #faf8f5; }
     }
     .hero-section .btn {
         width: 100%;
+    }
+    
+    /* Ensure mobile navigation doesn't flicker */
+    .navbar-collapse {
+        transition: height 0.35s ease;
     }
 }
 

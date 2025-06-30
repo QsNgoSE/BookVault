@@ -82,16 +82,16 @@ public class AuthService {
     
     // Login user
     public AuthResponse login(LoginRequest request, String clientIpAddress) {
-        // Check if user is banned
-        if (loginAttemptService.isUserBanned(request.getEmail())) {
-            long remainingTime = loginAttemptService.getUserBanTimeRemaining(request.getEmail());
-            throw new BadRequestException("User account is temporarily banned. Try again in " + remainingTime + " minutes.");
+        // Check if user is banned using improved BanInfo approach
+        LoginAttemptService.BanInfo userBanInfo = loginAttemptService.getUserBanInfo(request.getEmail());
+        if (userBanInfo.isBanned()) {
+            throw new BadRequestException(userBanInfo.getMessage());
         }
         
         // Check if IP is banned
         if (loginAttemptService.isIpBanned(clientIpAddress)) {
             long remainingTime = loginAttemptService.getIpBanTimeRemaining(clientIpAddress);
-            throw new BadRequestException("IP address is temporarily banned. Try again in " + remainingTime + " minutes.");
+            throw new BadRequestException("Too many failed login attempts from this location. Please try again in " + remainingTime + " minutes.");
         }
         
         try {
@@ -118,17 +118,21 @@ public class AuthService {
             // Record failed login attempt
             loginAttemptService.recordFailedAttempt(request.getEmail(), clientIpAddress);
             
-            // Get current attempt counts for better error message
+            // Get current attempt counts for progressive warning messages
             int userAttempts = loginAttemptService.getUserFailedAttempts(request.getEmail());
             int ipAttempts = loginAttemptService.getIpFailedAttempts(clientIpAddress);
             
-            // Provide informative error message
+            // Provide informative error message with exact requirements
             String errorMessage = "Invalid email or password.";
-            if (userAttempts >= 3) {
-                errorMessage += " Warning: Your account will be temporarily locked after 5 failed attempts.";
-            } else if (ipAttempts >= 7) {
-                errorMessage += " Warning: This IP address will be temporarily blocked after 10 failed attempts.";
+            
+            if (userAttempts >= 2) {
+                errorMessage += " Warning: Account will be locked for 15 minutes after 3 failed attempts, permanently after 5 attempts.";
+            } else if (ipAttempts >= 3) {
+                errorMessage += " Warning: This IP will be blocked for 30 minutes after 5 failed attempts.";
             }
+            
+            log.warn("Failed login attempt for user: {} from IP: {} (attempt {}/5 user, {}/5 IP)", 
+                    request.getEmail(), clientIpAddress, userAttempts, ipAttempts);
             
             throw new BadRequestException(errorMessage);
         }

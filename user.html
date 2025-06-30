@@ -337,6 +337,31 @@
       
       // Update user profile display
       updateUserProfile();
+      
+      // Load user's purchase history
+      console.log('🔍 DEBUG: About to check UserManager...');
+      console.log('🔍 DEBUG: UserManager available:', typeof UserManager !== 'undefined');
+      console.log('🔍 DEBUG: AuthManager.isLoggedIn():', AuthManager?.isLoggedIn());
+      console.log('🔍 DEBUG: Current user:', AuthManager?.getCurrentUser());
+      
+      // Try different approaches to load user orders
+      if (typeof PageManager !== 'undefined' && typeof PageManager.loadUserDashboard === 'function') {
+        console.log('🔄 Loading user dashboard via PageManager...');
+        setTimeout(() => {
+          console.log('🔄 Starting dashboard load after delay...');
+          PageManager.loadUserDashboard();
+        }, 500);
+      } else if (typeof loadUserOrders === 'function') {
+        console.log('🔄 Loading user orders via standalone function...');
+        setTimeout(() => {
+          console.log('🔄 Starting order load after delay...');
+          loadUserOrders();
+        }, 500);
+      } else {
+        console.error('❌ No method available to load user orders');
+        console.log('🔍 DEBUG: Available objects:', Object.keys(window));
+        console.log('🔍 DEBUG: PageManager methods:', typeof PageManager !== 'undefined' ? Object.keys(PageManager) : 'PageManager not available');
+      }
     });
 
     function updateUserProfile() {

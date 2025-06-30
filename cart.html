@@ -198,8 +198,45 @@
   <script>
     // Initialize cart page when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Initializing cart page...');
+        console.log('🛒 Cart Page - Starting initialization...');
+        
+        // Debug cart state
+        console.log('🔍 Debug cart initialization:');
+        console.log('  - PageManager available:', typeof PageManager);
+        console.log('  - CartManager available:', typeof CartManager);
+        console.log('  - Current page path:', window.location.pathname);
+        
+        // Check if cart container exists
+        const container = document.getElementById('cart-container');
+        console.log('  - Cart container found:', !!container);
+        
+        if (container) {
+            console.log('  - Container element:', container);
+        }
+        
+        // Initialize PageManager
+        console.log('🚀 Calling PageManager.init()...');
         PageManager.init();
+        
+        // Fallback: Direct cart initialization after delay
+        setTimeout(() => {
+            console.log('🔄 Fallback: Attempting direct cart initialization...');
+            const container = document.getElementById('cart-container');
+            
+            if (container && CartManager) {
+                console.log('✅ Container and CartManager available, calling displayCart...');
+                try {
+                    CartManager.displayCart('cart-container');
+                    console.log('🎉 Cart displayed successfully!');
+                } catch (error) {
+                    console.error('❌ Error displaying cart:', error);
+                }
+            } else {
+                console.error('❌ Missing requirements for cart display:');
+                console.error('  - Container:', !!container);
+                console.error('  - CartManager:', !!CartManager);
+            }
+        }, 2000);
     });
   </script>
 </body>

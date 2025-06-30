@@ -119,8 +119,15 @@ const CartManager = {
 
     // Update item quantity
     updateQuantity(bookId, quantity) {
-        console.log(`🔄 UpdateQuantity called: item ${bookId}, new quantity ${quantity}`);
+        console.log(`🔄 UpdateQuantity called: item ${bookId} (type: ${typeof bookId}), new quantity ${quantity}`);
         const cart = this.getCart();
+        
+        // Debug cart search
+        console.log(`🔍 Looking for item ${bookId} in cart with ${cart.length} items`);
+        cart.forEach((item, index) => {
+            console.log(`  Cart item ${index}: id=${item.id} (type: ${typeof item.id}), matches: ${item.id === bookId}`);
+        });
+        
         const item = cart.find(item => item.id === bookId);
         
         if (item) {
@@ -151,6 +158,7 @@ const CartManager = {
             }
         } else {
             console.log(`❌ Item ${bookId} not found in cart`);
+            console.log(`❌ Available item IDs:`, cart.map(item => `${item.id} (${typeof item.id})`));
         }
     },
 
@@ -239,6 +247,16 @@ const CartManager = {
 
         const cart = this.getCart();
         console.log(`🛍️ Cart has ${cart.length} items:`, cart);
+        
+        // Debug each cart item
+        cart.forEach((item, index) => {
+            console.log(`📋 Cart item ${index + 1}:`, {
+                id: item.id,
+                idType: typeof item.id,
+                title: item.title,
+                quantity: item.quantity
+            });
+        });
         
         if (cart.length === 0) {
             container.innerHTML = `
@@ -1864,26 +1882,42 @@ const APIService = {
 
     // Order API calls - Real backend implementation
     order: {
-        create: (orderData) => APIService.makeRequest(CONFIG.ENDPOINTS.ORDERS.BASE, {
-            method: 'POST',
-            body: JSON.stringify(orderData)
-        }),
+        create: (orderData) => {
+            const userId = AuthManager.getCurrentUser()?.userId || AuthManager.getCurrentUser()?.id;
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}`, {
+                method: 'POST',
+                headers: { 'X-User-Id': userId },
+                body: JSON.stringify(orderData)
+            });
+        },
         getById: (orderId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}`),
-        getByUser: (userId, page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.USER}/${userId}?page=${page}&size=${size}`),
+        getByUser: (userId, page = 0, size = 10) => {
+            // Use the correct endpoint that the backend actually provides
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/my-orders`, {
+                headers: { 'X-User-Id': userId }
+            });
+        },
+        getByUserPaged: (userId, page = 0, size = 10) => {
+            // Use the paged version
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/my-orders/paged?page=${page}&size=${size}`, {
+                headers: { 'X-User-Id': userId }
+            });
+        },
         updateStatus: (orderId, status) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/status`, {
             method: 'PUT',
             body: JSON.stringify({ status })
         }),
-        cancel: (orderId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/cancel`, {
-            method: 'PUT'
+        cancel: (orderId, reason = "User requested cancellation") => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/cancel`, {
+            method: 'PUT',
+            body: JSON.stringify({ reason })
         }),
         track: (orderId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/tracking`),
         // Admin order methods
         admin: {
-            getAll: (page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.ADMIN}?page=${page}&size=${size}`),
-            getStats: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.ADMIN}/stats`),
-            getByStatus: (status, page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.ADMIN}/status/${status}?page=${page}&size=${size}`),
-            updateStatus: (orderId, status) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.ADMIN}/${orderId}/status`, {
+            getAll: (page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/all?page=${page}&size=${size}`),
+            getStats: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/statistics`),
+            getByStatus: (status, page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/status/${status}?page=${page}&size=${size}`),
+            updateStatus: (orderId, status) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/status`, {
                 method: 'PUT',
                 body: JSON.stringify({ status })
             })
@@ -2272,6 +2306,321 @@ const UserManager = {
         }
 
         BookManager.displayBooks(wishlist, 'user-wishlist');
+    },
+
+    // Get order status badge color
+    getOrderStatusColor(status) {
+        switch (status?.toUpperCase()) {
+            case 'DELIVERED': return 'success';
+            case 'PROCESSING': case 'CONFIRMED': case 'SHIPPED': return 'warning';
+            case 'CANCELLED': case 'REFUNDED': return 'danger';
+            case 'PENDING': return 'secondary';
+            default: return 'secondary';
+        }
+    },
+
+    // View order details
+    async viewOrder(orderId) {
+        try {
+            console.log('🔍 ViewOrder called with ID:', orderId);
+            const currentUser = AuthManager.getCurrentUser();
+            console.log('👤 Current user object:', currentUser);
+            
+            // Try different possible ID fields
+            const userId = currentUser?.id || currentUser?.userId || currentUser?.sub;
+            console.log('🔍 Extracted user ID:', userId);
+            
+            if (!userId) {
+                console.warn('❌ No user ID found in user object');
+                return;
+            }
+            
+            console.log('📦 Fetching order details...');
+            const response = await APIService.order.getById(orderId);
+            const order = response.data || response; // Handle both response formats
+            console.log('📦 Order data received:', order);
+            
+            const statusColor = this.getOrderStatusColor(order.status);
+            const orderItems = order.orderItems || [];
+            
+            console.log('🎨 Creating modal with', orderItems.length, 'items');
+            
+            // Remove any existing order modal first
+            const existingModal = document.getElementById('orderDetailsModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Show order details in modal
+            const modal = document.createElement('div');
+            modal.id = 'orderDetailsModal';
+            modal.className = 'modal fade';
+            modal.setAttribute('tabindex', '-1');
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Order Details #${order.orderNumber || order.id.substring(0, 8)}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Status:</strong> <span class="badge bg-${statusColor}">${order.status}</span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Order Number:</strong> ${order.orderNumber || 'N/A'}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Payment Method:</strong> ${order.paymentMethodDisplayName || order.paymentMethod}
+                                </div>
+                            </div>
+                            ${order.trackingNumber ? `
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <strong>Tracking Number:</strong> ${order.trackingNumber}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <h6 class="mt-4">Order Items:</h6>
+                            <div class="order-items">
+                                ${orderItems.map(item => `
+                                    <div class="d-flex align-items-center gap-3 mb-3 p-3 border rounded">
+                                        <img src="${item.bookImageUrl || '/asset/img/books/placeholder.jpg'}" 
+                                             style="width: 60px; height: 80px; object-fit: cover;" 
+                                             class="rounded" alt="${item.bookTitle}">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">${item.bookTitle}</h6>
+                                            <p class="text-muted mb-1 small">${item.bookAuthor || 'Unknown Author'}</p>
+                                            <div class="small">
+                                                <div>Quantity: <strong>${item.quantity}</strong></div>
+                                                <div>Unit Price: <strong>$${parseFloat(item.unitPrice).toFixed(2)}</strong></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold text-primary">$${parseFloat(item.totalPrice).toFixed(2)}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            ${order.fullShippingAddress ? `
+                                <h6 class="mt-4">Shipping Address:</h6>
+                                <div class="p-3 border rounded bg-light">
+                                    <div><strong>${order.customerName}</strong></div>
+                                    <div>${order.fullShippingAddress}</div>
+                                    ${order.customerPhone ? `<div>Phone: ${order.customerPhone}</div>` : ''}
+                                </div>
+                            ` : ''}
+                            
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    ${order.orderNotes ? `
+                                        <div>
+                                            <strong>Order Notes:</strong>
+                                            <p class="text-muted small">${order.orderNotes}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-end">
+                                        <div>Subtotal: $${parseFloat(order.totalAmount).toFixed(2)}</div>
+                                        ${order.shippingCost ? `<div>Shipping: $${parseFloat(order.shippingCost).toFixed(2)}</div>` : ''}
+                                        ${order.taxAmount && order.taxAmount > 0 ? `<div>Tax: $${parseFloat(order.taxAmount).toFixed(2)}</div>` : ''}
+                                        <hr>
+                                        <h5 class="text-primary">Total: $${parseFloat(order.finalAmount || order.totalAmount).toFixed(2)}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${order.status === 'PENDING' ? `
+                                <div class="mt-4 text-center">
+                                    <button class="btn btn-outline-danger" onclick="UserManager.cancelOrder('${order.id}')">
+                                        <i class="bi bi-x-circle"></i> Cancel Order
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary" onclick="UserManager.buyAgain('${order.id}')">
+                                <i class="bi bi-arrow-repeat"></i> Buy Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            console.log('📝 Modal added to DOM');
+            
+            // Try multiple ways to show the modal
+            try {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    console.log('🚀 Showing modal with Bootstrap...');
+                    const bsModal = new bootstrap.Modal(modal);
+                    bsModal.show();
+                    
+                    modal.addEventListener('hidden.bs.modal', () => {
+                        console.log('🗑️ Removing modal from DOM');
+                        modal.remove();
+                    });
+                } else {
+                    // Fallback: show modal manually
+                    console.log('⚠️ Bootstrap not available, showing modal manually');
+                    modal.style.display = 'block';
+                    modal.classList.add('show');
+                    document.body.classList.add('modal-open');
+                    
+                    // Add backdrop
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    document.body.appendChild(backdrop);
+                    
+                    // Handle close button
+                    modal.querySelector('.btn-close').onclick = () => {
+                        modal.style.display = 'none';
+                        modal.classList.remove('show');
+                        document.body.classList.remove('modal-open');
+                        backdrop.remove();
+                        modal.remove();
+                    };
+                }
+            } catch (modalError) {
+                console.error('❌ Error showing modal:', modalError);
+                // Fallback to alert if modal fails
+                alert(`Order Details:\n\nOrder: ${order.orderNumber}\nStatus: ${order.status}\nTotal: $${order.finalAmount}\nItems: ${orderItems.length}`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error loading order details:', error);
+            if (typeof Utils !== 'undefined' && Utils.showError) {
+                Utils.showError('Failed to load order details.');
+            } else {
+                alert('Failed to load order details. Please try again.');
+            }
+        }
+    },
+    
+    // Cancel order
+    async cancelOrder(orderId) {
+        if (!confirm('Are you sure you want to cancel this order?')) return;
+        
+        try {
+            await APIService.order.cancel(orderId);
+            if (typeof Utils !== 'undefined' && Utils.showSuccess) {
+                Utils.showSuccess('Order cancelled successfully.');
+            }
+            
+            // Reload the orders if loadUserOrders function exists
+            if (typeof loadUserOrders === 'function') {
+                loadUserOrders();
+            }
+            
+            // Close any open modals
+            const openModal = document.querySelector('.modal.show');
+            if (openModal && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getInstance(openModal).hide();
+            }
+        } catch (error) {
+            console.error('Error cancelling order:', error);
+            if (typeof Utils !== 'undefined' && Utils.showError) {
+                Utils.showError('Failed to cancel order.');
+            }
+        }
+    },
+
+    // Buy again - Add all items from previous order to cart
+    async buyAgain(orderId) {
+        try {
+            console.log('🔄 BuyAgain called with order ID:', orderId);
+            const response = await APIService.order.getById(orderId);
+            const order = response.data || response; // Handle both response formats
+            console.log('📦 Order data for buy again:', order);
+            
+            const orderItems = order.orderItems || [];
+            console.log('📦 Found', orderItems.length, 'items in order');
+            
+            if (orderItems.length === 0) {
+                console.warn('❌ No order items found');
+                if (typeof Utils !== 'undefined' && Utils.showError) {
+                    Utils.showError('No items found in this order.');
+                } else {
+                    alert('No items found in this order.');
+                }
+                return;
+            }
+
+            let addedCount = 0;
+            console.log('🛒 Adding items to cart...');
+            
+            for (const item of orderItems) {
+                console.log('➕ Processing item:', item.bookTitle, 'x', item.quantity);
+                
+                // Create book object for cart
+                const bookForCart = {
+                    id: item.bookId,
+                    title: item.bookTitle,
+                    author: item.bookAuthor || 'Unknown Author',
+                    price: parseFloat(item.unitPrice),
+                    imageUrl: item.bookImageUrl || '/asset/img/books/placeholder.jpg'
+                };
+                
+                console.log('📚 Book for cart:', bookForCart);
+                
+                // Add each item to cart with its original quantity
+                if (typeof CartManager !== 'undefined' && CartManager.addToCart) {
+                    try {
+                        CartManager.addToCart(bookForCart, item.quantity);
+                        addedCount += item.quantity;
+                        console.log('✅ Added to cart:', item.bookTitle, 'x', item.quantity);
+                    } catch (cartError) {
+                        console.error('❌ Error adding to cart:', cartError);
+                    }
+                } else {
+                    console.warn('⚠️ CartManager not available');
+                }
+            }
+            
+            console.log('🎉 Total items added to cart:', addedCount);
+            
+            if (addedCount > 0) {
+                if (typeof Utils !== 'undefined' && Utils.showSuccess) {
+                    Utils.showSuccess(`${addedCount} item(s) added to your cart!`);
+                } else {
+                    alert(`${addedCount} item(s) added to your cart!`);
+                }
+                
+                // Close the modal if it's open
+                const openModal = document.querySelector('.modal.show');
+                if (openModal && typeof bootstrap !== 'undefined') {
+                    const modalInstance = bootstrap.Modal.getInstance(openModal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }
+            } else {
+                if (typeof Utils !== 'undefined' && Utils.showError) {
+                    Utils.showError('No items were added to cart.');
+                } else {
+                    alert('No items were added to cart.');
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Error processing buy again:', error);
+            if (typeof Utils !== 'undefined' && Utils.showError) {
+                Utils.showError('Failed to add items to cart.');
+            } else {
+                alert('Failed to add items to cart.');
+            }
+        }
     }
 };
 
@@ -2514,62 +2863,119 @@ const PageManager = {
     
     // Initialize global event listeners
     initGlobalEventListeners() {
-        // Handle logout clicks - ENHANCED FOR DROPDOWN COMPATIBILITY
+        // ROBUST LOGOUT HANDLING - BOOTSTRAP DROPDOWN COMPATIBLE
+        console.log('🎯 Initializing robust logout handlers...');
+        
+        // Method 1: Global event delegation with immediate handling
         document.addEventListener('click', (e) => {
-            const logoutBtn = e.target.matches('.logout-btn') ? e.target : e.target.closest('.logout-btn');
+            // Check if clicked element is logout button or contains logout button
+            const logoutBtn = e.target.classList.contains('logout-btn') ? e.target : e.target.closest('.logout-btn');
             if (logoutBtn) {
+                console.log('🚪 Logout button clicked (Method 1)!', logoutBtn);
                 e.preventDefault();
-                e.stopPropagation(); // Prevent dropdown from interfering
-                console.log('🚪 Logout button clicked!');
-                
-                // Add confirmation dialog for better UX
-                if (confirm('Are you sure you want to log out?')) {
-                    console.log('🚪 User confirmed logout, proceeding...');
-                    AuthManager.logout();
-                } else {
-                    console.log('🚪 User cancelled logout');
-                }
-            }
-        }, true); // Use capture phase for better dropdown compatibility
-        
-        // Alternative: Direct logout handler for better compatibility
-        const logoutButtons = document.querySelectorAll('.logout-btn');
-        console.log(`🔍 Found ${logoutButtons.length} logout buttons on page`);
-        
-        logoutButtons.forEach((btn, index) => {
-            console.log(`🔗 Binding logout handler to button ${index + 1}:`, btn);
-            
-            // Force visibility check bypass for dropdown items
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
+                e.stopImmediatePropagation();
                 e.stopPropagation();
-                console.log('🚪 Direct logout button clicked via direct handler!');
                 
-                if (confirm('Are you sure you want to log out?')) {
-                    console.log('🚪 User confirmed logout via direct handler, proceeding...');
-                    AuthManager.logout();
-                } else {
-                    console.log('🚪 User cancelled logout via direct handler');
-                }
-            }, true); // Use capture phase
+                // Immediate logout without confirmation for testing
+                this.performLogout();
+                return false;
+            }
+        }, true); // Use capture phase
+
+        // Method 2: Direct event binding with Bootstrap dropdown prevention
+        const bindLogoutEvents = () => {
+            const logoutButtons = document.querySelectorAll('.logout-btn');
+            console.log(`🔍 Found ${logoutButtons.length} logout buttons for direct binding`);
             
-            // Also add a mousedown handler as backup
-            btn.addEventListener('mousedown', (e) => {
-                console.log('🖱️ Mousedown detected on logout button');
+            logoutButtons.forEach((btn, index) => {
+                console.log(`🔗 Binding events to logout button ${index + 1}:`, btn);
+                
+                // Remove any existing listeners by cloning
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                // Multiple event types for maximum compatibility
+                ['click', 'mousedown', 'touchstart'].forEach(eventType => {
+                    newBtn.addEventListener(eventType, (e) => {
+                        console.log(`🚪 Logout triggered via ${eventType} (Method 2)!`);
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        e.stopPropagation();
+                        
+                        // Close dropdown immediately to prevent Bootstrap interference
+                        const dropdown = newBtn.closest('.dropdown');
+                        if (dropdown) {
+                            const dropdownToggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+                            if (dropdownToggle && bootstrap && bootstrap.Dropdown) {
+                                const dropdownInstance = bootstrap.Dropdown.getInstance(dropdownToggle);
+                                if (dropdownInstance) {
+                                    dropdownInstance.hide();
+                                }
+                            }
+                        }
+                        
+                        // Perform logout
+                        this.performLogout();
+                        return false;
+                    }, { capture: true, passive: false });
+                });
+                
+                // Also handle href="#" clicks by changing the href
+                newBtn.href = 'javascript:void(0)';
+            });
+        };
+
+        // Method 3: MutationObserver to handle dynamically added logout buttons
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const addedLogoutButtons = [];
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.classList && node.classList.contains('logout-btn')) {
+                                addedLogoutButtons.push(node);
+                            }
+                            const childLogoutButtons = node.querySelectorAll ? node.querySelectorAll('.logout-btn') : [];
+                            addedLogoutButtons.push(...childLogoutButtons);
+                        }
+                    });
+                    
+                    if (addedLogoutButtons.length > 0) {
+                        console.log(`🔄 Found ${addedLogoutButtons.length} new logout buttons, binding events...`);
+                        setTimeout(bindLogoutEvents, 100);
+                    }
+                }
             });
         });
         
-        // Add keyboard shortcut for logout (Ctrl/Cmd + Shift + L)
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // Initial binding
+        setTimeout(bindLogoutEvents, 100);
+        
+        // Method 4: Keyboard shortcut (Ctrl/Cmd + Shift + L)
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
                 e.preventDefault();
-                console.log('⌨️ Logout keyboard shortcut triggered!');
-                if (AuthManager.isLoggedIn() && confirm('Logout with keyboard shortcut?\n\nPress Ctrl+Shift+L to logout from anywhere on the site.')) {
-                    AuthManager.logout();
-                }
+                console.log('⌨️ Logout keyboard shortcut triggered (Ctrl+Shift+L)!');
+                this.performLogout();
             }
         });
-        
+
+        // Method 5: Fallback timer-based rebinding
+        setInterval(() => {
+            const logoutButtons = document.querySelectorAll('.logout-btn');
+            if (logoutButtons.length > 0) {
+                logoutButtons.forEach(btn => {
+                    if (!btn.hasAttribute('data-logout-bound')) {
+                        console.log('🔄 Found unbound logout button, fixing...');
+                        btn.setAttribute('data-logout-bound', 'true');
+                        bindLogoutEvents();
+                    }
+                });
+            }
+        }, 3000);
+
         // Handle cart button clicks
         document.addEventListener('click', (e) => {
             if (e.target.matches('.add-to-cart-btn') || e.target.closest('.add-to-cart-btn')) {
@@ -2577,7 +2983,7 @@ const PageManager = {
                 this.handleAddToCart(e.target.closest('.add-to-cart-btn'));
             }
         });
-        
+
         // Handle wishlist button clicks
         document.addEventListener('click', (e) => {
             if (e.target.matches('.wishlist-btn') || e.target.closest('.wishlist-btn')) {
@@ -2589,17 +2995,57 @@ const PageManager = {
                 }
             }
         });
+
+        console.log('✅ All global event listeners initialized with robust logout handling');
+    },
+
+    // Centralized logout performance method
+    performLogout() {
+        console.log('🚪 Performing logout...');
         
-        // Final fallback: Force fix logout buttons after a delay
-        setTimeout(() => {
-            this.forceFixLogoutButtons();
-        }, 1000);
+        // Show immediate feedback
+        const logoutButtons = document.querySelectorAll('.logout-btn');
+        logoutButtons.forEach(btn => {
+            btn.textContent = 'Logging out...';
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.6';
+        });
         
-        console.log('🎯 Global event listeners initialized');
-        console.log(`🎯 Found ${document.querySelectorAll('.logout-btn').length} logout buttons on page`);
+        // Use AuthManager logout method
+        if (AuthManager && typeof AuthManager.logout === 'function') {
+            console.log('🚪 Using AuthManager.logout()');
+            AuthManager.logout();
+        } else {
+            console.log('🚪 AuthManager not available, performing manual logout');
+            this.manualLogout();
+        }
+    },
+
+    // Manual logout as fallback
+    manualLogout() {
+        console.log('🚪 Executing manual logout...');
+        
+        // Clear authentication data
+        localStorage.removeItem('bookvault_auth_token');
+        localStorage.removeItem('bookvault_user_role'); 
+        localStorage.removeItem('bookvault_user_profile');
+        console.log('🚪 Authentication data cleared from localStorage');
+        
+        // Clear cart
+        if (window.CartManager) {
+            CartManager.clearCart();
+            console.log('🚪 Shopping cart cleared');
+        }
+        
+        // Show success message
+        alert('Successfully logged out! Redirecting to home page...');
+        
+        // Redirect to home page
+        console.log('🚪 Redirecting to home page...');
+        window.location.href = 'index.html';
     },
     
-    // Force fix logout buttons as final fallback
+    // Force fix logout buttons as final fallback - SIMPLIFIED VERSION
     forceFixLogoutButtons() {
         const logoutButtons = document.querySelectorAll('.logout-btn');
         console.log(`🔧 Force fixing ${logoutButtons.length} logout buttons...`);
@@ -2607,44 +3053,21 @@ const PageManager = {
         logoutButtons.forEach((logoutBtn, index) => {
             console.log(`🔧 Fixing logout button ${index + 1}`);
             
-            // Clone to remove all existing event listeners
-            const newLogoutBtn = logoutBtn.cloneNode(true);
-            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-            
-            // Add reliable click handler
-            newLogoutBtn.addEventListener('click', function(e) {
+            // Simply add a direct onclick handler as ultimate fallback
+            logoutBtn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('🚪 FORCE FIXED logout button clicked!');
-                
-                if (confirm('Are you sure you want to log out?')) {
-                    console.log('🚪 User confirmed logout, proceeding...');
-                    
-                    // Clear auth data
-                    localStorage.removeItem('bookvault_auth_token');
-                    localStorage.removeItem('bookvault_user_role'); 
-                    localStorage.removeItem('bookvault_user_profile');
-                    
-                    // Clear cart
-                    if (window.CartManager) {
-                        CartManager.clearCart();
-                    }
-                    
-                    // Redirect
-                    window.location.href = 'index.html';
-                } else {
-                    console.log('🚪 User cancelled logout');
-                }
-            });
+                console.log('🚪 Force fixed onclick handler triggered!');
+                this.performLogout();
+                return false;
+            };
             
-            // Also handle mousedown as backup
-            newLogoutBtn.addEventListener('mousedown', function() {
-                console.log('🖱️ Mousedown detected on fixed logout button');
-            });
+            // Mark as force-fixed
+            logoutBtn.setAttribute('data-force-fixed', 'true');
         });
         
         if (logoutButtons.length > 0) {
-            console.log('✅ All logout buttons have been force-fixed!');
+            console.log('✅ All logout buttons have been force-fixed with onclick handlers!');
         }
     },
 
@@ -3103,11 +3526,37 @@ const PageManager = {
     // Load user orders
     async loadUserOrders() {
         try {
-            const userId = AuthManager.getCurrentUser()?.id;
-            if (!userId) return;
+            console.log('📦 Loading user orders...');
+            const currentUser = AuthManager.getCurrentUser();
+            console.log('👤 Current user:', currentUser);
             
+            // Try different possible ID fields
+            const userId = currentUser?.id || currentUser?.userId || currentUser?.sub || currentUser?.email;
+            console.log('🔍 User ID for orders:', userId);
+            
+            if (!userId) {
+                console.warn('❌ No user ID found, cannot load orders');
+                const container = document.querySelector('#orders-table-body');
+                if (container) {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                                <p class="text-muted">Unable to load orders - please log in again</p>
+                                <a href="login.html" class="btn bookvault-btn">Login</a>
+                            </td>
+                        </tr>
+                    `;
+                }
+                return;
+            }
+            
+            console.log('🌐 Making API call to get orders for user:', userId);
             const response = await APIService.order.getByUser(userId);
-            const orders = response.content || response;
+            console.log('📦 Orders API response:', response);
+            
+            const orders = response.content || response.data || response;
+            console.log('📦 Processed orders:', orders);
             const container = document.querySelector('#orders-table-body');
             
             if (container) {
@@ -3150,8 +3599,53 @@ const PageManager = {
                 }
             }
         } catch (error) {
-            console.error('Error loading orders:', error);
-            Utils.showError('Failed to load orders.');
+            console.error('❌ Error loading orders:', error);
+            const container = document.querySelector('#orders-table-body');
+            if (container) {
+                // Show different messages based on error type
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-wifi-off display-4 text-muted mb-3"></i>
+                                <p class="text-muted">Unable to connect to order service</p>
+                                <p class="small text-muted">Error: ${error.message}</p>
+                                <button class="btn btn-outline-primary" onclick="UserManager.loadUserOrders()">Retry</button>
+                            </td>
+                        </tr>
+                    `;
+                } else if (error.message.includes('404')) {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-box display-4 text-muted mb-3"></i>
+                                <p class="text-muted">No orders found</p>
+                                <p class="small text-muted">Order service is not available or you have no orders yet.</p>
+                                <a href="booklisting.html" class="btn bookvault-btn">Start Shopping</a>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-exclamation-circle display-4 text-warning mb-3"></i>
+                                <p class="text-muted">Failed to load orders</p>
+                                <p class="small text-muted">Error: ${error.message}</p>
+                                <div class="mt-3">
+                                    <button class="btn btn-outline-primary me-2" onclick="UserManager.loadUserOrders()">Retry</button>
+                                    <a href="booklisting.html" class="btn btn-outline-secondary">Browse Books</a>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+            
+            // Also show a toast notification
+            if (typeof Utils !== 'undefined' && Utils.showError) {
+                Utils.showError('Failed to load purchase history. Please try again.');
+            }
         }
     },
     
@@ -3447,6 +3941,8 @@ const PageManager = {
     // Handle add to cart
     handleAddToCart(button, book = null) {
         console.log('🛒 HandleAddToCart called', { button, book });
+        console.log('🛒 CartManager available:', typeof CartManager);
+        console.log('🛒 Utils available:', typeof Utils);
         
         // Use provided book data or extract from page
         const bookData = book || this.extractBookDataFromPage();
@@ -3454,7 +3950,21 @@ const PageManager = {
         
         if (bookData) {
             console.log('✅ Adding book to cart...');
-            CartManager.addToCart(bookData);
+            try {
+                CartManager.addToCart(bookData);
+                console.log('🎉 Book successfully added to cart!');
+                
+                // Show notification
+                if (CartManager.showCartNotification) {
+                    CartManager.showCartNotification('Book added to cart!');
+                } else {
+                    console.log('📢 No CartManager.showCartNotification method found');
+                    Utils.showSuccess('Book added to cart!');
+                }
+            } catch (error) {
+                console.error('❌ Error adding book to cart:', error);
+                Utils.showError('Unable to add book to cart. Please try again.');
+            }
         } else {
             console.log('❌ No book data found');
             Utils.showError('Unable to add book to cart. Please try again.');
@@ -3514,55 +4024,96 @@ const PageManager = {
 
     // Setup book action buttons
     setupBookActions(book = null) {
-        // Add to Cart buttons
-        const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-        console.log(`🔘 Found ${addToCartBtns.length} Add to Cart buttons`);
+        console.log('🔧 setupBookActions called with book:', book);
+        console.log('🔧 Current DOM state:', document.readyState);
         
-        // Remove existing listeners first to prevent duplicates
-        addToCartBtns.forEach(btn => {
-            // Clone the button to remove all event listeners
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-        });
-        
-        // Re-select buttons after cloning
-        const freshAddToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-        freshAddToCartBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🔘 Add to Cart button clicked', book);
-                this.handleAddToCart(btn, book);
+        // Wait a moment for DOM to be fully ready
+        setTimeout(() => {
+            // Add to Cart buttons
+            const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+            console.log(`🔘 Found ${addToCartBtns.length} Add to Cart buttons`);
+            console.log('🔘 Add to Cart buttons:', addToCartBtns);
+            
+            // Remove existing listeners first to prevent duplicates
+            addToCartBtns.forEach((btn, index) => {
+                console.log(`🔧 Processing Add to Cart button ${index + 1}:`, btn);
+                // Clone the button to remove all event listeners
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
             });
-        });
+            
+            // Re-select buttons after cloning
+            const freshAddToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+            console.log(`🔘 Re-selected ${freshAddToCartBtns.length} fresh Add to Cart buttons`);
+            
+            freshAddToCartBtns.forEach((btn, index) => {
+                console.log(`🔧 Adding event listener to Add to Cart button ${index + 1}`);
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('🛒 Add to Cart button clicked!', book);
+                    this.handleAddToCart(btn, book);
+                });
+                
+                // Also add visual feedback on hover
+                btn.style.cursor = 'pointer';
+                btn.title = 'Add this book to your cart';
+            });
 
-        // Buy Now buttons
-        const buyNowBtns = document.querySelectorAll('.buy-now-btn');
-        console.log(`🔘 Found ${buyNowBtns.length} Buy Now buttons`);
-        
-        // Remove existing listeners first to prevent duplicates
-        buyNowBtns.forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-        });
-        
-        // Re-select buttons after cloning
-        const freshBuyNowBtns = document.querySelectorAll('.buy-now-btn');
-        freshBuyNowBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🔘 Buy Now button clicked', book);
-                this.handleBuyNow(book);
+            // Buy Now buttons
+            const buyNowBtns = document.querySelectorAll('.buy-now-btn');
+            console.log(`🔘 Found ${buyNowBtns.length} Buy Now buttons`);
+            console.log('🔘 Buy Now buttons:', buyNowBtns);
+            
+            // Remove existing listeners first to prevent duplicates
+            buyNowBtns.forEach((btn, index) => {
+                console.log(`🔧 Processing Buy Now button ${index + 1}:`, btn);
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
             });
-        });
+            
+            // Re-select buttons after cloning
+            const freshBuyNowBtns = document.querySelectorAll('.buy-now-btn');
+            console.log(`🔘 Re-selected ${freshBuyNowBtns.length} fresh Buy Now buttons`);
+            
+            freshBuyNowBtns.forEach((btn, index) => {
+                console.log(`🔧 Adding event listener to Buy Now button ${index + 1}`);
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('⚡ Buy Now button clicked!', book);
+                    this.handleBuyNow(book);
+                });
+                
+                // Also add visual feedback on hover
+                btn.style.cursor = 'pointer';
+                btn.title = 'Buy this book now';
+            });
+            
+            console.log('✅ setupBookActions completed successfully');
+        }, 100);
     },
 
     // Handle buy now
     handleBuyNow(book = null) {
+        console.log('⚡ HandleBuyNow called', { book });
+        console.log('⚡ CartManager available:', typeof CartManager);
+        console.log('⚡ CheckoutManager available:', typeof CheckoutManager);
+        
         const bookData = book || this.extractBookDataFromPage();
+        console.log('📖 Book data for buy now:', bookData);
+        
         if (bookData) {
-            CartManager.addToCart(bookData);
-            CheckoutManager.startCheckout();
+            console.log('✅ Adding book to cart and starting checkout...');
+            try {
+                CartManager.addToCart(bookData);
+                console.log('🎉 Book added to cart, starting checkout...');
+                CheckoutManager.startCheckout();
+                console.log('🛒 Checkout started successfully!');
+            } catch (error) {
+                console.error('❌ Error processing buy now:', error);
+                Utils.showError('Unable to process purchase. Please try again.');
+            }
         } else {
+            console.log('❌ No book data found for buy now');
             Utils.showError('Unable to process purchase. Please try again.');
         }
     },
@@ -3618,11 +4169,181 @@ const PageManager = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔥 BookVault - Starting Application...');
     
+    // IMMEDIATE LOGOUT FIX - Run before anything else
+    console.log('🚨 IMMEDIATE LOGOUT FIX - Starting...');
+    immediateLogoutFix();
+    
     // Initialize the main page manager
     PageManager.init();
     
     console.log('✅ BookVault Application Started Successfully');
 });
+
+// IMMEDIATE LOGOUT FIX FUNCTION
+function immediateLogoutFix() {
+    console.log('🔧 Applying immediate logout fix...');
+    
+    // Function to aggressively fix logout buttons
+    const aggressiveLogoutFix = () => {
+        const logoutButtons = document.querySelectorAll('.logout-btn:not([data-immediate-fixed])');
+        console.log(`🎯 IMMEDIATE FIX: Found ${logoutButtons.length} unfixed logout buttons`);
+        
+        if (logoutButtons.length === 0) {
+            console.log('✅ All logout buttons already fixed, skipping...');
+            return;
+        }
+        
+        logoutButtons.forEach((btn, index) => {
+            console.log(`🔧 IMMEDIATE FIX: Processing button ${index + 1}`, btn);
+            
+            // Check if already fixed to prevent infinite loop
+            if (btn.hasAttribute('data-immediate-fixed')) {
+                console.log('⏭️ Button already fixed, skipping...');
+                return;
+            }
+            
+            // Mark as fixed FIRST to prevent re-processing
+            btn.setAttribute('data-immediate-fixed', 'true');
+            
+            // Completely override the href WITHOUT cloning (to avoid mutation observer loop)
+            btn.removeAttribute('href');
+            btn.href = 'javascript:void(0)';
+            
+            // Set direct onclick handler (most reliable)
+            btn.onclick = function(e) {
+                console.log('🚪 IMMEDIATE LOGOUT ONCLICK TRIGGERED!');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                // Immediate logout
+                console.log('🚪 Executing immediate logout...');
+                
+                // Clear auth data
+                localStorage.removeItem('bookvault_auth_token');
+                localStorage.removeItem('bookvault_user_role'); 
+                localStorage.removeItem('bookvault_user_profile');
+                console.log('🚪 Auth data cleared');
+                
+                // Clear cart
+                if (window.CartManager) {
+                    CartManager.clearCart();
+                    console.log('🚪 Cart cleared');
+                }
+                
+                // Show immediate feedback with auto-dismiss
+                showLogoutFeedback();
+                
+                // Redirect after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                
+                return false;
+            };
+            
+            // Set style
+            btn.style.cursor = 'pointer';
+            
+            console.log(`✅ IMMEDIATE FIX: Button ${index + 1} fixed with onclick handler`);
+        });
+        
+        if (logoutButtons.length > 0) {
+            console.log('✅ IMMEDIATE LOGOUT FIX COMPLETED!');
+        }
+    };
+    
+    // Apply fix immediately
+    aggressiveLogoutFix();
+    
+    // Apply fix again after a short delay (for dynamic content)
+    setTimeout(aggressiveLogoutFix, 500);
+    setTimeout(aggressiveLogoutFix, 1000);
+    setTimeout(aggressiveLogoutFix, 2000);
+    
+    // Watch for new logout buttons (but ignore our own changes)
+    const observer = new MutationObserver((mutations) => {
+        let hasNewUnfixedLogoutButtons = false;
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Only count as new if it's a logout button without our fix
+                        if (node.classList && node.classList.contains('logout-btn') && 
+                            !node.hasAttribute('data-immediate-fixed')) {
+                            hasNewUnfixedLogoutButtons = true;
+                        }
+                        if (node.querySelectorAll) {
+                            const childLogoutButtons = node.querySelectorAll('.logout-btn:not([data-immediate-fixed])');
+                            if (childLogoutButtons.length > 0) {
+                                hasNewUnfixedLogoutButtons = true;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (hasNewUnfixedLogoutButtons) {
+            console.log('🔄 IMMEDIATE FIX: New unfixed logout buttons detected, applying fix...');
+            setTimeout(aggressiveLogoutFix, 100);
+        }
+    });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    console.log('🚨 IMMEDIATE LOGOUT FIX INITIALIZED');
+}
+
+// Show logout feedback with auto-dismiss
+function showLogoutFeedback() {
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+    `;
+    
+    toast.innerHTML = `
+        <i class="bi bi-check-circle" style="font-size: 18px;"></i>
+        <span>Logging out... Redirecting in 2 seconds</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0)';
+    });
+    
+    // Auto remove after 2.5 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 2500);
+}
 
 // Export managers for global access
 window.BookVault = {
@@ -3664,7 +4385,11 @@ window.debugCart = {
 window.debugAuth = {
     testLogout: () => {
         console.log('🧪 Testing logout function directly...');
-        AuthManager.logout();
+        if (PageManager && PageManager.performLogout) {
+            PageManager.performLogout();
+        } else {
+            AuthManager.logout();
+        }
     },
     
     checkAuthState: () => {
@@ -3683,6 +4408,10 @@ window.debugAuth = {
             console.log(`  - Text:`, btn.textContent);
             console.log(`  - Classes:`, btn.className);
             console.log(`  - Visible:`, btn.offsetParent !== null);
+            console.log(`  - In dropdown:`, btn.closest('.dropdown-menu') !== null);
+            console.log(`  - Has onclick:`, btn.onclick !== null);
+            console.log(`  - Has data-logout-bound:`, btn.hasAttribute('data-logout-bound'));
+            console.log(`  - Has data-force-fixed:`, btn.hasAttribute('data-force-fixed'));
         });
         return buttons;
     },
@@ -3691,6 +4420,7 @@ window.debugAuth = {
         const buttons = document.querySelectorAll('.logout-btn');
         if (buttons.length > 0) {
             console.log('🧪 Simulating click on first logout button...');
+            console.log('🧪 Button details:', buttons[0]);
             buttons[0].click();
         } else {
             console.log('🧪 No logout buttons found!');
@@ -3723,5 +4453,67 @@ window.debugAuth = {
         } else {
             console.log('❌ No dropdown toggle found');
         }
+    },
+    
+    testAllLogoutMethods: () => {
+        console.log('🧪 Testing all logout methods...');
+        
+        // Test Method 1: Direct click simulation
+        console.log('🧪 Testing Method 1: Direct click simulation');
+        const buttons = document.querySelectorAll('.logout-btn');
+        if (buttons.length > 0) {
+            buttons[0].click();
+        }
+        
+        setTimeout(() => {
+            // Test Method 2: Keyboard shortcut
+            console.log('🧪 Testing Method 2: Keyboard shortcut (Ctrl+Shift+L)');
+            const event = new KeyboardEvent('keydown', {
+                key: 'L',
+                ctrlKey: true,
+                shiftKey: true,
+                bubbles: true
+            });
+            document.dispatchEvent(event);
+        }, 1000);
+        
+        setTimeout(() => {
+            // Test Method 3: Direct function call
+            console.log('🧪 Testing Method 3: Direct function call');
+            if (PageManager && PageManager.performLogout) {
+                PageManager.performLogout();
+            }
+        }, 2000);
+    },
+    
+    fixLogoutButtons: () => {
+        console.log('🧪 Manually fixing logout buttons...');
+        if (PageManager && PageManager.forceFixLogoutButtons) {
+            PageManager.forceFixLogoutButtons();
+        } else {
+            console.log('❌ PageManager.forceFixLogoutButtons not available');
+        }
     }
+};
+
+// GLOBAL IMMEDIATE LOGOUT FUNCTION - Call from console: testLogoutNow()
+window.testLogoutNow = function() {
+    console.log('🧪 TESTING LOGOUT NOW!');
+    
+    // Clear auth data immediately
+    localStorage.removeItem('bookvault_auth_token');
+    localStorage.removeItem('bookvault_user_role'); 
+    localStorage.removeItem('bookvault_user_profile');
+    console.log('🚪 Auth data cleared');
+    
+    // Clear cart
+    if (window.CartManager) {
+        CartManager.clearCart();
+        console.log('🚪 Cart cleared');
+    }
+    
+    showLogoutFeedback();
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 2000);
 }; 

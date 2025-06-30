@@ -282,11 +282,144 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="asset/js/main.js"></script>
   <script>
-    // Initialize page when DOM is loaded
+    // Book details page specific initialization
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Initializing book details page...');
-        PageManager.init();
+        console.log('📖 Book Details Page - Adding book action event listeners...');
+        
+        // Wait for PageManager to be fully initialized
+        setTimeout(() => {
+            console.log('🔧 Setting up book actions using direct approach...');
+            
+            // Setup Add to Cart buttons
+            const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
+            console.log(`🔘 Found ${addToCartBtns.length} Add to Cart buttons`);
+            
+            addToCartBtns.forEach((btn, index) => {
+                console.log(`🔧 Adding event listener to Add to Cart button ${index + 1}`);
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('🛒 Add to Cart button clicked!');
+                    
+                    // Extract book data from page
+                    const bookData = extractBookDataFromPage();
+                    console.log('📖 Book data:', bookData);
+                    
+                    console.log('🔍 Debug info:');
+                    console.log('  - bookData:', bookData);
+                    console.log('  - window.CartManager:', window.CartManager);
+                    console.log('  - typeof CartManager:', typeof CartManager);
+                    console.log('  - CartManager available:', !!CartManager);
+                    
+                    if (bookData && CartManager) {
+                        console.log('✅ Adding book to cart...');
+                        try {
+                            CartManager.addToCart(bookData);
+                            console.log('🎉 Book successfully added to cart!');
+                            
+                            if (CartManager.showCartNotification) {
+                                CartManager.showCartNotification('Book added to cart!');
+                            } else {
+                                console.log('📢 showCartNotification not available, using alert');
+                                alert('Book added to cart!');
+                            }
+                        } catch (error) {
+                            console.error('❌ Error calling CartManager.addToCart:', error);
+                            alert('Error adding book to cart: ' + error.message);
+                        }
+                    } else {
+                        console.error('❌ Unable to add book to cart');
+                        console.error('  - bookData valid:', !!bookData);
+                        console.error('  - CartManager available:', !!CartManager);
+                        alert('Unable to add book to cart. Please try again.');
+                    }
+                });
+                
+                btn.style.cursor = 'pointer';
+                btn.title = 'Add this book to your cart';
+            });
+            
+            // Setup Buy Now buttons
+            const buyNowBtns = document.querySelectorAll('.buy-now-btn');
+            console.log(`🔘 Found ${buyNowBtns.length} Buy Now buttons`);
+            
+            buyNowBtns.forEach((btn, index) => {
+                console.log(`🔧 Adding event listener to Buy Now button ${index + 1}`);
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('⚡ Buy Now button clicked!');
+                    
+                    // Extract book data from page
+                    const bookData = extractBookDataFromPage();
+                    console.log('📖 Book data:', bookData);
+                    
+                    console.log('🔍 Buy Now Debug info:');
+                    console.log('  - bookData:', bookData);
+                    console.log('  - CartManager:', !!CartManager);
+                    console.log('  - CheckoutManager:', !!CheckoutManager);
+                    
+                    if (bookData && CartManager && CheckoutManager) {
+                        console.log('✅ Adding book to cart and starting checkout...');
+                        try {
+                            CartManager.addToCart(bookData);
+                            console.log('🎉 Book added to cart for checkout!');
+                            CheckoutManager.startCheckout();
+                            console.log('🛒 Checkout started successfully!');
+                        } catch (error) {
+                            console.error('❌ Error during buy now process:', error);
+                            alert('Error during purchase: ' + error.message);
+                        }
+                    } else {
+                        console.error('❌ Unable to process purchase');
+                        console.error('  - bookData valid:', !!bookData);
+                        console.error('  - CartManager available:', !!CartManager);
+                        console.error('  - CheckoutManager available:', !!CheckoutManager);
+                        alert('Unable to process purchase. Please try again.');
+                    }
+                });
+                
+                btn.style.cursor = 'pointer';
+                btn.title = 'Buy this book now';
+            });
+            
+            console.log('✅ Book actions setup completed successfully');
+        }, 1000);
     });
+    
+    // Function to extract book data from the current page
+    function extractBookDataFromPage() {
+        const titleElement = document.querySelector('.book-title-main');
+        const authorElement = document.querySelector('.book-author-main');
+        const priceElement = document.querySelector('.book-price-main');
+        const imageElement = document.querySelector('.book-cover-main');
+        
+        if (titleElement && authorElement && priceElement) {
+            const title = titleElement.textContent.trim();
+            const author = authorElement.textContent.trim();
+            
+            return {
+                id: generateBookId(title, author),
+                title: title,
+                author: author,
+                price: parseFloat(priceElement.textContent.replace(/[^0-9.]/g, '')),
+                imageUrl: imageElement ? imageElement.src : '/asset/img/books/placeholder.jpg'
+            };
+        }
+        
+        console.error('❌ Unable to extract book data from page');
+        return null;
+    }
+    
+    // Generate consistent book ID
+    function generateBookId(title, author) {
+        const text = `${title}-${author}`.toLowerCase().replace(/\s+/g, '-');
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            const char = text.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash);
+    }
   </script>
 </body>
 </html>

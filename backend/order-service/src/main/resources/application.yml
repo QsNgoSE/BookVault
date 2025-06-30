@@ -36,6 +36,11 @@ eureka:
   instance:
     prefer-ip-address: true
 
+# JWT configuration
+jwt:
+  secret: bookvault-secret-key-that-should-be-very-long-and-secure-in-production
+  expiration: 86400000 # 24 hours in milliseconds
+
 management:
   endpoints:
     web:

@@ -257,6 +257,14 @@ public class BookService {
     }
     
     private BookResponse mapToResponse(Book book) {
+        // Map categories from BookCategory relationships
+        List<CategoryResponse> categories = null;
+        if (book.getBookCategories() != null && !book.getBookCategories().isEmpty()) {
+            categories = book.getBookCategories().stream()
+                    .map(bc -> mapCategoryToResponse(bc.getCategory()))
+                    .collect(Collectors.toList());
+        }
+        
         return BookResponse.builder()
                 .id(book.getId())
                 .title(book.getTitle())
@@ -276,6 +284,7 @@ public class BookService {
                 .publisher(book.getPublisher())
                 .createdAt(book.getCreatedAt())
                 .updatedAt(book.getUpdatedAt())
+                .categories(categories)
                 .inStock(book.isInStock())
                 .available(book.isAvailable())
                 .build();

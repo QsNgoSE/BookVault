@@ -1,0 +1,19 @@
+# Order Service Configuration
+server:
+  port: 8084
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bookvault_orders
+    username: bookvault
+    password: bookvault123
+    driver-class-name: org.postgresql.Driver
+
+# Docker profile override
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/bookvault_orders 

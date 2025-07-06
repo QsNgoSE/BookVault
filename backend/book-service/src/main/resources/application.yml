@@ -103,10 +103,99 @@ spring:
     activate:
       on-profile: docker
   
+  # Disable config service for Docker (same as local)
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+  
   datasource:
     url: jdbc:postgresql://postgres:5432/bookvault
+  
+  # Redis configuration for Docker
+  redis:
+    host: redis
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+    password: # no password for Docker
 
 eureka:
   client:
     service-url:
-      defaultZone: http://discovery-service:8761/eureka/ 
+      defaultZone: http://discovery-service:8761/eureka
+
+---
+# Railway profile
+spring:
+  config:
+    activate:
+      on-profile: railway
+  
+  # Disable config service for Railway
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD}}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  
+  main:
+    lazy-initialization: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# External service URLs for Railway
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8082}
+
+# CORS configuration for Railway
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://*.railway.app,https://*.netlify.app,https://*.vercel.app}
+
+# Logging configuration for Railway
+logging:
+  level:
+    com.bookvault: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Management endpoints for Railway
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    readinessstate:
+      enabled: true
+    livenessstate:
+      enabled: true/ 

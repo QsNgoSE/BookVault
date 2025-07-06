@@ -1,13 +1,13 @@
 package com.bookvault.auth.service;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Service to handle login attempt tracking and banning logic
@@ -42,16 +42,26 @@ public class LoginAttemptService {
      * Check if user is temporarily banned (3 attempts = 15 min ban)
      */
     public boolean isUserTemporarilyBanned(String email) {
-        String key = USER_TEMP_BAN_PREFIX + email;
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        try {
+            String key = USER_TEMP_BAN_PREFIX + email;
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            logger.warn("Redis connection failed while checking temp ban for user: {}. Allowing login attempt.", email);
+            return false; // Allow login when Redis is unavailable
+        }
     }
     
     /**
      * Check if user is database banned (5 attempts = 24 hour ban)
      */
     public boolean isUserDatabaseBanned(String email) {
-        String key = USER_DB_BAN_PREFIX + email;
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        try {
+            String key = USER_DB_BAN_PREFIX + email;
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            logger.warn("Redis connection failed while checking database ban for user: {}. Allowing login attempt.", email);
+            return false; // Allow login when Redis is unavailable
+        }
     }
     
     /**
@@ -86,18 +96,23 @@ public class LoginAttemptService {
      * Get ban type and details for better error messages
      */
     public BanInfo getUserBanInfo(String email) {
-        if (isUserTemporarilyBanned(email)) {
-            long remaining = getUserBanTimeRemaining(email);
-            return new BanInfo(BanInfo.BanType.TEMPORARY, remaining, 
-                "Account temporarily locked due to failed login attempts. Try again in " + remaining + " minutes.");
+        try {
+            if (isUserTemporarilyBanned(email)) {
+                long remaining = getUserBanTimeRemaining(email);
+                return new BanInfo(BanInfo.BanType.TEMPORARY, remaining, 
+                    "Account temporarily locked due to failed login attempts. Try again in " + remaining + " minutes.");
+            }
+            
+            if (isUserDatabaseBanned(email)) {
+                return new BanInfo(BanInfo.BanType.DATABASE, 0, 
+                    "Account permanently banned due to multiple failed login attempts. Contact administrator for assistance.");
+            }
+            
+            return new BanInfo(BanInfo.BanType.NONE, 0, "Not banned");
+        } catch (Exception e) {
+            logger.warn("Redis connection failed while getting ban info for user: {}. Allowing login attempt.", email);
+            return new BanInfo(BanInfo.BanType.NONE, 0, "Not banned (Redis unavailable)");
         }
-        
-        if (isUserDatabaseBanned(email)) {
-            return new BanInfo(BanInfo.BanType.DATABASE, 0, 
-                "Account permanently banned due to multiple failed login attempts. Contact administrator for assistance.");
-        }
-        
-        return new BanInfo(BanInfo.BanType.NONE, 0, "Not banned");
     }
     
     // Helper class for ban information
@@ -132,16 +147,24 @@ public class LoginAttemptService {
      * Record failed login attempt and handle banning logic
      */
     public void recordFailedAttempt(String email, String ipAddress) {
-        recordUserFailedAttempt(email);
-        recordIpFailedAttempt(ipAddress);
+        try {
+            recordUserFailedAttempt(email);
+            recordIpFailedAttempt(ipAddress);
+        } catch (Exception e) {
+            logger.warn("Redis connection failed while recording failed attempt for user: {} and IP: {}. Continuing without tracking.", email, ipAddress);
+        }
     }
     
     /**
      * Clear failed attempts on successful login
      */
     public void clearFailedAttempts(String email, String ipAddress) {
-        clearUserFailedAttempts(email);
-        clearIpFailedAttempts(ipAddress);
+        try {
+            clearUserFailedAttempts(email);
+            clearIpFailedAttempts(ipAddress);
+        } catch (Exception e) {
+            logger.warn("Redis connection failed while clearing failed attempts for user: {} and IP: {}. Continuing without clearing.", email, ipAddress);
+        }
     }
     
     /**

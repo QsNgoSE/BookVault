@@ -1,228 +1,294 @@
-# BookVault Backend - Microservices Architecture
+# BookVault Backend - Simplified Architecture
 
-This is the backend implementation for BookVault, built with Java 17+ and Spring Boot microservices.
+This is the simplified, production-ready backend implementation for BookVault, optimized for Railway deployment.
 
-## Architecture Overview
+## 🏗️ Architecture Overview
 
-The backend follows a microservices architecture pattern with the following services:
+The backend has been refactored from a complex microservices architecture to a simplified, efficient structure:
 
 ```
-BookVault Backend
-├── api-gateway/           # API Gateway (Spring Cloud Gateway)
-├── discovery-service/     # Service Discovery (Eureka)
-├── config-service/        # Configuration Service (Spring Cloud Config)
-├── auth-service/          # Authentication & Authorization
-├── user-service/          # User Management
-├── book-service/          # Book/Product Management
-├── order-service/         # Order Management
-├── notification-service/  # Notifications & Support
-├── file-service/          # File Upload/Management
-└── shared/               # Shared libraries and utilities
+BookVault Backend (Simplified)
+├── auth-service/          # Authentication & User Management
+├── book-service/          # Book Catalog & Orders
+├── shared/               # Shared libraries and utilities
+└── infrastructure/       # (Optional) Discovery & Config services
 ```
 
-## Technology Stack
+## 🎯 Core Services
+
+### 1. Auth Service (Port: 8082)
+**Purpose**: Complete authentication and user management
+- ✅ JWT token generation and validation
+- ✅ User registration and login
+- ✅ Profile management
+- ✅ Role-based authorization (USER, SELLER, ADMIN)
+- ✅ Redis-based login attempt tracking
+- ✅ Account banning (temporary and permanent)
+- ✅ Admin user management
+
+### 2. Book Service (Port: 8083)
+**Purpose**: Complete book catalog and order management
+- ✅ Book catalog management
+- ✅ Categories and search functionality
+- ✅ Book reviews and ratings
+- ✅ Inventory management
+- ✅ Basic order processing
+- ✅ Shopping cart functionality
+
+### 3. Shared Module
+**Purpose**: Common utilities and DTOs
+- ✅ JWT utilities
+- ✅ Exception handling
+- ✅ Validation utilities
+- ✅ Common DTOs and enums
+
+## 📋 Removed/Simplified Services
+
+### ❌ User Service
+- **Reason**: Functionality merged into auth-service
+- **Impact**: Simplified user management, reduced complexity
+
+### ❌ Order Service  
+- **Reason**: Basic order functionality moved to book-service
+- **Impact**: Simpler deployment, adequate for MVP
+
+### ❌ Discovery Service (Eureka)
+- **Reason**: Not needed for Railway deployment
+- **Impact**: Reduced infrastructure complexity
+
+### ❌ Config Service
+- **Reason**: Using Spring profiles instead
+- **Impact**: Simpler configuration management
+
+## 🚀 Technology Stack
 
 - **Java**: 17+
 - **Spring Boot**: 3.2+
-- **Spring Cloud**: 2023.0.x
-- **Spring Security**: 6.x
+- **Spring Security**: 6.x with JWT
 - **Spring Data JPA**: Hibernate 6.x
-- **Database**: PostgreSQL (primary), Redis (caching)
-- **Message Queue**: RabbitMQ
-- **Service Discovery**: Eureka
-- **API Gateway**: Spring Cloud Gateway
+- **Database**: PostgreSQL 14+
+- **Cache**: Redis 7+ (for login attempts)
 - **Documentation**: OpenAPI 3 (Swagger)
-- **Build Tool**: Maven
-- **Testing**: JUnit 5, Mockito, Testcontainers
+- **Build Tool**: Maven 3.8+
 
-## Microservices
+## 🌍 Deployment Profiles
 
-### 1. API Gateway (Port: 8080)
-- Routes requests to appropriate services
-- Authentication & Authorization
-- Rate limiting and circuit breaker
-- CORS configuration
-- Request/Response logging
-
-### 2. Discovery Service (Port: 8761)
-- Eureka server for service registration
-- Service health monitoring
-- Load balancing
-
-### 3. Config Service (Port: 8888)
-- Centralized configuration management
-- Environment-specific configs
-- Dynamic configuration updates
-
-### 4. Auth Service (Port: 8081)
-- JWT token generation and validation
-- User authentication
-- Role-based authorization
-- OAuth2 integration (future)
-
-### 5. User Service (Port: 8082)
-- User registration and profile management
-- User roles (USER, SELLER, ADMIN)
-- Address management
-- User preferences
-
-### 6. Book Service (Port: 8083)
-- Book catalog management
-- Categories and search
-- Book reviews and ratings
-- Inventory management
-
-### 7. Order Service (Port: 8084)
-- Order processing
-- Payment integration
-- Order tracking
-- Invoice generation
-
-### 8. Notification Service (Port: 8085)
-- Email notifications
-- In-app notifications
-- Support ticket management
-- Newsletter management
-
-### 9. File Service (Port: 8086)
-- File upload and management
-- Image processing
-- CDN integration
-- File security
-
-## Database Design
-
-### User Service Database
-- users
-- user_roles
-- user_addresses
-- user_preferences
-
-### Book Service Database
-- books
-- categories
-- book_categories
-- book_reviews
-- book_ratings
-- inventory
-
-### Order Service Database
-- orders
-- order_items
-- payments
-- order_status_history
-
-### Auth Service Database
-- auth_tokens
-- refresh_tokens
-- user_sessions
-
-## Security
-
-- **JWT Authentication**: Stateless authentication
-- **Role-based Access Control**: USER, SELLER, ADMIN
-- **HTTPS**: All communications encrypted
-- **CORS**: Configured for frontend integration
-- **Input Validation**: Request validation and sanitization
-- **Rate Limiting**: API rate limiting
-
-## API Documentation
-
-Each service provides OpenAPI 3.0 documentation accessible at:
-- `http://localhost:{port}/api/docs` (Swagger UI)
-- `http://localhost:{port}/api/docs.json` (OpenAPI JSON)
-
-## Getting Started
-
-1. **Prerequisites**
-   - Java 17+
-   - Maven 3.8+
-   - Docker & Docker Compose
-   - PostgreSQL 15+
-   - Redis 7+
-
-2. **Setup Database**
-   ```bash
-   docker-compose up -d postgres redis
-   ```
-
-3. **Start Services** (in order)
-   ```bash
-   # Start discovery service first
-   cd discovery-service && mvn spring-boot:run
-   
-   # Start config service
-   cd config-service && mvn spring-boot:run
-   
-   # Start other services
-   cd auth-service && mvn spring-boot:run
-   cd user-service && mvn spring-boot:run
-   cd book-service && mvn spring-boot:run
-   cd order-service && mvn spring-boot:run
-   cd notification-service && mvn spring-boot:run
-   cd file-service && mvn spring-boot:run
-   
-   # Start API gateway last
-   cd api-gateway && mvn spring-boot:run
-   ```
-
-4. **Access Services**
-   - API Gateway: http://localhost:8080
-   - Eureka Dashboard: http://localhost:8761
-   - Config Service: http://localhost:8888
-
-## Development
-
-### Running with Docker
-```bash
-docker-compose up -d
+### 1. Local Development
+```yaml
+spring.profiles.active: local
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
+- Verbose logging and debugging
 ```
 
-### Running Individual Services
+### 2. Railway Production
+```yaml
+spring.profiles.active: railway
+- PostgreSQL: Railway managed
+- Redis: Railway managed
+- Optimized for cloud deployment
+```
+
+### 3. Docker (Optional)
+```yaml
+spring.profiles.active: docker
+- For local container testing only
+- Not recommended for production
+```
+
+## 📊 Database Design
+
+### Auth Service Database (`bookvault`)
+```sql
+-- Users table
+users (id, email, password, first_name, last_name, role, created_at, updated_at)
+
+-- Future: Address, preferences, etc.
+```
+
+### Book Service Database (`bookvault`) 
+```sql
+-- Books and catalog
+books (id, title, author, description, price, stock, created_at)
+categories (id, name, description)
+book_categories (book_id, category_id)
+book_reviews (id, book_id, user_id, rating, comment, created_at)
+
+-- Basic orders (simplified)
+orders (id, user_id, total_amount, status, created_at)
+order_items (id, order_id, book_id, quantity, price)
+```
+
+## 🔒 Security Features
+
+### Authentication & Authorization
+- ✅ JWT-based stateless authentication
+- ✅ Role-based access control (USER, SELLER, ADMIN)
+- ✅ Password encryption with BCrypt
+- ✅ CORS configuration for frontend integration
+
+### Login Attempt Protection
+- ✅ Redis-based attempt tracking
+- ✅ Temporary ban: 3 failed attempts = 15 min ban
+- ✅ Permanent ban: 5 failed attempts = database ban
+- ✅ IP-based banning: 5 attempts = 30 min ban
+- ✅ Graceful fallback when Redis unavailable
+
+### API Security
+- ✅ Input validation and sanitization
+- ✅ SQL injection prevention
+- ✅ XSS protection
+- ✅ Rate limiting ready
+
+## 📈 Performance Optimizations
+
+### Database
+- ✅ Connection pooling
+- ✅ Lazy loading optimization
+- ✅ Proper indexing
+- ✅ Query optimization
+
+### Caching
+- ✅ Redis for login attempts
+- ✅ Application-level caching ready
+- ✅ Database query caching
+
+### Memory Management
+- ✅ Optimized for Railway's 512MB limit
+- ✅ Lazy initialization
+- ✅ Efficient logging configuration
+
+## 🛠️ Development Workflow
+
+### Local Development
 ```bash
-cd {service-name}
-mvn spring-boot:run
+# Start dependencies
+brew services start postgresql@14 redis
+
+# Start services
+./start-local-dev.sh
+
+# Or manually:
+cd backend/auth-service && mvn spring-boot:run -Dspring-boot.run.profiles=local
+cd backend/book-service && mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+### Railway Deployment
+```bash
+# Deploy auth service
+railway service create auth-service
+railway up --service auth-service
+
+# Deploy book service  
+railway service create book-service
+railway up --service book-service
 ```
 
 ### Testing
 ```bash
 # Run all tests
-mvn test
+cd backend && mvn test
 
-# Run integration tests
-mvn verify
+# Test specific service
+cd backend/auth-service && mvn test
 ```
 
-## Deployment
+## 🔍 API Documentation
 
-### Production Deployment
-- **Containerization**: Docker containers
-- **Orchestration**: Docker Compose / Kubernetes
-- **Monitoring**: Prometheus + Grafana
-- **Logging**: ELK Stack (Elasticsearch, Logstash, Kibana)
-- **CI/CD**: GitHub Actions / Jenkins
+### Auth Service APIs
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/profile` - Get user profile
+- `PUT /api/auth/profile` - Update user profile
+- `GET /api/admin/users` - Admin: List users
+- `PUT /api/admin/users/{id}` - Admin: Update user
 
-### Environment Configuration
-- **Development**: Local database, in-memory caching
-- **Staging**: Shared database, Redis caching
-- **Production**: Clustered database, Redis cluster, CDN
+### Book Service APIs
+- `GET /api/books` - List books with search/filter
+- `GET /api/books/{id}` - Get book details
+- `POST /api/books` - Create book (SELLER/ADMIN)
+- `PUT /api/books/{id}` - Update book (SELLER/ADMIN)
+- `POST /api/books/{id}/reviews` - Add review
+- `GET /api/categories` - List categories
 
-## Monitoring & Observability
+### Health & Monitoring
+- `GET /actuator/health` - Health check
+- `GET /actuator/info` - Application info
+- `GET /actuator/metrics` - Application metrics
 
-- **Health Checks**: Spring Boot Actuator
-- **Metrics**: Micrometer + Prometheus
-- **Distributed Tracing**: Spring Cloud Sleuth + Zipkin
-- **Logging**: Structured logging with Logback
-- **Dashboards**: Grafana dashboards
+## 📦 Build & Deployment
 
-## Contributing
+### Maven Build
+```bash
+# Build all services
+cd backend && mvn clean package
 
-1. Fork the repository
-2. Create a feature branch
-3. Follow coding standards
-4. Write tests
-5. Submit pull request
+# Build specific service
+cd backend/auth-service && mvn clean package
+```
 
-## License
+### Docker Build (Optional)
+```bash
+# Build auth service
+cd backend/auth-service && docker build -t bookvault-auth .
 
-MIT License - see LICENSE file for details. 
+# Build book service
+cd backend/book-service && docker build -t bookvault-book .
+```
+
+### Railway Deployment
+```bash
+# Deploy with Railway CLI
+railway login
+railway up --service auth-service
+railway up --service book-service
+```
+
+## 🔄 Migration from Complex Architecture
+
+### What Was Removed
+1. **Eureka Discovery**: Not needed for Railway
+2. **Spring Cloud Config**: Replaced with profiles
+3. **Separate User Service**: Merged into auth-service
+4. **Complex Order Service**: Simplified into book-service
+5. **API Gateway**: Not needed for two services
+
+### What Was Kept
+1. **JWT Authentication**: Stateless and scalable
+2. **Redis Login Tracking**: Essential security feature
+3. **Role-based Authorization**: Business requirement
+4. **PostgreSQL**: Reliable database choice
+5. **Shared Module**: Code reusability
+
+### Benefits of Simplification
+- ✅ **Reduced Complexity**: Easier to maintain
+- ✅ **Lower Costs**: Fewer services = lower Railway costs
+- ✅ **Faster Development**: Less moving parts
+- ✅ **Better Performance**: Reduced network calls
+- ✅ **Simpler Deployment**: Fewer dependencies
+- ✅ **Easier Debugging**: Centralized logging
+
+## 🎯 Future Enhancements
+
+### Potential Additions (when needed)
+1. **Message Queue**: RabbitMQ for async processing
+2. **File Service**: Image upload and processing
+3. **Notification Service**: Email and push notifications
+4. **Analytics Service**: User behavior tracking
+5. **Search Service**: Elasticsearch for advanced search
+
+### Scaling Strategy
+1. **Horizontal Scaling**: Deploy multiple instances
+2. **Database Sharding**: When user base grows
+3. **CDN Integration**: For static content
+4. **Caching Layer**: Redis cluster for performance
+5. **Microservices**: Re-introduce when complexity justifies it
+
+---
+
+## 📞 Support
+
+- **Local Development**: See `DEPLOYMENT_GUIDE.md`
+- **Railway Deployment**: Follow Railway section in deployment guide
+- **Issues**: Check logs with `railway logs`
+- **Performance**: Monitor with `/actuator/metrics` 

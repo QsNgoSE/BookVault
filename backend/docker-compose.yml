@@ -121,33 +121,14 @@ services:
       - bookvault-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_CONFIG_ENABLED=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Config Service
-  config-service:
-    build:
-      context: ./config-service
-      dockerfile: Dockerfile
-    container_name: bookvault-config
-    ports:
-      - "8888:8888"
-    networks:
-      - bookvault-network
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
-    depends_on:
-      discovery-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # Config Service - REMOVED (using self-contained configuration)
 
   # Auth Service
   auth-service:
@@ -166,8 +147,13 @@ services:
       - SPRING_DATASOURCE_PASSWORD=bookvault123
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_TIMEOUT=2000ms
+      - SPRING_REDIS_LETTUCE_POOL_MAXACTIVE=8
+      - SPRING_REDIS_LETTUCE_POOL_MAXIDLE=8
+      - SPRING_REDIS_LETTUCE_POOL_MINIDLE=0
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
-      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
+      - JAVA_OPTS=-Dspring.redis.host=redis -Dspring.redis.port=6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,13 +161,11 @@ services:
         condition: service_healthy
       discovery-service:
         condition: service_healthy
-      config-service:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/auth/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
 
   # User Service
   user-service:
@@ -200,18 +184,18 @@ services:
       - SPRING_DATASOURCE_PASSWORD=bookvault123
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_TIMEOUT=2000ms
+      - SPRING_REDIS_LETTUCE_POOL_MAX_ACTIVE=8
+      - SPRING_REDIS_LETTUCE_POOL_MAX_IDLE=8
+      - SPRING_REDIS_LETTUCE_POOL_MIN_IDLE=0
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
-      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       discovery-service:
-        condition: service_healthy
-      config-service:
-        condition: service_healthy
-      auth-service:
         condition: service_healthy
 
   # Book Service
@@ -231,16 +215,18 @@ services:
       - SPRING_DATASOURCE_PASSWORD=bookvault123
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_TIMEOUT=2000ms
+      - SPRING_REDIS_LETTUCE_POOL_MAX_ACTIVE=8
+      - SPRING_REDIS_LETTUCE_POOL_MAX_IDLE=8
+      - SPRING_REDIS_LETTUCE_POOL_MIN_IDLE=0
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
-      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       discovery-service:
-        condition: service_healthy
-      config-service:
         condition: service_healthy
 
   # Order Service
@@ -260,12 +246,16 @@ services:
       - SPRING_DATASOURCE_PASSWORD=bookvault123
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_TIMEOUT=2000ms
+      - SPRING_REDIS_LETTUCE_POOL_MAX_ACTIVE=8
+      - SPRING_REDIS_LETTUCE_POOL_MAX_IDLE=8
+      - SPRING_REDIS_LETTUCE_POOL_MIN_IDLE=0
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=bookvault
       - SPRING_RABBITMQ_PASSWORD=bookvault123
+      - SPRING_CLOUD_CONFIG_ENABLED=false
       - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
-      - SPRING_CLOUD_CONFIG_URI=http://config-service:8888
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,8 +264,6 @@ services:
       rabbitmq:
         condition: service_healthy
       discovery-service:
-        condition: service_healthy
-      config-service:
         condition: service_healthy
 
 

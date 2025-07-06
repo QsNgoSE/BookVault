@@ -1,20 +1,13 @@
-server:
-  port: 8082
-
 spring:
-  application:
-    name: auth-service
   profiles:
     active: local
   
-  # Database configuration for local development (Docker)
   datasource:
     url: jdbc:postgresql://localhost:5432/bookvault
     username: bookvault
     password: bookvault123
     driver-class-name: org.postgresql.Driver
   
-  # JPA configuration
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,28 +17,22 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   
-  # Redis configuration for local development (Docker)
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  # Disable config service for local development
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
 
-# Disable service discovery for local development
-eureka:
-  client:
-    enabled: false
+server:
+  port: 8083
 
-# JWT configuration
-jwt:
-  secret: your-very-long-secret-key-for-local-development-only-make-it-at-least-32-characters
-  expiration: 86400000 # 24 hours in milliseconds
+# External service URLs for local development
+auth:
+  service:
+    url: http://localhost:8082
 
-# Actuator endpoints
+# Enable all actuator endpoints for local development
 management:
   endpoints:
     web:
@@ -59,18 +46,10 @@ management:
 cors:
   allowed-origins: http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080,http://127.0.0.1:3000
 
-# Disable config service for local development
-cloud:
-  config:
-    enabled: false
-    import-check:
-      enabled: false
-
-# Logging
+# Logging configuration for local development
 logging:
   level:
     com.bookvault: DEBUG
-    org.springframework.security: DEBUG
     org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE

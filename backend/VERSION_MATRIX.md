@@ -13,14 +13,14 @@
 ### Databases & Cache
 | Component | Version | Compatibility |
 |-----------|---------|---------------|
-| **PostgreSQL Driver** | **42.7.3** | ✅ Java 17 + Spring Boot 3.2 |
+| **PostgreSQL Driver** | **42.7.3** | ✅ Java 21 + Spring Boot 3.2 |
 | **Redis (Jedis)** | **5.0.2** | ✅ Spring Data Redis 3.x |
 | **H2 (Testing)** | **2.2.224** | ✅ Test compatibility |
 
 ### Security & JWT
 | Component | Version | Compatibility |
 |-----------|---------|---------------|
-| **JJWT** | **0.12.5** | ✅ Java 17 + Spring Security 6 |
+| **JJWT** | **0.12.5** | ✅ Java 21 + Spring Security 6 |
 | **Spring Security** | **6.2.x** | ✅ Via Spring Boot 3.2.4 |
 
 ### Documentation & Testing
@@ -28,13 +28,13 @@
 |-----------|---------|---------------|
 | **SpringDoc OpenAPI** | **2.4.0** | ✅ Spring Boot 3.2.x |
 | **TestContainers** | **1.19.7** | ✅ Modern testing |
-| **Mockito** | **5.11.0** | ✅ JUnit 5 + Java 17 |
+| **Mockito** | **5.11.0** | ✅ JUnit 5 + Java 21 |
 
 ### Utilities
 | Component | Version | Compatibility |
 |-----------|---------|---------------|
-| **Lombok** | **1.18.32** | ✅ Java 17 + Latest IDEs |
-| **MapStruct** | **1.5.5.Final** | ✅ Lombok 1.18.32 |
+| **Lombok** | **1.18.32** | ✅ Java 21 + Latest IDEs (DISABLED) |
+| **MapStruct** | **1.6.2** | ✅ Manual implementations |
 
 ## 🐳 Docker Images
 
@@ -44,12 +44,12 @@ FROM eclipse-temurin:21-jre-jammy
 ```
 
 **Services Updated:**
-- ✅ auth-service/Dockerfile  
-- ✅ book-service/Dockerfile
-- ✅ discovery-service/Dockerfile
-- ✅ config-service/Dockerfile
-- ✅ order-service/Dockerfile
-- ✅ user-service/Dockerfile
+- ✅ auth-service/Dockerfile → Java 21
+- ✅ book-service/Dockerfile → Java 21  
+- ✅ discovery-service/Dockerfile → Java 21
+- ✅ config-service/Dockerfile → Java 21
+- ✅ order-service/Dockerfile → Java 21
+- ✅ user-service/Dockerfile → Java 21
 
 ## 🔧 Maven Configuration
 
@@ -84,7 +84,7 @@ FROM eclipse-temurin:21-jre-jammy
 java -version
 
 # Docker Java version
-docker run --rm eclipse-temurin:17-jre-jammy java -version
+docker run --rm eclipse-temurin:21-jre-jammy java -version
 
 # Maven compilation
 mvn clean compile -q
@@ -119,8 +119,12 @@ docker-compose build --no-cache
    - ✅ Solution: Updated to 0.12.5 + fixed JwtUtil
 
 4. **Maven Compiler 3.10.1 vs 3.12.1**
-   - ❌ Problem: Java 17+ compatibility issues
+   - ❌ Problem: Java 21+ compatibility issues
    - ✅ Solution: Updated to 3.12.1
+
+5. **Lombok Annotation Processing**
+   - ❌ Problem: Lombok incompatible with Java 21 compilation
+   - ✅ Solution: Removed Lombok, implemented manual getters/setters/builders
 
 ### Quick Fixes
 
@@ -159,8 +163,21 @@ When updating versions:
 - Keep other versions compatible
 - Gradual migration plan
 
+## 🚨 Current Known Issues
+
+### Config Service
+- **Issue**: Attempting to connect to remote Git repository over SSH
+- **Status**: ❌ Failing with timeout
+- **Solution**: Configure local file-based config or fix Git access
+
+### Discovery Service  
+- **Status**: ✅ Working with Java 21
+
+### Other Services
+- **Status**: ⏳ Waiting for config service dependency
+
 ---
-**Last Updated:** `date`
-**Java Version:** 17 LTS  
+**Last Updated:** July 2025
+**Java Version:** 21 LTS  
 **Spring Boot:** 3.2.4  
-**Status:** ✅ All services standardized 
+**Status:** 🔧 Config service needs fixing, others ready 

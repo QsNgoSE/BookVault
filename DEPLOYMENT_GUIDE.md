@@ -1,72 +1,228 @@
-# BookVault Free Deployment Guide
+# BookVault Deployment Guide
 
-This guide will help you deploy BookVault for free using the most cost-effective platforms.
+This guide will help you deploy BookVault using Railway (recommended) and includes local development setup.
 
-## 🚀 Quick Start: Railway Deployment (Recommended)
+## 🛠️ Local Development Setup
 
-**Why Railway?**
+### **Prerequisites**
+- Java 17+
+- PostgreSQL 12+
+- Redis 7+ (for login attempt tracking)
+- Maven 3.8+
+
+### **Step 1: Install Dependencies**
+
+**macOS:**
+```bash
+# Install using Homebrew
+brew install postgresql@14 redis maven
+brew services start postgresql@14
+brew services start redis
+```
+
+**Ubuntu/Debian:**
+```bash
+# Install PostgreSQL and Redis
+sudo apt update
+sudo apt install postgresql postgresql-contrib redis-server maven
+sudo systemctl start postgresql
+sudo systemctl start redis-server
+```
+
+### **Step 2: Database Setup**
+```bash
+# Create database
+sudo -u postgres psql
+CREATE DATABASE bookvault;
+CREATE USER bookvault WITH PASSWORD 'bookvault123';
+GRANT ALL PRIVILEGES ON DATABASE bookvault TO bookvault;
+\q
+```
+
+### **Step 3: Local Configuration**
+Create `backend/auth-service/src/main/resources/application-local.yml`:
+```yaml
+spring:
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bookvault
+    username: bookvault
+    password: bookvault123
+    driver-class-name: org.postgresql.Driver
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+server:
+  port: 8082
+
+jwt:
+  secret: your-very-long-secret-key-for-local-development-only
+  expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+```
+
+### **Step 4: Run Services Locally**
+```bash
+# Terminal 1: Start Auth Service
+cd backend/auth-service
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# Terminal 2: Start Book Service
+cd backend/book-service
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# Terminal 3: Start Frontend
+cd ../../
+python -m http.server 8080
+# or
+npx serve . -p 8080
+```
+
+---
+
+## 🚀 Railway Deployment (Recommended)
+
+### **Why Railway?**
 - $5 monthly credit (enough for 2-3 services)
-- PostgreSQL included
+- PostgreSQL & Redis included
 - Automatic deployments from Git
-- Easy container deployments
+- Built-in health checks & monitoring
+- Easy domain management
 
-### **Step 1: Prepare Your Code**
+### **Step 1: Install Railway CLI**
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
 
-1. **Simplify your architecture** (already created: `docker-compose.simple.yml`)
-2. **Update frontend config** to use production URLs (already created: `config.prod.js`)
+# Login to Railway
+railway login
+```
 
-### **Step 2: Deploy Backend Services**
+### **Step 2: Deploy Infrastructure**
 
-#### **A. Create Railway Account**
-1. Sign up at [railway.app](https://railway.app)
-2. Connect your GitHub account
-3. Fork or push your BookVault repo to GitHub
+#### **A. Create New Project**
+```bash
+# Create project
+railway new bookvault-production
+cd bookvault-production
+```
 
 #### **B. Deploy PostgreSQL Database**
 ```bash
-# In Railway dashboard:
-1. Click "New Project"
-2. Select "Provision PostgreSQL"
-3. Note the connection details
+# Add PostgreSQL service
+railway add postgresql
+railway deploy
 ```
 
-#### **C. Deploy Auth Service**
+#### **C. Deploy Redis Cache**
 ```bash
-# In Railway dashboard:
-1. Click "New Service"
-2. Select "GitHub Repo"
-3. Choose your BookVault repo
-4. Set Root Directory: backend/auth-service
-5. Add Environment Variables:
-   - SPRING_PROFILES_ACTIVE=railway
-   - SPRING_DATASOURCE_URL=[Your PostgreSQL URL from step B]
-   - SPRING_DATASOURCE_USERNAME=[From PostgreSQL service]
-   - SPRING_DATASOURCE_PASSWORD=[From PostgreSQL service]
-   - JWT_SECRET=your-secret-key-here-make-it-long-and-secure
-   - SERVER_PORT=8080
+# Add Redis service
+railway add redis
+railway deploy
 ```
 
-#### **D. Deploy Book Service**
+### **Step 3: Deploy Auth Service**
+
+#### **A. Create Railway Config**
+Create `backend/auth-service/railway.toml`:
+```toml
+[build]
+builder = "NIXPACKS"
+buildCommand = "mvn clean package -DskipTests -B"
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+startCommand = "java -Xmx450m -jar target/*.jar"
+
+[env]
+SPRING_PROFILES_ACTIVE = "railway"
+SERVER_PORT = "8080"
+```
+
+#### **B. Deploy Auth Service**
 ```bash
-# In Railway dashboard:
-1. Click "New Service"
-2. Select "GitHub Repo"
-3. Choose your BookVault repo
-4. Set Root Directory: backend/book-service
-5. Add Environment Variables:
-   - SPRING_PROFILES_ACTIVE=railway
-   - SPRING_DATASOURCE_URL=[Your PostgreSQL URL]
-   - SPRING_DATASOURCE_USERNAME=[From PostgreSQL service]
-   - SPRING_DATASOURCE_PASSWORD=[From PostgreSQL service]
-   - AUTH_SERVICE_URL=[URL from Auth service deployment]
-   - SERVER_PORT=8080
+# Deploy auth service
+railway service create auth-service
+railway up --service auth-service --detach
 ```
 
-### **Step 3: Deploy Frontend (Netlify)**
+#### **C. Set Environment Variables**
+```bash
+# Set environment variables for auth service
+railway variables set SPRING_PROFILES_ACTIVE=railway
+railway variables set JWT_SECRET=your-very-long-and-secure-jwt-secret-key-here
+railway variables set SPRING_DATASOURCE_URL=${{Postgres.DATABASE_URL}}
+railway variables set SPRING_REDIS_HOST=${{Redis.REDIS_HOST}}
+railway variables set SPRING_REDIS_PORT=${{Redis.REDIS_PORT}}
+railway variables set SPRING_REDIS_USERNAME=${{Redis.REDIS_USERNAME}}
+railway variables set SPRING_REDIS_PASSWORD=${{Redis.REDIS_PASSWORD}}
+```
+
+### **Step 4: Deploy Book Service**
+
+#### **A. Create Railway Config**
+Create `backend/book-service/railway.toml`:
+```toml
+[build]
+builder = "NIXPACKS"
+buildCommand = "mvn clean package -DskipTests -B"
+
+[deploy]
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+startCommand = "java -Xmx450m -jar target/*.jar"
+
+[env]
+SPRING_PROFILES_ACTIVE = "railway"
+SERVER_PORT = "8080"
+```
+
+#### **B. Deploy Book Service**
+```bash
+# Deploy book service
+railway service create book-service
+railway up --service book-service --detach
+```
+
+#### **C. Set Environment Variables**
+```bash
+# Set environment variables for book service
+railway variables set SPRING_PROFILES_ACTIVE=railway
+railway variables set SPRING_DATASOURCE_URL=${{Postgres.DATABASE_URL}}
+railway variables set AUTH_SERVICE_URL=${{auth-service.RAILWAY_PUBLIC_DOMAIN}}
+```
+
+### **Step 5: Deploy Frontend (Netlify)**
 
 #### **A. Prepare Frontend**
-1. Copy `config.prod.js` content to `config.js`
-2. Update API URLs with your Railway service URLs
+1. Update `config.js` with your Railway service URLs:
+```javascript
+const API_CONFIG = {
+    AUTH_SERVICE_URL: 'https://your-auth-service.railway.app/api',
+    BOOK_SERVICE_URL: 'https://your-book-service.railway.app/api',
+    ORDER_SERVICE_URL: 'https://your-auth-service.railway.app/api',
+    
+    // Fallback for local development
+    BASE_URL: 'https://your-auth-service.railway.app/api',
+};
+```
 
 #### **B. Deploy to Netlify**
 ```bash
@@ -79,6 +235,118 @@ This guide will help you deploy BookVault for free using the most cost-effective
 2. Connect GitHub to Netlify
 3. Set build directory to root
 4. Deploy
+```
+
+### **Step 6: Test Your Deployment**
+
+#### **A. Health Check**
+```bash
+# Check auth service health
+curl https://your-auth-service.railway.app/actuator/health
+
+# Check book service health
+curl https://your-book-service.railway.app/actuator/health
+```
+
+#### **B. Test Authentication**
+```bash
+# Test user registration
+curl -X POST https://your-auth-service.railway.app/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123","firstName":"Test","lastName":"User"}'
+
+# Test user login
+curl -X POST https://your-auth-service.railway.app/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+
+---
+
+## 🔧 Railway CLI Commands Reference
+
+### **Service Management**
+```bash
+# List all services
+railway service list
+
+# Switch to a service
+railway service switch
+
+# View service logs
+railway logs
+
+# View service metrics
+railway metrics
+
+# Connect to database
+railway connect postgres
+railway connect redis
+```
+
+### **Environment Variables**
+```bash
+# List all variables
+railway variables
+
+# Set a variable
+railway variables set KEY=value
+
+# Delete a variable
+railway variables delete KEY
+
+# Load variables from file
+railway variables load .env
+```
+
+### **Deployments**
+```bash
+# Deploy current directory
+railway up
+
+# Deploy specific service
+railway up --service auth-service
+
+# View deployment status
+railway status
+
+# Rollback to previous deployment
+railway rollback
+```
+
+---
+
+## 🛠️ Quick Local Development
+
+### **Using the Startup Script**
+```bash
+# Start all services at once
+./start-local-dev.sh
+```
+
+### **Manual Startup**
+```bash
+# Terminal 1: Auth Service
+cd backend/auth-service
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# Terminal 2: Book Service
+cd backend/book-service
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# Terminal 3: Frontend
+python3 -m http.server 8080
+```
+
+### **Database Management**
+```bash
+# Connect to local PostgreSQL
+psql -h localhost -U bookvault -d bookvault
+
+# Reset database
+DROP DATABASE bookvault;
+CREATE DATABASE bookvault;
+GRANT ALL PRIVILEGES ON DATABASE bookvault TO bookvault;
 ```
 
 ---

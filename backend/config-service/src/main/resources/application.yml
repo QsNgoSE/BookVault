@@ -5,15 +5,17 @@ spring:
   application:
     name: config-service
   
-  # Config server settings
+  # Config server settings - FORCE native mode only
   cloud:
     config:
       server:
-        git:
-          uri: classpath:/config-repo
-          default-label: main
         native:
           search-locations: classpath:/config-repo
+        # Explicitly disable git
+        git:
+          uri: file:///tmp/non-existent-repo
+        default-application-name: application
+        default-profile: default
   
   profiles:
     active: native

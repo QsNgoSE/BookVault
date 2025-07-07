@@ -43,19 +43,20 @@ spring:
   # Redis configuration - only configured for Docker profile
   # redis configuration is profile-specific - see docker profile below
 
-# Eureka client configuration
+# Eureka client configuration - DISABLED for local development
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
+    register-with-eureka: false
+    fetch-registry: false
+    enabled: false
   instance:
     prefer-ip-address: true
 
 # JWT configuration
 jwt:
-  secret: bookvault-secret-key-that-should-be-very-long-and-secure-in-production
+  secret: bookvault-secret-key-that-should-be-very-long-and-secure-in-production-environment-with-at-least-32-characters
   expiration: 86400000 # 24 hours in milliseconds
 
 # OPTIMIZED Actuator endpoints

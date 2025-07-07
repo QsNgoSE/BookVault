@@ -42,7 +42,7 @@ eureka:
 
 # JWT configuration
 jwt:
-  secret: your-very-long-secret-key-for-local-development-only-make-it-at-least-32-characters
+  secret: bookvault-secret-key-that-should-be-very-long-and-secure-in-production-environment-with-at-least-32-characters
   expiration: 86400000 # 24 hours in milliseconds
 
 # Actuator endpoints

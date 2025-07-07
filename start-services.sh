@@ -94,17 +94,6 @@ else
     BOOK_PID=""
 fi
 
-# Start Order Service
-echo "📦 Starting Order Service..."
-if start_service "order-service" "8084"; then
-    ORDER_PID=$(jobs -p | tail -n 1)
-    echo "⏳ Waiting for Order Service to start..."
-    sleep 10
-else
-    echo "❌ Failed to start Order Service"
-    ORDER_PID=""
-fi
-
 echo ""
 echo "🎉 Services started successfully!"
 echo "📍 Service URLs:"

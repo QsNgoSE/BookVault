@@ -5,43 +5,72 @@
 
 // Configuration - Updated for Real Backend Integration
 const CONFIG = {
-    // Microservices URLs
-    AUTH_SERVICE_URL: 'http://localhost:8082',
-    BOOK_SERVICE_URL: 'http://localhost:8083',
-    ORDER_SERVICE_URL: 'http://localhost:8084',
+    // Get configuration from config.js with fallbacks
+    get AUTH_SERVICE_URL() {
+        try {
+            if (window.BookVaultConfig && window.BookVaultConfig.environment) {
+                return window.BookVaultConfig.environment === 'development' 
+                    ? window.BookVaultConfig.development.AUTH_SERVICE_URL 
+                    : window.BookVaultConfig.production.AUTH_SERVICE_URL;
+            }
+        } catch (error) {
+            console.warn('Config not available, using fallback:', error);
+        }
+        return 'http://localhost:8082/api';
+    },
+    
+    get BOOK_SERVICE_URL() {
+        try {
+            if (window.BookVaultConfig && window.BookVaultConfig.environment) {
+                return window.BookVaultConfig.environment === 'development' 
+                    ? window.BookVaultConfig.development.BOOK_SERVICE_URL 
+                    : window.BookVaultConfig.production.BOOK_SERVICE_URL;
+            }
+        } catch (error) {
+            console.warn('Config not available, using fallback:', error);
+        }
+        return 'http://localhost:8083/api';
+    },
+    
+    // Orders are now handled by the Book Service
+    get ORDER_SERVICE_URL() {
+        return this.BOOK_SERVICE_URL;
+    },
     
     // Legacy API base URL for compatibility
-    API_BASE_URL: 'http://localhost:8082',
+    get API_BASE_URL() {
+        return this.AUTH_SERVICE_URL;
+    },
     
     ENDPOINTS: {
         // Real backend endpoints
         AUTH: {
-            LOGIN: '/api/auth/login',
-            REGISTER: '/api/auth/register',
-            PROFILE: '/api/auth/profile',
-            VALIDATE: '/api/auth/validate'
+            LOGIN: '/auth/login',
+            REGISTER: '/auth/register',
+            PROFILE: '/auth/profile',
+            VALIDATE: '/auth/validate'
         },
         BOOKS: {
-            BASE: '/api/books',
-            SEARCH: '/api/books/search',
-            CATEGORIES: '/api/books/categories',
-            FEATURED: '/api/books/featured',
-            BESTSELLERS: '/api/books/bestsellers',
-            NEW_RELEASES: '/api/books/new-releases',
-            BY_CATEGORY: '/api/books/category',
-            BY_AUTHOR: '/api/books/author',
-            FILTER: '/api/books/filter'
+            BASE: '/books',
+            SEARCH: '/books/search',
+            CATEGORIES: '/books/categories',
+            FEATURED: '/books/featured',
+            BESTSELLERS: '/books/bestsellers',
+            NEW_RELEASES: '/books/new-releases',
+            BY_CATEGORY: '/books/category',
+            BY_AUTHOR: '/books/author',
+            FILTER: '/books/filter'
         },
         ADMIN: {
-            USERS: '/api/auth/admin/users',
-            SELLERS: '/api/auth/admin/sellers',
-            DASHBOARD: '/api/auth/admin/dashboard',
-            STATS: '/api/auth/admin/dashboard/stats'
+            USERS: '/auth/admin/users',
+            SELLERS: '/auth/admin/sellers',
+            DASHBOARD: '/auth/admin/dashboard',
+            STATS: '/auth/admin/dashboard/stats'
         },
         ORDERS: {
-            BASE: '/api/orders',
-            USER: '/api/orders/user',
-            ADMIN: '/api/admin/orders'
+            BASE: '/orders',
+            USER: '/orders/user',
+            ADMIN: '/orders/admin'
         }
     }
 };
@@ -1798,18 +1827,15 @@ const APIService = {
         // Determine service URL based on endpoint
         let baseUrl = serviceUrl;
         if (!baseUrl) {
-            if (endpoint.includes('/auth/') || endpoint.includes('/api/auth/') || endpoint.includes('/api/admin/')) {
+            if (endpoint.includes('/auth') || endpoint.includes('/admin')) {
                 baseUrl = CONFIG.AUTH_SERVICE_URL;
                 console.log('🔐 Using AUTH service for:', endpoint);
-            } else if (endpoint.includes('/api/books')) {
-                baseUrl = CONFIG.BOOK_SERVICE_URL;
+            } else if (endpoint.includes('/books') || endpoint.includes('/orders')) {
+                baseUrl = CONFIG.BOOK_SERVICE_URL;  // Orders are now handled by book service
                 console.log('📚 Using BOOK service for:', endpoint);
-            } else if (endpoint.includes('/api/orders')) {
-                baseUrl = CONFIG.ORDER_SERVICE_URL;
-                console.log('📦 Using ORDER service for:', endpoint);
             } else {
-                baseUrl = CONFIG.API_BASE_URL;
-                console.log('🔧 Using DEFAULT service for:', endpoint);
+                baseUrl = CONFIG.AUTH_SERVICE_URL;  // Default to auth service
+                console.log('🔧 Using AUTH service (default) for:', endpoint);
             }
         }
         

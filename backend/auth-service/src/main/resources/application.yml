@@ -132,23 +132,31 @@ spring:
         enabled: false
   
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL}}
-    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD}}
+    url: jdbc:postgresql://postgres.railway.internal:5432/railway
+    username: postgres
+    password: LyxjyafXTDmZBQgGaufLHvYJwdNbTwuR
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 20000
+      pool-name: AuthServiceHikariCP
   
   # Redis configuration for Railway - using environment variables
-  redis:
-    host: ${SPRING_REDIS_HOST:${REDIS_HOST:localhost}}
-    port: ${SPRING_REDIS_PORT:${REDIS_PORT:6379}}
-    username: ${SPRING_REDIS_USERNAME:${REDIS_USERNAME:}}
-    password: ${SPRING_REDIS_PASSWORD:${REDIS_PASSWORD:}}
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  data:
+    redis:
+      url: ${REDIS_URL}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 60000
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
   
   jpa:
     hibernate:
@@ -163,7 +171,7 @@ spring:
     lazy-initialization: true
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:8080}
 
 # CORS configuration for Railway
 cors:
@@ -185,6 +193,7 @@ management:
     web:
       exposure:
         include: health,info,metrics
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
@@ -194,4 +203,4 @@ management:
     readinessstate:
       enabled: true
     livenessstate:
-      enabled: true/ 
+      enabled: true

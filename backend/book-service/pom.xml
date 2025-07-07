@@ -10,6 +10,7 @@
         <groupId>com.bookvault</groupId>
         <artifactId>bookvault-backend</artifactId>
         <version>1.0.0</version>
+        <relativePath>parent-pom.xml</relativePath>
     </parent>
     
     <artifactId>book-service</artifactId>
@@ -17,6 +18,12 @@
     
     <name>BookVault Book Service</name>
     <description>Book catalog management and search service</description>
+    
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <java.version>17</java.version>
+    </properties>
     
     <dependencies>
         <!-- Spring Boot Web -->
@@ -58,11 +65,13 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
         </dependency>
         
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
         </dependency>
         
         <!-- Spring Cloud Config Client -->
@@ -107,7 +116,7 @@
             <artifactId>lombok</artifactId>
         </dependency>
         
-        <!-- Shared module -->
+        <!-- Shared module dependency -->
         <dependency>
             <groupId>com.bookvault</groupId>
             <artifactId>bookvault-shared</artifactId>

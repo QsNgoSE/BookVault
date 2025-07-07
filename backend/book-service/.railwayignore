@@ -1,0 +1,19 @@
+# Railway ignore file for book service
+target/
+.mvn/
+mvnw
+mvnw.cmd
+*.log
+*.tmp
+.DS_Store
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.git/
+.gitignore
+README.md
+docs/
+test/
+src/test/

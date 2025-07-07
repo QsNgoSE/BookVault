@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["mvn clean package -DskipTests -B -Dmaven.repo.local=./.m2/repository"]
+
+[start]
+cmd = "java -Dserver.port=$PORT -jar target/*.jar"

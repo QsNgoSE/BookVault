@@ -1,0 +1,8 @@
+[phases.build]
+cmds = [
+    "cd shared && mvn clean install -DskipTests -B",
+    "mvn clean package -DskipTests -B"
+]
+
+[start]
+cmd = "java -Dserver.port=$PORT -jar target/*.jar"

@@ -16,7 +16,7 @@ const CONFIG = {
         } catch (error) {
             console.warn('Config not available, using fallback:', error);
         }
-        return 'http://localhost:8082/api';
+        return 'https://auth-service-production-0848.up.railway.app/api';
     },
     
     get BOOK_SERVICE_URL() {
@@ -29,7 +29,7 @@ const CONFIG = {
         } catch (error) {
             console.warn('Config not available, using fallback:', error);
         }
-        return 'http://localhost:8083/api';
+        return 'https://book-service-production-4444.up.railway.app/api';
     },
     
     // Orders are now handled by the Book Service

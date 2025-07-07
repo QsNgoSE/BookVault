@@ -9,10 +9,10 @@ const BookVaultConfig = {
     
     // Development API Configuration (localhost)
     development: {
-        AUTH_SERVICE_URL: 'http://localhost:8082/api',
-        BOOK_SERVICE_URL: 'http://localhost:8083/api',
-        ORDER_SERVICE_URL: 'http://localhost:8083/api', // Combined with book service
-        BASE_URL: 'http://localhost:8082/api',
+      AUTH_SERVICE_URL: 'https://auth-service-production-0848.up.railway.app/api',
+      BOOK_SERVICE_URL: 'https://book-service-production-4444.up.railway.app/api',
+      ORDER_SERVICE_URL: 'https://book-service-production-4444.up.railway.app/api', // Combined with book service
+      BASE_URL: 'https://auth-service-production-0848.up.railway.app/api',
     },
     
     // Production API Configuration (Railway)

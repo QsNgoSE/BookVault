@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="/asset/css/bookvault.css">
-  <link rel="stylesheet" href="/asset/css/register.css">
+  <link rel="stylesheet" href="asset/css/bookvault.css">
+  <link rel="stylesheet" href="asset/css/register.css">
   <style>
     
   </style>
@@ -105,7 +105,7 @@
   <div class="register-container">
     <div class="register-card">
       <div class="register-logo">
-        <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+        <img src="asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
         <span>BookVault</span>
       </div>
       <form id="registerForm">
@@ -161,8 +161,8 @@
     © 2025 BookVault. All rights reserved.
   </footer>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/config.js"></script>
-    <script src="/asset/js/main.js"></script>
+    <script src="config.js"></script>
+    <script src="asset/js/main.js"></script>
       <script>
     // Initialize BookVault App on Register Page
     document.addEventListener('DOMContentLoaded', function() {
@@ -210,57 +210,36 @@
     }
 
     async function handleRegister(event) {
-      console.log('🚀 handleRegister called!', event);
       event.preventDefault();
       
       const form = event.target;
-      console.log('📋 Form element:', form);
-      const formData = new FormData(form);
-      
-      // Get form values
-      const firstName = formData.get('firstName');
-      const lastName = formData.get('lastName');
-      const email = formData.get('email');
-      const password = formData.get('password');
-      const confirmPassword = formData.get('confirmPassword');
-      const role = formData.get('role');
-      
-      console.log('🔄 Attempting registration for:', email, 'as', role);
-      
-      // Basic validation
-      if (!firstName || !lastName || !email || !password || !role) {
-        showMessage('Please fill in all required fields!', 'error');
-        return;
-      }
+      const email = form.email.value;
+      const password = form.password.value;
+      const confirmPassword = form.confirmPassword.value;
+      const name = form.firstName.value + ' ' + form.lastName.value;
       
       if (password !== confirmPassword) {
-        showMessage('Passwords do not match!', 'error');
+        showMessage('Passwords do not match', 'error');
         return;
       }
       
-      if (password.length < 6) {
-        showMessage('Password must be at least 6 characters long!', 'error');
-        return;
-      }
+      console.log('🔄 Attempting registration...');
       
-      // Show loading state
       const submitButton = form.querySelector('button[type="submit"]');
       const originalText = submitButton.textContent;
       submitButton.textContent = 'Creating Account...';
       submitButton.disabled = true;
       
       try {
-        const response = await fetch('http://localhost:8082/api/auth/register', {
+        const response = await fetch(`${API_CONFIG.AUTH_SERVICE_URL}/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            firstName: firstName,
-            lastName: lastName,
             email: email,
             password: password,
-            role: role
+            name: name
           })
         });
         

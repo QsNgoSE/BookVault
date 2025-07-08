@@ -1827,12 +1827,18 @@ const APIService = {
         // Determine service URL based on endpoint
         let baseUrl = serviceUrl;
         if (!baseUrl) {
-            if (endpoint.includes('/auth') || endpoint.includes('/admin')) {
+            if (endpoint.includes('/auth')) {
                 baseUrl = CONFIG.AUTH_SERVICE_URL;
                 console.log('🔐 Using AUTH service for:', endpoint);
             } else if (endpoint.includes('/books') || endpoint.includes('/orders')) {
                 baseUrl = CONFIG.BOOK_SERVICE_URL;  // Orders are now handled by book service
                 console.log('📚 Using BOOK service for:', endpoint);
+            } else if (endpoint.includes('/admin/users') || endpoint.includes('/admin/sellers') || endpoint.includes('/admin/regular-users')) {
+                baseUrl = CONFIG.AUTH_SERVICE_URL;  // User admin endpoints go to auth service
+                console.log('🔐 Using AUTH service for user admin:', endpoint);
+            } else if (endpoint.includes('/admin/orders') || endpoint.includes('/admin/books')) {
+                baseUrl = CONFIG.BOOK_SERVICE_URL;  // Order and book admin endpoints go to book service
+                console.log('📚 Using BOOK service for order/book admin:', endpoint);
             } else {
                 baseUrl = CONFIG.AUTH_SERVICE_URL;  // Default to auth service
                 console.log('🔧 Using AUTH service (default) for:', endpoint);

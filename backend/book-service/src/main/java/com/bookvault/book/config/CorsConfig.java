@@ -23,6 +23,7 @@ public class CorsConfig {
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:*",
                 "http://127.0.0.1:*",
+                "https://*.github.io",
                 "file://*"
         ));
         

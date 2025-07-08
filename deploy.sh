@@ -215,35 +215,27 @@ Dockerfile*
 docker-compose*
 EOF
 
-    # Copy parent POM and shared module to auth service  
-    cp backend/pom.xml backend/auth-service/parent-pom.xml
-    cp -r backend/shared backend/auth-service/
-    
-    # Create Railway nixpacks.toml for auth service
+    # Create Railway nixpacks.toml for auth service (ensures Java 17)
     cat > backend/auth-service/nixpacks.toml << EOF
 [phases.build]
-cmds = [
-    "mvn install:install-file -Dfile=parent-pom.xml -DgroupId=com.bookvault -DartifactId=bookvault-backend -Dversion=1.0.0 -Dpackaging=pom",
-    "cd shared && mvn clean install -DskipTests -B && cd ..",
-    "mvn clean package -DskipTests -B"
-]
+dependsOn = ["install"]
+cmds = ["./mvnw clean package -DskipTests -B"]
+
+[phases.install]
+cmds = ["chmod +x mvnw"]
 
 [start]
 cmd = "java -Dserver.port=\$PORT -jar target/*.jar"
 EOF
 
-    # Copy parent POM and shared module to book service
-    cp backend/pom.xml backend/book-service/parent-pom.xml
-    cp -r backend/shared backend/book-service/
-    
     # Create Railway nixpacks.toml for book service
     cat > backend/book-service/nixpacks.toml << EOF
 [phases.build]
-cmds = [
-    "mvn install:install-file -Dfile=parent-pom.xml -DgroupId=com.bookvault -DartifactId=bookvault-backend -Dversion=1.0.0 -Dpackaging=pom",
-    "cd shared && mvn clean install -DskipTests -B && cd ..",
-    "mvn clean package -DskipTests -B"
-]
+dependsOn = ["install"]
+cmds = ["./mvnw clean package -DskipTests -B"]
+
+[phases.install]
+cmds = ["chmod +x mvnw"]
 
 [start]
 cmd = "java -Dserver.port=\$PORT -jar target/*.jar"
@@ -260,9 +252,6 @@ test_build() {
     
     cd backend
     
-    # Make Maven wrapper executable
-    chmod +x mvnw
-    
     if [ -f "pom.xml" ]; then
         print_info "Building parent project..."
         ./mvnw clean install -DskipTests -B
@@ -270,12 +259,10 @@ test_build() {
     
     print_info "Building auth service..."
     cd auth-service
-    chmod +x mvnw
     ./mvnw clean package -DskipTests -B
     
     cd ../book-service
     print_info "Building book service..."
-    chmod +x mvnw
     ./mvnw clean package -DskipTests -B
     
     cd ../..
@@ -309,9 +296,14 @@ deploy_auth_service() {
     # Link to the project and create service
     railway link -p f8ab2f01-dfb1-49e8-ad20-8135585bb276
     
-    # Create auth service
-    print_info "Creating auth service..."
-    railway add -s auth-service
+    # Check if auth-service already exists
+    if railway service list | grep -q "auth-service"; then
+        print_status "Auth service already exists, linking to it..."
+        railway service auth-service
+    else
+        print_info "Creating auth service..."
+        railway add -s auth-service
+    fi
     
     # Set environment variables
     railway variables --set "SPRING_PROFILES_ACTIVE=railway"
@@ -351,9 +343,6 @@ deploy_book_service() {
     
     # Link to the project and create service
     railway link -p f8ab2f01-dfb1-49e8-ad20-8135585bb276
-    
-    # Create book service
-    print_info "Creating book service..."
     railway add -s book-service
     
     # Set environment variables

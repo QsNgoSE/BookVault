@@ -1,21 +1,23 @@
 package com.bookvault.auth.config;
 
-import com.bookvault.shared.security.JwtUtil;
-import com.bookvault.shared.enums.UserRole;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
-import java.util.Arrays;
+import com.bookvault.shared.enums.UserRole;
+import com.bookvault.shared.security.JwtUtil;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * JWT Authentication Filter for Auth Service
@@ -42,12 +44,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
     
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@SuppressWarnings("null") HttpServletRequest request, @SuppressWarnings("null") HttpServletResponse response, 
+                                    @SuppressWarnings("null") FilterChain filterChain) throws ServletException, IOException {
         
         String requestPath = request.getRequestURI();
-        String method = request.getMethod();
-        
         // Skip JWT processing for public endpoints
         if (isPublicEndpoint(requestPath)) {
             filterChain.doFilter(request, response);

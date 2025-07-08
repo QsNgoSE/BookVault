@@ -1,13 +1,13 @@
 package com.bookvault.auth.config;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * CORS Configuration for frontend integration
@@ -19,12 +19,8 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Allow specific origins (frontend)
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-                "file://*"
-        ));
+        // Allow all origins (for development/testing)
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
         // Allow all headers
         configuration.setAllowedHeaders(List.of("*"));

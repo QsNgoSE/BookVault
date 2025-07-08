@@ -7,8 +7,8 @@ healthcheckPath = "/actuator/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+startupTimeout = 600
 startCommand = "java -Xmx450m -jar target/*.jar"
 
 [env]
 SPRING_PROFILES_ACTIVE = "railway"
-SERVER_PORT = "8080" 

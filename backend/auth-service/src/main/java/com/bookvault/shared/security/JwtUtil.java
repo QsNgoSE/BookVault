@@ -51,6 +51,7 @@ public class JwtUtil {
     /**
      * Generate JWT token for user
      */
+    @SuppressWarnings("deprecation")
     public String generateToken(UUID userId, String email, UserRole role) {
         Date expiryDate = Date.from(
                 LocalDateTime.now()
@@ -65,13 +66,14 @@ public class JwtUtil {
                 .claim("role", role.name())
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
     
     /**
      * Generate refresh token
      */
+    @SuppressWarnings("deprecation")
     public String generateRefreshToken(UUID userId) {
         Date expiryDate = Date.from(
                 LocalDateTime.now()
@@ -85,7 +87,7 @@ public class JwtUtil {
                 .claim("type", "refresh")
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
-                .signWith(secretKey, SignatureAlgorithm.HS512)
+                .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }
     

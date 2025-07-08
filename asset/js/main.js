@@ -2939,6 +2939,9 @@ const PageManager = {
                         }
                     });
                 });
+                
+                // Update main navigation items based on role
+                AuthManager.updateMainNavigationForRole(role);
             }
         } else {
             console.log('🔓 User not logged in - showing guest navigation');

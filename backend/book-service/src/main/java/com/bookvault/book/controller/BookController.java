@@ -21,7 +21,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * REST Controller for book management
@@ -368,6 +370,69 @@ public class BookController {
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
         List<CategoryResponse> categories = bookService.getAllCategories();
         return ResponseEntity.ok(ApiResponse.success(categories));
+    }
+    
+    // ========== SELLER REVENUE ENDPOINTS ==========
+    
+    @GetMapping("/seller/revenue")
+    @Operation(summary = "Get seller revenue analytics", description = "Get comprehensive revenue analytics for the current seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ApiResponse<SellerRevenueResponse>> getSellerRevenue() {
+        try {
+            UUID currentUserId = getCurrentUserId();
+            SellerRevenueResponse analytics = bookService.getSellerRevenueAnalytics(currentUserId);
+            return ResponseEntity.ok(ApiResponse.success(analytics, "Seller revenue analytics retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get seller revenue analytics: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/seller/orders")
+    @Operation(summary = "Get seller orders", description = "Get recent orders for the current seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ApiResponse<List<SellerRevenueResponse.SellerOrderItem>>> getSellerOrders() {
+        try {
+            UUID currentUserId = getCurrentUserId();
+            List<SellerRevenueResponse.SellerOrderItem> orders = bookService.getSellerOrders(currentUserId);
+            return ResponseEntity.ok(ApiResponse.success(orders, "Seller orders retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get seller orders: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/seller/stats")
+    @Operation(summary = "Get seller dashboard stats", description = "Get basic dashboard statistics for the current seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSellerDashboardStats() {
+        try {
+            UUID currentUserId = getCurrentUserId();
+            Map<String, Object> stats = bookService.getSellerDashboardStats(currentUserId);
+            return ResponseEntity.ok(ApiResponse.success(stats, "Seller dashboard stats retrieved successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get seller dashboard stats: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get current user ID from security context
+     */
+    private UUID getCurrentUserId() {
+        try {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            
+            if (principal instanceof UUID) {
+                return (UUID) principal;
+            } else if (principal instanceof String) {
+                return UUID.fromString((String) principal);
+            } else {
+                throw new SecurityException("User not authenticated - unexpected principal type: " + principal.getClass().getName());
+            }
+        } catch (Exception e) {
+            throw new SecurityException("User not authenticated: " + e.getMessage());
+        }
     }
     
     /**

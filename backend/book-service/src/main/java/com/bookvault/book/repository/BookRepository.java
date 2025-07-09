@@ -108,4 +108,11 @@ public interface BookRepository extends JpaRepository<Book, UUID> {
     
     @Query("SELECT AVG(b.rating) FROM Book b WHERE b.sellerId = :sellerId AND b.rating IS NOT NULL")
     Optional<BigDecimal> findAverageRatingBySeller(@Param("sellerId") UUID sellerId);
+    
+    // Seller-specific queries
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.sellerId = :sellerId AND b.isActive = true")
+    long countBySellerIdAndIsActiveTrue(@Param("sellerId") UUID sellerId);
+    
+    @Query("SELECT COUNT(b) FROM Book b WHERE b.sellerId = :sellerId AND b.stockQuantity <= :threshold")
+    long countBySellerIdAndStockQuantityLessThanEqual(@Param("sellerId") UUID sellerId, @Param("threshold") Long threshold);
 } 

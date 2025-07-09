@@ -1,9 +1,0 @@
-{
-  "title": "Test Book",
-  "author": "Test Author", 
-  "description": "This is a test book for API testing",
-  "price": 19.99,
-  "stockQuantity": 10,
-  "sellerId": "84464dea-6b82-4195-8dce-b952f13f007e",
-  "categoryNames": ["Fiction"]
-} 

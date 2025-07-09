@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,11 +38,13 @@ public class BookService {
     
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
+    private final OrderItemRepository orderItemRepository;
     
     // Constructor (replacing @RequiredArgsConstructor)
-    public BookService(BookRepository bookRepository, CategoryRepository categoryRepository) {
+    public BookService(BookRepository bookRepository, CategoryRepository categoryRepository, OrderItemRepository orderItemRepository) {
         this.bookRepository = bookRepository;
         this.categoryRepository = categoryRepository;
+        this.orderItemRepository = orderItemRepository;
     }
     
     // Get all books (paginated)
@@ -422,5 +426,178 @@ public class BookService {
                 .description(category.getDescription())
                 .isActive(category.getIsActive())
                 .build();
+    }
+    
+    // ========== SELLER REVENUE ANALYTICS METHODS ==========
+    
+    /**
+     * Get seller revenue analytics
+     */
+    @Transactional(readOnly = true)
+    public SellerRevenueResponse getSellerRevenueAnalytics(UUID sellerId) {
+        log.info("Getting revenue analytics for seller: {}", sellerId);
+        
+        try {
+            // Get basic seller stats
+            Long totalBooks = bookRepository.countBooksBySeller(sellerId);
+            Long activeBooks = bookRepository.countBySellerIdAndIsActiveTrue(sellerId);
+            Long lowStockBooks = bookRepository.countBySellerIdAndStockQuantityLessThanEqual(sellerId, 10L);
+            
+            // Get revenue statistics
+            BigDecimal totalRevenue = orderItemRepository.getTotalRevenueBySellerId(sellerId);
+            Long totalSoldItems = orderItemRepository.getTotalQuantityBySellerId(sellerId);
+            Long orderCount = orderItemRepository.getOrderCountBySellerId(sellerId);
+            
+            // Calculate average order value
+            BigDecimal averageOrderValue = BigDecimal.ZERO;
+            if (orderCount != null && orderCount > 0 && totalRevenue != null) {
+                averageOrderValue = totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, BigDecimal.ROUND_HALF_UP);
+            }
+            
+            // Get time-based revenue
+            BigDecimal monthlyRevenue = orderItemRepository.getRevenueBySellerIdAndPeriod(sellerId, "month");
+            BigDecimal yearlyRevenue = orderItemRepository.getRevenueBySellerIdAndPeriod(sellerId, "year");
+            BigDecimal weeklyRevenue = orderItemRepository.getRevenueBySellerIdAndPeriod(sellerId, "week");
+            
+            // Get top performing books
+            List<SellerRevenueResponse.BookRevenueItem> topPerformingBooks = getTopPerformingBooks(sellerId);
+            
+            // Get revenue breakdown
+            List<SellerRevenueResponse.RevenuePeriod> revenueBreakdown = getRevenueBreakdown(sellerId);
+            
+            // Get recent orders
+            List<SellerRevenueResponse.SellerOrderItem> recentOrders = getRecentSellerOrders(sellerId);
+            
+            // Calculate revenue growth (simplified - compare current month with previous month)
+            BigDecimal revenueGrowth = calculateRevenueGrowth(sellerId);
+            
+            return SellerRevenueResponse.builder()
+                    .sellerId(sellerId)
+                    .sellerName("Seller") // TODO: Get from auth service
+                    .totalBooks(totalBooks)
+                    .totalSoldItems(totalSoldItems)
+                    .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
+                    .averageOrderValue(averageOrderValue)
+                    .monthlyRevenue(monthlyRevenue != null ? monthlyRevenue : BigDecimal.ZERO)
+                    .yearlyRevenue(yearlyRevenue != null ? yearlyRevenue : BigDecimal.ZERO)
+                    .weeklyRevenue(weeklyRevenue != null ? weeklyRevenue : BigDecimal.ZERO)
+                    .revenueGrowth(revenueGrowth)
+                    .orderCount(orderCount)
+                    .activeBooks(activeBooks)
+                    .lowStockBooks(lowStockBooks)
+                    .topPerformingBooks(topPerformingBooks)
+                    .revenueBreakdown(revenueBreakdown)
+                    .recentOrders(recentOrders)
+                    .build();
+                    
+        } catch (Exception e) {
+            log.error("Error getting seller revenue analytics: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get seller revenue analytics: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Get seller orders
+     */
+    @Transactional(readOnly = true)
+    public List<SellerRevenueResponse.SellerOrderItem> getSellerOrders(UUID sellerId) {
+        log.info("Getting orders for seller: {}", sellerId);
+        
+        try {
+            return getRecentSellerOrders(sellerId);
+        } catch (Exception e) {
+            log.error("Error getting seller orders: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get seller orders: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Get seller dashboard stats
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getSellerDashboardStats(UUID sellerId) {
+        log.info("Getting dashboard stats for seller: {}", sellerId);
+        
+        try {
+            Long totalBooks = bookRepository.countBooksBySeller(sellerId);
+            Long totalSoldItems = orderItemRepository.getTotalQuantityBySellerId(sellerId);
+            BigDecimal totalRevenue = orderItemRepository.getTotalRevenueBySellerId(sellerId);
+            
+            return Map.of(
+                "totalBooks", totalBooks != null ? totalBooks : 0L,
+                "totalSold", totalSoldItems != null ? totalSoldItems : 0L,
+                "totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO
+            );
+        } catch (Exception e) {
+            log.error("Error getting seller dashboard stats: {}", e.getMessage(), e);
+            return Map.of(
+                "totalBooks", 0L,
+                "totalSold", 0L,
+                "totalRevenue", BigDecimal.ZERO
+            );
+        }
+    }
+    
+    // Helper methods for revenue analytics
+    
+    private List<SellerRevenueResponse.BookRevenueItem> getTopPerformingBooks(UUID sellerId) {
+        List<Object[]> results = orderItemRepository.findTopPerformingBooksBySellerId(sellerId);
+        return results.stream()
+                .map(result -> new SellerRevenueResponse.BookRevenueItem(
+                    (UUID) result[0],
+                    (String) result[1],
+                    (String) result[2],
+                    (String) result[3],
+                    (Long) result[4],
+                    (BigDecimal) result[5],
+                    (BigDecimal) result[6]
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    private List<SellerRevenueResponse.RevenuePeriod> getRevenueBreakdown(UUID sellerId) {
+        List<Object[]> results = orderItemRepository.getRevenueBreakdownBySellerId(sellerId);
+        return results.stream()
+                .map(result -> new SellerRevenueResponse.RevenuePeriod(
+                    (String) result[0],
+                    (BigDecimal) result[1],
+                    (Long) result[2],
+                    (Long) result[3]
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    private List<SellerRevenueResponse.SellerOrderItem> getRecentSellerOrders(UUID sellerId) {
+        List<Object[]> results = orderItemRepository.findRecentOrdersBySellerId(sellerId);
+        return results.stream()
+                .map(result -> new SellerRevenueResponse.SellerOrderItem(
+                    (UUID) result[0],
+                    (String) result[1],
+                    (String) result[2],
+                    (String) result[3],
+                    (String) result[4],
+                    (Integer) result[5],
+                    (BigDecimal) result[6],
+                    (BigDecimal) result[7],
+                    (String) result[8],
+                    (String) result[9],
+                    (LocalDateTime) result[10],
+                    (String) result[11]
+                ))
+                .collect(Collectors.toList());
+    }
+    
+    private BigDecimal calculateRevenueGrowth(UUID sellerId) {
+        // Simplified growth calculation - compare current month with previous month
+        BigDecimal currentMonthRevenue = orderItemRepository.getRevenueBySellerIdAndPeriod(sellerId, "month");
+        BigDecimal previousMonthRevenue = orderItemRepository.getRevenueBySellerIdAndPeriod(sellerId, "previous_month");
+        
+        if (previousMonthRevenue != null && previousMonthRevenue.compareTo(BigDecimal.ZERO) > 0) {
+            return currentMonthRevenue.subtract(previousMonthRevenue)
+                    .divide(previousMonthRevenue, 4, BigDecimal.ROUND_HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+        }
+        
+        return BigDecimal.ZERO;
     }
 } 

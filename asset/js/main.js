@@ -151,18 +151,40 @@ const CartManager = {
         
         if (existingItem) {
             console.log(`📝 Found existing item: ${existingItem.title}, current qty: ${existingItem.quantity}, adding: ${quantity}`);
+            
+            // Check stock limit for existing item
+            if (existingItem.stockQuantity !== null && existingItem.stockQuantity !== undefined) {
+                const newTotalQuantity = existingItem.quantity + quantity;
+                if (newTotalQuantity > existingItem.stockQuantity) {
+                    console.log(`⚠️ Cannot add ${quantity} more - would exceed stock limit ${existingItem.stockQuantity}`);
+                    Utils.showError(`Cannot add more than ${existingItem.stockQuantity} copies of "${existingItem.title}"`);
+                    return false;
+                }
+            }
+            
             existingItem.quantity += quantity;
             console.log(`📝 New quantity: ${existingItem.quantity}`);
             this.showCartNotification(`Updated quantity to ${existingItem.quantity}!`);
         } else {
             console.log(`🆕 Adding new item to cart`);
+            
+            // Check stock limit for new item
+            if (book.stockQuantity !== undefined && book.stockQuantity !== null) {
+                if (quantity > book.stockQuantity) {
+                    console.log(`⚠️ Cannot add ${quantity} - exceeds stock limit ${book.stockQuantity}`);
+                    Utils.showError(`Cannot add more than ${book.stockQuantity} copies of "${book.title}"`);
+                    return false;
+                }
+            }
+            
             const newItem = {
                 id: String(book.id),
                 title: String(book.title).trim(),
                 author: String(book.author).trim(),
                 price: parseFloat(book.price),
-                imageUrl: book.imageUrl || 'asset/img/books/placeholder.jpg',
+                imageUrl: book.coverImageUrl || book.imageUrl || 'asset/img/books/placeholder.jpg',
                 quantity: parseInt(quantity),
+                stockQuantity: book.stockQuantity !== undefined ? parseInt(book.stockQuantity) : null,
                 addedAt: new Date().toISOString()
             };
             console.log('🆕 New item:', newItem);
@@ -196,7 +218,7 @@ const CartManager = {
         }
     },
 
-    // Update item quantity
+    // Update item quantity with stock limit validation
     updateQuantity(bookId, quantity) {
         console.log(`🔄 UpdateQuantity called: item ${bookId} (type: ${typeof bookId}), new quantity ${quantity}`);
         const cart = this.getCart();
@@ -214,6 +236,16 @@ const CartManager = {
         
         if (item) {
             console.log(`📝 Found item: ${item.title}, current quantity: ${item.quantity}`);
+            
+            // Check stock limit if available
+            if (item.stockQuantity !== null && item.stockQuantity !== undefined) {
+                if (quantity > item.stockQuantity) {
+                    console.log(`⚠️ Requested quantity ${quantity} exceeds stock limit ${item.stockQuantity}`);
+                    Utils.showError(`Cannot add more than ${item.stockQuantity} copies of "${item.title}"`);
+                    return;
+                }
+            }
+            
             if (quantity <= 0) {
                 console.log('🗑️ Quantity <= 0, removing item');
                 this.removeFromCart(searchId);
@@ -367,24 +399,48 @@ const CartManager = {
             return;
         }
 
-        const cartHTML = cart.map(item => `
-            <div class="cart-item d-flex align-items-center gap-3 mb-3 p-3 border rounded" data-item-id="${item.id}">
-                <img src="${item.imageUrl}" alt="${item.title}" style="width: 60px; height: 80px; object-fit: cover;" class="rounded">
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">${item.title}</h6>
-                    <p class="text-muted mb-1 small">${item.author}</p>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-sm btn-outline-secondary decrease-qty" data-id="${item.id}" data-current="${item.quantity}">-</button>
-                        <span class="mx-2">${item.quantity}</span>
-                        <button class="btn btn-sm btn-outline-secondary increase-qty" data-id="${item.id}" data-current="${item.quantity}">+</button>
+        const cartHTML = cart.map(item => {
+            // Get stock information for this item (if available)
+            const stockInfo = item.stockQuantity !== undefined ? item.stockQuantity : null;
+            let stockDisplay = '';
+            let stockClass = '';
+            
+            if (stockInfo !== null) {
+                if (stockInfo <= 0) {
+                    stockDisplay = '<small class="text-danger"><i class="bi bi-x-circle"></i> Out of Stock</small>';
+                    stockClass = 'text-danger';
+                } else if (stockInfo < item.quantity) {
+                    stockDisplay = `<small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Only ${stockInfo} available</small>`;
+                    stockClass = 'text-warning';
+                } else if (stockInfo < 10) {
+                    stockDisplay = `<small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Low Stock (${stockInfo})</small>`;
+                    stockClass = 'text-warning';
+                } else {
+                    stockDisplay = `<small class="text-success"><i class="bi bi-check-circle"></i> ${stockInfo} available</small>`;
+                    stockClass = 'text-success';
+                }
+            }
+
+            return `
+                <div class="cart-item d-flex align-items-center gap-3 mb-3 p-3 border rounded" data-item-id="${item.id}">
+                    <img src="${item.imageUrl}" alt="${item.title}" style="width: 60px; height: 80px; object-fit: cover;" class="rounded">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${item.title}</h6>
+                        <p class="text-muted mb-1 small">${item.author}</p>
+                        ${stockDisplay ? `<div class="mb-2">${stockDisplay}</div>` : ''}
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-secondary decrease-qty" data-id="${item.id}" data-current="${item.quantity}">-</button>
+                            <span class="mx-2">${item.quantity}</span>
+                            <button class="btn btn-sm btn-outline-secondary increase-qty" data-id="${item.id}" data-current="${item.quantity}" ${stockInfo !== null && item.quantity >= stockInfo ? 'disabled' : ''}>+</button>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">${Utils.formatCurrency(item.price * item.quantity)}</div>
+                        <button class="btn btn-sm btn-outline-danger mt-1 remove-item" data-id="${item.id}">Remove</button>
                     </div>
                 </div>
-                <div class="text-end">
-                    <div class="fw-bold">${Utils.formatCurrency(item.price * item.quantity)}</div>
-                    <button class="btn btn-sm btn-outline-danger mt-1 remove-item" data-id="${item.id}">Remove</button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         const total = this.getCartTotal();
         
@@ -459,6 +515,15 @@ const CartManager = {
                 const cart = this.getCart();
                 const item = cart.find(item => String(item.id) === String(itemId));
                 const currentQty = item ? item.quantity : 0;
+                
+                // Check stock limit before increasing
+                if (item && item.stockQuantity !== null && item.stockQuantity !== undefined) {
+                    if (currentQty >= item.stockQuantity) {
+                        console.log(`⚠️ Cannot increase quantity - already at stock limit ${item.stockQuantity}`);
+                        Utils.showError(`Cannot add more than ${item.stockQuantity} copies of "${item.title}"`);
+                        return;
+                    }
+                }
                 
                 const newQty = currentQty + 1;
                 console.log(`Increasing quantity for item ${itemId} from ${currentQty} to ${newQty}`);
@@ -1122,50 +1187,75 @@ const AdminManager = {
             return;
         }
 
-        container.innerHTML = books.map(book => `
-            <tr data-book-id="${book.id}">
-                <td>
-                    <img src="${book.imageUrl || 'asset/img/books/placeholder.jpg'}" 
-                         style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px;" 
-                         alt="${book.title}"
-                         class="shadow-sm">
-                </td>
-                <td>
-                    <div>
-                        <div class="fw-medium">${book.title}</div>
-                        <small class="text-muted">ID: ${book.id}</small>
-                    </div>
-                </td>
-                <td>
-                    <span class="text-muted">${book.author || 'N/A'}</span>
-                </td>
-                <td>
-                    <span class="badge bg-light text-dark">${book.category || book.genre || 'N/A'}</span>
-                </td>
-                <td>
-                    <span class="fw-medium text-success">${Utils.formatCurrency(book.price)}</span>
-                </td>
-                <td>
-                    <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
-                        ${book.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                </td>
-                <td>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-warning" 
-                                onclick="AdminManager.editBook('${book.id}')"
-                                title="Edit Book">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" 
-                                onclick="AdminManager.deleteBook('${book.id}')"
-                                title="Delete Book">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        container.innerHTML = books.map(book => {
+            // Determine stock status for admin view
+            let stockStatus = '';
+            let stockClass = '';
+            
+            if (book.stockQuantity <= 0) {
+                stockStatus = 'Out of Stock';
+                stockClass = 'danger';
+            } else if (book.stockQuantity < 5) {
+                stockStatus = `${book.stockQuantity} left`;
+                stockClass = 'warning';
+            } else if (book.stockQuantity < 10) {
+                stockStatus = `${book.stockQuantity} (Low)`;
+                stockClass = 'warning';
+            } else {
+                stockStatus = `${book.stockQuantity}`;
+                stockClass = 'success';
+            }
+
+            return `
+                <tr data-book-id="${book.id}">
+                    <td>
+                        <img src="${book.coverImageUrl || book.imageUrl || 'asset/img/books/placeholder.jpg'}" 
+                             style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px;" 
+                             alt="${book.title}"
+                             class="shadow-sm">
+                    </td>
+                    <td>
+                        <div>
+                            <div class="fw-medium">${book.title}</div>
+                            <small class="text-muted">ID: ${book.id}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="text-muted">${book.author || 'N/A'}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">${book.category || book.genre || 'N/A'}</span>
+                    </td>
+                    <td>
+                        <span class="fw-medium text-success">${Utils.formatCurrency(book.price)}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-${stockClass}">
+                            ${stockStatus}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
+                            ${book.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-warning" 
+                                    onclick="AdminManager.editBook('${book.id}')"
+                                    title="Edit Book">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" 
+                                    onclick="AdminManager.deleteBook('${book.id}')"
+                                    title="Delete Book">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     },
 
     // Toggle user status (suspend/activate)
@@ -1566,10 +1656,18 @@ const SellerManager = {
             const orders = ordersResponse.data || ordersResponse;
             this.displaySellerOrders(orders);
             
-            // Load seller stats
-            const statsResponse = await APIService.seller.getDashboardStats();
-            const stats = statsResponse.data || statsResponse;
-            this.displaySellerStats(stats);
+            // Load seller revenue analytics
+            try {
+                const revenueResponse = await APIService.seller.getRevenueAnalytics();
+                const revenue = revenueResponse.data || revenueResponse;
+                this.displaySellerRevenueAnalytics(revenue);
+            } catch (error) {
+                console.error('Failed to load revenue analytics:', error);
+                // Fallback to basic stats
+                const statsResponse = await APIService.seller.getDashboardStats();
+                const stats = statsResponse.data || statsResponse;
+                this.displaySellerStats(stats);
+            }
             
             // Initialize upload form
             this.initSellerUploadForm();
@@ -1605,36 +1703,61 @@ const SellerManager = {
             return;
         }
 
-        container.innerHTML = books.map(book => `
-            <tr data-book-id="${book.id}">
-                <td>
-                    <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" 
-                         class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="${book.title}">
-                </td>
-                <td>${book.title}</td>
-                <td>${book.author}</td>
-                <td>${Utils.formatCurrency(book.price)}</td>
-                <td>
-                    <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
-                        ${book.isActive ? 'Active' : 'Paused'}
-                    </span>
-                </td>
-                <td>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-warning" 
-                                onclick="SellerManager.editBook('${book.id}')" 
-                                title="Edit Book">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" 
-                                onclick="SellerManager.deleteBook('${book.id}')" 
-                                title="Delete Book">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        container.innerHTML = books.map(book => {
+            // Determine stock status for seller view
+            let stockStatus = '';
+            let stockClass = '';
+            
+            if (book.stockQuantity <= 0) {
+                stockStatus = 'Out of Stock';
+                stockClass = 'danger';
+            } else if (book.stockQuantity < 5) {
+                stockStatus = `${book.stockQuantity} left`;
+                stockClass = 'warning';
+            } else if (book.stockQuantity < 10) {
+                stockStatus = `${book.stockQuantity} (Low)`;
+                stockClass = 'warning';
+            } else {
+                stockStatus = `${book.stockQuantity}`;
+                stockClass = 'success';
+            }
+
+            return `
+                <tr data-book-id="${book.id}">
+                    <td>
+                        <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" 
+                             class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="${book.title}">
+                    </td>
+                    <td>${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${Utils.formatCurrency(book.price)}</td>
+                    <td>
+                        <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
+                            ${book.isActive ? 'Active' : 'Paused'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-${stockClass}">
+                            ${stockStatus}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-warning" 
+                                    onclick="SellerManager.editBook('${book.id}')" 
+                                    title="Edit Book">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="SellerManager.deleteBook('${book.id}')" 
+                                    title="Delete Book">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     },
 
     // Display seller's orders
@@ -1684,6 +1807,119 @@ const SellerManager = {
         if (statProducts) statProducts.textContent = stats.totalBooks || 0;
         if (statSold) statSold.textContent = stats.totalSold || 0;
         if (statRevenue) statRevenue.textContent = Utils.formatCurrency(stats.totalRevenue || 0);
+    },
+    
+    // Display seller revenue analytics
+    displaySellerRevenueAnalytics(revenue) {
+        // Update basic stats
+        this.displaySellerStats(revenue);
+        
+        // Update revenue charts if they exist
+        this.updateRevenueCharts(revenue);
+        
+        // Update top performing books
+        this.displayTopPerformingBooks(revenue.topPerformingBooks);
+        
+        // Update recent orders
+        this.displayRecentOrders(revenue.recentOrders);
+    },
+    
+    // Update revenue charts
+    updateRevenueCharts(revenue) {
+        // Monthly revenue chart
+        if (window.Chart && revenue.revenueBreakdown) {
+            const monthlyCtx = document.getElementById('chartMonth');
+            if (monthlyCtx) {
+                const monthlyData = revenue.revenueBreakdown.slice(0, 4).reverse();
+                new Chart(monthlyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyData.map(item => item.period),
+                        datasets: [{
+                            label: 'Revenue',
+                            data: monthlyData.map(item => item.revenue),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245,158,11,0.12)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+            
+            // Yearly revenue chart
+            const yearlyCtx = document.getElementById('chartYear');
+            if (yearlyCtx) {
+                const yearlyData = revenue.revenueBreakdown.slice(0, 4);
+                new Chart(yearlyCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: yearlyData.map(item => item.period),
+                        datasets: [{
+                            label: 'Annual Revenue',
+                            data: yearlyData.map(item => item.revenue),
+                            backgroundColor: '#f59e0b'
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+    },
+    
+    // Display top performing books
+    displayTopPerformingBooks(books) {
+        if (!books || books.length === 0) return;
+        
+        // Update the products table with top performing books
+        const container = document.querySelector('#products tbody');
+        if (container) {
+            container.innerHTML = books.map(book => `
+                <tr>
+                    <td><img src="${book.coverImageUrl || '/asset/img/books/placeholder.jpg'}" 
+                             class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="${book.bookTitle}"></td>
+                    <td>${book.bookTitle}</td>
+                    <td>${book.bookAuthor}</td>
+                    <td>${Utils.formatCurrency(book.totalRevenue)}</td>
+                    <td><span class="badge bg-success">${book.quantitySold} sold</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-warning" onclick="SellerManager.editBook('${book.bookId}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="SellerManager.deleteBook('${book.bookId}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    },
+    
+    // Display recent orders
+    displayRecentOrders(orders) {
+        if (!orders || orders.length === 0) return;
+        
+        const container = document.querySelector('#sold tbody');
+        if (container) {
+            container.innerHTML = orders.map(order => `
+                <tr>
+                    <td><img src="${order.coverImageUrl || '/asset/img/books/placeholder.jpg'}" 
+                             class="rounded" style="width: 46px; height: 60px;" alt="${order.bookTitle}"></td>
+                    <td>${order.bookTitle}</td>
+                    <td>${order.customerName}</td>
+                    <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                    <td>${Utils.formatCurrency(order.totalPrice)}</td>
+                    <td><span class="badge bg-${this.getOrderStatusColor(order.orderStatus)}">${order.orderStatus}</span></td>
+                </tr>
+            `).join('');
+        }
     },
 
     // Initialize seller upload form
@@ -2788,22 +3024,9 @@ const APIService = {
             });
         },
         deleteBook: (bookId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DELETE_BOOK}/${bookId}`, { method: 'DELETE' }),
-        getMyOrders: () => {
-            // For now, return empty array since backend doesn't have this endpoint yet
-            return Promise.resolve({
-                data: []
-            });
-        },
-        getDashboardStats: () => {
-            // For now, return mock stats since backend doesn't have this endpoint yet
-            return Promise.resolve({
-                data: {
-                    totalBooks: 0,
-                    totalSold: 0,
-                    totalRevenue: 0
-                }
-            });
-        }
+        getMyOrders: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.ORDERS}`),
+        getDashboardStats: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DASHBOARD_STATS}`),
+        getRevenueAnalytics: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.REVENUE}`)
     },
 
     // User API calls - Currently not implemented in backend  
@@ -2922,7 +3145,7 @@ window.BookManager = {
         }
     },
 
-    // Display books in grid format - Updated for real data structure
+    // Display books in grid format - Updated for real data structure with stock quantity
     displayBooks(books, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -2932,35 +3155,53 @@ window.BookManager = {
             return;
         }
 
-        const booksHTML = books.map(book => `
-            <div class="col-md-4 col-sm-6 mb-4">
-                <div class="card h-100">
-                    <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">${book.title}</h5>
-                        <p class="card-text text-muted">by ${book.author}</p>
-                        <p class="card-text">${Utils.formatCurrency(book.price)}</p>
-                        ${book.rating ? `<div class="mb-2">
-                            <span class="text-warning">${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5-Math.floor(book.rating))}</span>
-                            <small class="text-muted">(${book.reviewCount || 0} reviews)</small>
-                        </div>` : ''}
-                        <div class="mt-auto">
-                            <div class="d-flex justify-content-between">
-                                <a href="book-details.html?id=${book.id}" class="btn btn-primary btn-sm">View Details</a>
-                                <button class="btn btn-outline-warning btn-sm" onclick="window.BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
-                                    <i class="bi bi-heart"></i>
-                                </button>
-                            </div>
-                            <div class="mt-2">
-                                ${book.stockQuantity <= 0 ? '<small class="text-danger"><i class="bi bi-x-circle"></i> Out of Stock</small>' : 
-                                  book.stockQuantity < 10 ? `<small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Only ${book.stockQuantity} left</small>` : 
-                                  '<small class="text-success"><i class="bi bi-check-circle"></i> In Stock</small>'}
+        const booksHTML = books.map(book => {
+            // Determine stock status and quantity display
+            let stockStatus = '';
+            let stockClass = '';
+            
+            if (book.stockQuantity <= 0) {
+                stockStatus = '<i class="bi bi-x-circle"></i> Out of Stock';
+                stockClass = 'text-danger';
+            } else if (book.stockQuantity < 5) {
+                stockStatus = `<i class="bi bi-exclamation-triangle"></i> Only ${book.stockQuantity} left`;
+                stockClass = 'text-warning';
+            } else if (book.stockQuantity < 10) {
+                stockStatus = `<i class="bi bi-exclamation-triangle"></i> Low Stock (${book.stockQuantity})`;
+                stockClass = 'text-warning';
+            } else {
+                stockStatus = `<i class="bi bi-check-circle"></i> In Stock (${book.stockQuantity} available)`;
+                stockClass = 'text-success';
+            }
+
+            return `
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="card h-100">
+                        <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" class="card-img-top" alt="${book.title}" style="height: 300px; object-fit: cover;">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">${book.title}</h5>
+                            <p class="card-text text-muted">by ${book.author}</p>
+                            <p class="card-text">${Utils.formatCurrency(book.price)}</p>
+                            ${book.rating ? `<div class="mb-2">
+                                <span class="text-warning">${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5-Math.floor(book.rating))}</span>
+                                <small class="text-muted">(${book.reviewCount || 0} reviews)</small>
+                            </div>` : ''}
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between">
+                                    <a href="book-details.html?id=${book.id}" class="btn btn-primary btn-sm">View Details</a>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="window.BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
+                                        <i class="bi bi-heart"></i>
+                                    </button>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="${stockClass}">${stockStatus}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         container.innerHTML = booksHTML;
     },
@@ -5294,7 +5535,7 @@ const PageManager = {
         }
     },
 
-    // Display book details
+    // Display book details with stock quantity
     displayBookDetails(book) {
         console.log('📄 Displaying book details:', book);
         
@@ -5326,12 +5567,64 @@ const PageManager = {
             console.log('📄 Updated price:', bookData.price);
         }
         if (imageElement) {
-            imageElement.src = bookData.imageUrl || '/asset/img/books/placeholder.jpg';
-            console.log('📄 Updated image:', bookData.imageUrl);
+            imageElement.src = bookData.coverImageUrl || bookData.imageUrl || '/asset/img/books/placeholder.jpg';
+            console.log('📄 Updated image:', bookData.coverImageUrl || bookData.imageUrl);
         }
         if (descriptionElement && bookData.description) {
             descriptionElement.textContent = bookData.description;
             console.log('📄 Updated description:', bookData.description);
+        }
+
+        // Add stock quantity display
+        this.displayStockQuantity(bookData);
+    },
+
+    // Display stock quantity information
+    displayStockQuantity(bookData) {
+        console.log('📦 Displaying stock quantity for book:', bookData);
+        
+        // Find or create stock quantity display element
+        let stockElement = document.querySelector('.book-stock-quantity');
+        if (!stockElement) {
+            // Create stock quantity element after price
+            const priceElement = document.querySelector('.book-price-main');
+            if (priceElement) {
+                stockElement = document.createElement('div');
+                stockElement.className = 'book-stock-quantity mb-3';
+                priceElement.parentNode.insertBefore(stockElement, priceElement.nextSibling);
+            }
+        }
+
+        if (stockElement && bookData.stockQuantity !== undefined) {
+            let stockStatus = '';
+            let stockClass = '';
+            let stockIcon = '';
+            
+            if (bookData.stockQuantity <= 0) {
+                stockStatus = 'Out of Stock';
+                stockClass = 'text-danger';
+                stockIcon = 'bi-x-circle';
+            } else if (bookData.stockQuantity < 5) {
+                stockStatus = `Only ${bookData.stockQuantity} left in stock`;
+                stockClass = 'text-warning';
+                stockIcon = 'bi-exclamation-triangle';
+            } else if (bookData.stockQuantity < 10) {
+                stockStatus = `Low Stock - ${bookData.stockQuantity} available`;
+                stockClass = 'text-warning';
+                stockIcon = 'bi-exclamation-triangle';
+            } else {
+                stockStatus = `${bookData.stockQuantity} copies available`;
+                stockClass = 'text-success';
+                stockIcon = 'bi-check-circle';
+            }
+
+            stockElement.innerHTML = `
+                <div class="d-flex align-items-center ${stockClass}">
+                    <i class="bi ${stockIcon} me-2"></i>
+                    <span class="fw-bold">${stockStatus}</span>
+                </div>
+            `;
+            console.log('📦 Updated stock quantity display:', stockStatus);
         }
     },
 

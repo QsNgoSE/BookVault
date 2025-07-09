@@ -82,8 +82,9 @@ const BookVaultConfig = {
             UPDATE_BOOK: '/books',
             DELETE_BOOK: '/books',
             MY_BOOKS: '/books/seller',
-            MY_ORDERS: '/orders/seller',
-            DASHBOARD_STATS: '/seller/stats'
+            MY_ORDERS: '/books/seller/orders',
+            DASHBOARD_STATS: '/books/seller/stats',
+            REVENUE: '/books/seller/revenue'
         }
     },
     

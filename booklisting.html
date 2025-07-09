@@ -119,7 +119,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label">Author</label>
-            <input type="text" class="form-control form-control-sm" placeholder="Type author...">
+            <input type="text" class="form-control form-control-sm" id="authorFilter" placeholder="Type author...">
           </div>
           <div class="mb-3">
             <label class="form-label">Price</label>
@@ -232,162 +232,39 @@
       }
       
       // Load books using BookManager from main.js
-      if (typeof window.BookVault !== 'undefined' && window.BookVault.BookManager) {
-        window.BookVault.BookManager.loadBooks('books-container');
-      } else if (typeof BookManager !== 'undefined') {
-        BookManager.loadBooks('books-container');
-      } else {
-        // Fallback to custom loading
-        loadBooksFromBackend();
-      }
+      setTimeout(() => {
+        if (typeof window.BookManager !== 'undefined') {
+          window.BookManager.loadBooks('books-container');
+        } else if (typeof BookManager !== 'undefined') {
+          BookManager.loadBooks('books-container');
+        } else if (typeof window.BookVault !== 'undefined' && window.BookVault.BookManager) {
+          window.BookVault.BookManager.loadBooks('books-container');
+        } else {
+          // Fallback to direct API call
+          const bookServiceUrl = window.BookVaultConfig ? 
+              window.BookVaultConfig.production.BOOK_SERVICE_URL : 
+              'https://book-service-production-4444.up.railway.app/api';
+          fetch(`${bookServiceUrl}/books?page=0&size=12`)
+            .then(response => response.json())
+            .then(data => {
+              // The BookManager should handle the display
+            })
+            .catch(error => {
+              console.error('Error loading books via fallback:', error);
+            });
+        }
+      }, 1000); // Give main.js time to load
     });
 
-    async function loadBooksFromBackend() {
-      try {
-        console.log('🔄 Loading books from Book Service...');
-        
-        // Show loading spinner
-        const loadingElement = document.getElementById('loading-placeholder');
-        const errorElement = document.getElementById('error-container');
-        
-        if (loadingElement) loadingElement.style.display = 'block';
-        if (errorElement) errorElement.style.display = 'none';
-        
-        // Make API call to Book Service
-        const response = await fetch('http://localhost:8083/api/books?page=0&size=12');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Books loaded successfully:', data);
-        
-        // Hide loading spinner
-        const loadingEl = document.getElementById('loading-placeholder');
-        if (loadingEl) loadingEl.style.display = 'none';
-        
-        // Display books
-        displayBooks(data.success ? data.data : data);
-        
-      } catch (error) {
-        console.error('❌ Error loading books:', error);
-        
-        // Hide loading spinner and show error
-        const loadingElem = document.getElementById('loading-placeholder');
-        const errorElem = document.getElementById('error-container');
-        
-        if (loadingElem) loadingElem.style.display = 'none';
-        if (errorElem) errorElem.style.display = 'block';
-      }
-    }
 
-    function displayBooks(booksResponse) {
-      const container = document.getElementById('books-container');
-      
-      // Handle paginated response format
-      const books = booksResponse.content || booksResponse;
-      
-      if (!books || books.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center"><p>No books found.</p></div>';
-        return;
-      }
-      
-      container.innerHTML = books.map(book => `
-        <div class="col-md-6 col-lg-4">
-          <div class="book-card card h-100">
-            <img class="book-cover" src="${book.coverImageUrl || 'asset/img/books/placeholder.jpg'}" 
-                 alt="${book.title}" onerror="this.src='asset/img/books/placeholder.jpg'">
-            <div class="book-card-body">
-              <div>
-                <a class="book-title" href="book-details.html?id=${book.id}">${book.title}</a>
-                <div class="book-author">by ${book.author}</div>
-                <div class="book-rating">
-                  ${generateStarRating(book.rating || 0)}
-                  <span class="text-muted">(${book.reviewCount || 0} reviews)</span>
-                </div>
-                <div class="book-isbn">
-                  <small class="text-muted">ISBN: ${book.isbn}</small>
-                </div>
-              </div>
-              <div>
-                <div class="book-price">$${book.price ? book.price.toFixed(2) : '0.00'}</div>
-                <button class="btn btn-warning w-100" onclick="addToCart('${book.id}')">Add to Cart</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
-      
-      // Display pagination if available
-      if (booksResponse.totalPages > 1) {
-        displayPagination(booksResponse);
-      }
-    }
 
-    function generateStarRating(rating) {
-      const fullStars = Math.floor(rating);
-      const hasHalfStar = rating % 1 >= 0.5;
-      const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-      
-      return '★'.repeat(fullStars) + 
-             (hasHalfStar ? '☆' : '') + 
-             '☆'.repeat(emptyStars);
-    }
 
-    function displayPagination(booksResponse) {
-      const paginationContainer = document.getElementById('books-container-pagination');
-      
-      if (!booksResponse.totalPages || booksResponse.totalPages <= 1) {
-        paginationContainer.innerHTML = '';
-        return;
-      }
-      
-      let paginationHTML = '<nav><ul class="pagination">';
-      
-      // Previous button
-      if (booksResponse.number > 0) {
-        paginationHTML += `<li class="page-item">
-          <a class="page-link" href="#" onclick="loadPage(${booksResponse.number - 1})">Previous</a>
-        </li>`;
-      }
-      
-      // Page numbers
-      for (let i = 0; i < booksResponse.totalPages; i++) {
-        paginationHTML += `<li class="page-item ${i === booksResponse.number ? 'active' : ''}">
-          <a class="page-link" href="#" onclick="loadPage(${i})">${i + 1}</a>
-        </li>`;
-      }
-      
-      // Next button
-      if (booksResponse.number < booksResponse.totalPages - 1) {
-        paginationHTML += `<li class="page-item">
-          <a class="page-link" href="#" onclick="loadPage(${booksResponse.number + 1})">Next</a>
-        </li>`;
-      }
-      
-      paginationHTML += '</ul></nav>';
-      paginationContainer.innerHTML = paginationHTML;
-    }
 
-    async function loadPage(pageNumber) {
-      try {
-        const response = await fetch(`http://localhost:8083/api/books?page=${pageNumber}&size=12`);
-        const data = await response.json();
-        displayBooks(data.success ? data.data : data);
-        
-        // Scroll to top of books section
-        document.getElementById('books-container').scrollIntoView({ behavior: 'smooth' });
-      } catch (error) {
-        console.error('Error loading page:', error);
-      }
-    }
 
-    function addToCart(bookId) {
-      console.log('Adding book to cart:', bookId);
-      // TODO: Implement cart functionality
-      alert('Cart functionality will be implemented soon!');
-    }
+
+
+
+
   </script>
 </body>
 </html>

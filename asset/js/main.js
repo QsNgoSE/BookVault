@@ -1690,7 +1690,64 @@ const SellerManager = {
     initSellerUploadForm() {
         const uploadForm = document.querySelector('.upload-book-form');
         if (uploadForm) {
+            // Check if event listener is already attached to prevent duplicates
+            if (uploadForm.hasAttribute('data-upload-initialized')) {
+                console.log('Upload form already initialized, skipping...');
+                return;
+            }
+            
             uploadForm.addEventListener('submit', this.handleBookUpload.bind(this));
+            uploadForm.setAttribute('data-upload-initialized', 'true');
+            console.log('✅ Upload form initialized');
+            
+            // Load categories into the dropdown
+            this.loadCategoriesIntoDropdown();
+        }
+    },
+
+    // Load categories into the dropdown
+    async loadCategoriesIntoDropdown() {
+        try {
+            console.log('📚 Loading categories for dropdown...');
+            const response = await APIService.books.getCategories();
+            const categories = response.data || response;
+            
+            const categoryDropdown = document.getElementById('bookGenre');
+            if (!categoryDropdown) {
+                console.error('Category dropdown not found');
+                return;
+            }
+            
+            // Clear existing options except the first one
+            categoryDropdown.innerHTML = '<option value="">Select a category...</option>';
+            
+            if (Array.isArray(categories) && categories.length > 0) {
+                categories.forEach(category => {
+                    if (category.isActive !== false) { // Only show active categories
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        categoryDropdown.appendChild(option);
+                    }
+                });
+                console.log(`✅ Loaded ${categories.length} categories into dropdown`);
+            } else {
+                console.warn('No categories found or invalid response format');
+            }
+        } catch (error) {
+            console.error('❌ Error loading categories:', error);
+            // Add fallback options if API fails
+            const categoryDropdown = document.getElementById('bookGenre');
+            if (categoryDropdown) {
+                categoryDropdown.innerHTML = `
+                    <option value="">Select a category...</option>
+                    <option value="fiction">Fiction</option>
+                    <option value="nonfiction">Nonfiction</option>
+                    <option value="business">Business</option>
+                    <option value="technology">Technology</option>
+                    <option value="biography">Biography</option>
+                `;
+            }
         }
     },
 
@@ -1700,6 +1757,19 @@ const SellerManager = {
         
         const form = event.target;
         
+        // Prevent multiple simultaneous submissions
+        if (form.hasAttribute('data-uploading')) {
+            console.log('Upload already in progress, ignoring duplicate submission');
+            return;
+        }
+        
+        // Mark form as uploading
+        form.setAttribute('data-uploading', 'true');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalText = submitButton.textContent;
+        submitButton.textContent = 'Uploading...';
+        submitButton.disabled = true;
+        
         // Debug: Log form elements
         console.log('Form elements:', {
             bookTitle: form.bookTitle?.value,
@@ -1708,13 +1778,14 @@ const SellerManager = {
             bookDesc: form.bookDesc?.value,
             bookStock: form.bookStock?.value,
             bookCoverImage: form.bookCoverImage?.value,
-            bookGenre: form.bookGenre?.value
+            bookGenre: form.bookGenre?.value,
+            bookGenreText: form.bookGenre?.options[form.bookGenre?.selectedIndex]?.textContent
         });
         
         // Validate required fields first
         if (!form.bookTitle.value.trim() || !form.bookAuthor.value.trim() || 
-            !form.bookPrice.value || !form.bookDesc.value.trim()) {
-            Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
+            !form.bookPrice.value || !form.bookDesc.value.trim() || !form.bookGenre.value) {
+            Utils.showError('Please fill in all required fields (Title, Author, Price, Description, Category).');
             return;
         }
         
@@ -1729,20 +1800,28 @@ const SellerManager = {
         }
 
         try {
-                    // Create FormData to send file directly
-        const formData = new FormData();
-        formData.append('title', form.bookTitle.value.trim());
-        formData.append('author', form.bookAuthor.value.trim());
-        formData.append('price', form.bookPrice.value);
-        formData.append('description', form.bookDesc.value.trim());
-        formData.append('stockQuantity', form.bookStock?.value || 1);
-        formData.append('categoryNames', form.bookGenre?.value ? form.bookGenre.value.trim() : 'General');
-        
-        // Add image file if selected (no base64 conversion needed)
-        const imageFile = form.bookCoverImage.files[0];
-        if (imageFile) {
-            formData.append('coverImage', imageFile);
-        }
+            // Create FormData to send file directly
+            const formData = new FormData();
+            formData.append('title', form.bookTitle.value.trim());
+            formData.append('author', form.bookAuthor.value.trim());
+            formData.append('price', form.bookPrice.value);
+            formData.append('description', form.bookDesc.value.trim());
+            formData.append('stockQuantity', form.bookStock?.value || 1);
+            
+            // Get the selected category ID and name
+            const selectedCategoryId = form.bookGenre.value;
+            const selectedCategoryOption = form.bookGenre.options[form.bookGenre.selectedIndex];
+            const selectedCategoryName = selectedCategoryOption.textContent;
+            
+            // Send both category ID and name for backend compatibility
+            formData.append('categoryIds', selectedCategoryId);
+            formData.append('categoryNames', selectedCategoryName);
+            
+            // Add image file if selected (no base64 conversion needed)
+            const imageFile = form.bookCoverImage.files[0];
+            if (imageFile) {
+                formData.append('coverImage', imageFile);
+            }
 
             // Debug: Log the form data
             console.log('FormData to send:', {
@@ -1751,6 +1830,7 @@ const SellerManager = {
                 price: formData.get('price'),
                 description: formData.get('description'),
                 stockQuantity: formData.get('stockQuantity'),
+                categoryIds: formData.get('categoryIds'),
                 categoryNames: formData.get('categoryNames'),
                 hasImage: !!imageFile
             });
@@ -1761,12 +1841,21 @@ const SellerManager = {
             // Reset form
             form.reset();
             
+            // Clear image preview
+            const imagePreview = document.getElementById('imagePreview');
+            if (imagePreview) imagePreview.style.display = 'none';
+            
             // Reload seller dashboard
             this.loadSellerDashboard();
             
         } catch (error) {
             console.error('Error uploading book:', error);
             Utils.showError('Failed to upload book. Please try again.');
+        } finally {
+            // Reset form state
+            form.removeAttribute('data-uploading');
+            submitButton.textContent = originalText;
+            submitButton.disabled = false;
         }
     },
 
@@ -1969,6 +2058,21 @@ const SellerManager = {
             case 'CANCELLED': return 'danger';
             default: return 'secondary';
         }
+    }
+};
+
+// Global function for pagination
+window.loadBooksPage = function(containerId, category, page) {
+    console.log(`🔄 loadBooksPage called: container=${containerId}, category=${category}, page=${page}`);
+    
+    // Convert 'null' string to null
+    const actualCategory = category === 'null' || category === null ? null : category;
+    
+    if (window.BookManager) {
+        console.log('✅ BookManager found, calling loadBooks');
+        window.BookManager.loadBooks(containerId, actualCategory, page);
+    } else {
+        console.error('❌ BookManager not available');
     }
 };
 
@@ -2434,14 +2538,7 @@ const APIService = {
             headers
         };
         
-        // Debug: Log the request details
-        console.log('🔍 Request Debug:', {
-            url: url,
-            method: requestOptions.method,
-            headers: headers,
-            hasBody: !!requestOptions.body,
-            bodyType: requestOptions.body ? requestOptions.body.constructor.name : 'none'
-        });
+
         
 
         
@@ -2787,33 +2884,41 @@ const APIService = {
 };
 
 // Book Management - Updated for Real Backend
-const BookManager = {
+// Make BookManager globally available
+window.BookManager = {
     // Load books on listing page with pagination support
     async loadBooks(containerId = 'books-container', category = null, page = 0, size = 12) {
+        console.log(`📚 Loading books: page=${page}, category=${category}`);
         Utils.showLoading(containerId);
         
         try {
-            const response = category 
+            const response = category && category !== 'null' && category !== null
                 ? await APIService.books.getByCategory(category, page, size)
                 : await APIService.books.getAll(page, size);
             
-            console.log('📚 Book API response:', response);
+            console.log('📚 API Response:', response);
             
             // Handle response structure from backend API
             const responseData = response.data || response;
             const books = responseData.content || responseData;
             
-            console.log(`📚 Found ${books.length} books to display`);
+            console.log('📚 Processed data:', {
+                responseData: responseData,
+                books: books,
+                booksLength: books ? books.length : 'undefined',
+                totalPages: responseData.totalPages,
+                currentPage: responseData.page
+            });
+            
             this.displayBooks(books, containerId);
             
-            // Display pagination if available
-            const paginationData = responseData.totalPages ? responseData : response;
-            if (paginationData.totalPages && paginationData.totalPages > 1) {
-                this.displayPagination(paginationData, containerId + '-pagination', category);
+            // Display pagination if available - use responseData which contains the pagination info
+            if (responseData.totalPages && responseData.totalPages > 1) {
+                this.displayPagination(responseData, containerId + '-pagination', category);
             }
         } catch (error) {
+            console.error('❌ Error loading books:', error);
             Utils.showError('Failed to load books. Please try again later.');
-            console.error('Error loading books:', error);
         }
     },
 
@@ -2842,7 +2947,7 @@ const BookManager = {
                         <div class="mt-auto">
                             <div class="d-flex justify-content-between">
                                 <a href="book-details.html?id=${book.id}" class="btn btn-primary btn-sm">View Details</a>
-                                <button class="btn btn-outline-warning btn-sm" onclick="BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
+                                <button class="btn btn-outline-warning btn-sm" onclick="window.BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
                                     <i class="bi bi-heart"></i>
                                 </button>
                             </div>
@@ -2862,27 +2967,37 @@ const BookManager = {
 
     // Display pagination controls
     displayPagination(response, containerId, category = null) {
+        console.log('📄 Display pagination called with:', { response, containerId, category });
         const container = document.getElementById(containerId);
         if (!container) return;
 
         const { page, totalPages, first, last } = response;
+        console.log('📄 Pagination data:', { page, totalPages, first, last });
+        
+        // Only show pagination if there are multiple pages
+        if (totalPages <= 1) {
+            console.log('📄 No pagination needed - only one page or less');
+            container.innerHTML = '';
+            return;
+        }
+        
         let paginationHTML = '<nav><ul class="pagination justify-content-center">';
         
         // Previous button
         paginationHTML += `<li class="page-item ${first ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="BookManager.loadBooks('books-container', '${category}', ${page - 1})">Previous</a>
+            <a class="page-link" href="#" onclick="loadBooksPage('books-container', ${category ? `'${category}'` : 'null'}, ${page - 1})">Previous</a>
         </li>`;
         
         // Page numbers
         for (let i = Math.max(0, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) {
             paginationHTML += `<li class="page-item ${i === page ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="BookManager.loadBooks('books-container', '${category}', ${i})">${i + 1}</a>
+                <a class="page-link" href="#" onclick="loadBooksPage('books-container', ${category ? `'${category}'` : 'null'}, ${i})">${i + 1}</a>
             </li>`;
         }
         
         // Next button
         paginationHTML += `<li class="page-item ${last ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="BookManager.loadBooks('books-container', '${category}', ${page + 1})">Next</a>
+            <a class="page-link" href="#" onclick="loadBooksPage('books-container', ${category ? `'${category}'` : 'null'}, ${page + 1})">Next</a>
         </li>`;
         
         paginationHTML += '</ul></nav>';
@@ -2922,6 +3037,12 @@ const BookManager = {
             
             console.log(`🔍 Found ${books.length} books for search: "${query}"`);
             this.displayBooks(books, containerId);
+            
+            // Clear pagination when search is performed (since we're showing all search results)
+            const paginationContainer = document.getElementById('books-container-pagination');
+            if (paginationContainer) {
+                paginationContainer.innerHTML = '';
+            }
         } catch (error) {
             Utils.showError('Search failed. Please try again.');
             console.error('Error searching books:', error);
@@ -2963,35 +3084,49 @@ const BookManager = {
 
             // Apply client-side filtering
             let filteredBooks = books.filter(book => {
+                console.log('🔍 Filtering book:', book.title, 'Author:', book.author, 'Genre:', book.category || book.genre);
+                
                 // Genre filter
                 if (filters.genres && filters.genres.length > 0) {
-                    const bookGenres = book.category || book.genre || '';
+                    // Handle categories array structure
+                    const bookCategories = book.categories || [];
+                    const categoryNames = bookCategories.map(cat => cat.name || '').filter(name => name.length > 0);
+                    
                     const hasMatchingGenre = filters.genres.some(genre => 
-                        bookGenres.toLowerCase().includes(genre.toLowerCase())
+                        categoryNames.some(categoryName => 
+                            categoryName.toLowerCase().includes(genre.toLowerCase())
+                        )
                     );
+                    
+                    console.log('🔍 Genre check:', categoryNames, 'vs', filters.genres, 'Match:', hasMatchingGenre);
                     if (!hasMatchingGenre) return false;
                 }
 
                 // Author filter
                 if (filters.author) {
                     const bookAuthor = book.author || '';
-                    if (!bookAuthor.toLowerCase().includes(filters.author.toLowerCase())) {
-                        return false;
-                    }
+                    const authorMatch = bookAuthor.toLowerCase().includes(filters.author.toLowerCase());
+                    console.log('🔍 Author check:', bookAuthor, 'vs', filters.author, 'Match:', authorMatch);
+                    if (!authorMatch) return false;
                 }
 
                 // Price filter
                 if (filters.maxPrice !== undefined && filters.maxPrice < 100) {
                     const bookPrice = parseFloat(book.price) || 0;
-                    if (bookPrice > filters.maxPrice) return false;
+                    const priceMatch = bookPrice <= filters.maxPrice;
+                    console.log('🔍 Price check:', bookPrice, 'vs', filters.maxPrice, 'Match:', priceMatch);
+                    if (!priceMatch) return false;
                 }
 
                 // Rating filter
                 if (filters.minRating > 0) {
                     const bookRating = parseFloat(book.rating) || 0;
-                    if (bookRating < filters.minRating) return false;
+                    const ratingMatch = bookRating >= filters.minRating;
+                    console.log('🔍 Rating check:', bookRating, 'vs', filters.minRating, 'Match:', ratingMatch);
+                    if (!ratingMatch) return false;
                 }
 
+                console.log('✅ Book passed all filters:', book.title);
                 return true;
             });
 
@@ -3002,6 +3137,12 @@ const BookManager = {
 
             // Display filtered results
             this.displayBooks(filteredBooks, containerId);
+
+            // Clear pagination when filters are applied (since we're showing all filtered results)
+            const paginationContainer = document.getElementById('books-container-pagination');
+            if (paginationContainer) {
+                paginationContainer.innerHTML = '';
+            }
 
             // Show filter results summary
             this.showFilterSummary(filteredBooks.length, books.length, filters);
@@ -3052,11 +3193,19 @@ const BookManager = {
                         Showing <strong>${filteredCount}</strong> of <strong>${totalCount}</strong> books
                         ${activeFiltersText ? ` • ${activeFiltersText}` : ''}
                     </div>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="PageManager.clearAllFilters()">
+                    <button class="btn btn-sm btn-outline-secondary" id="clear-filters-btn">
                         <i class="bi bi-x-circle me-1"></i>Clear Filters
                     </button>
                 </div>
             `;
+            
+            // Add event listener to the clear filters button
+            const clearButton = summary.querySelector('#clear-filters-btn');
+            if (clearButton) {
+                clearButton.addEventListener('click', () => {
+                    this.clearAllFilters();
+                });
+            }
             
             container.insertBefore(summary, container.firstChild);
         }
@@ -3092,6 +3241,52 @@ const BookManager = {
         }
         
         return activeFilters.join(' • ');
+    },
+
+    // Clear all filters and reload books
+    clearAllFilters() {
+        console.log('🧹 Clearing all filters...');
+        
+        // Clear all checkboxes
+        const checkboxes = document.querySelectorAll('.filters-sidebar input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        
+        // Clear radio buttons
+        const radioButtons = document.querySelectorAll('.filters-sidebar input[type="radio"]');
+        radioButtons.forEach(rb => rb.checked = false);
+        
+        // Reset price range
+        const priceRange = document.getElementById('priceRange');
+        if (priceRange) {
+            priceRange.value = 100;
+            const maxDisplay = document.getElementById('price-max-display');
+            if (maxDisplay) {
+                maxDisplay.textContent = '$100';
+            }
+        }
+        
+        // Clear author input
+        const authorInput = document.getElementById('authorFilter');
+        if (authorInput) {
+            authorInput.value = '';
+        }
+        
+        // Remove filter summary
+        const existingSummary = document.getElementById('filter-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+        
+        // Clear pagination
+        const paginationContainer = document.getElementById('books-container-pagination');
+        if (paginationContainer) {
+            paginationContainer.innerHTML = '';
+        }
+        
+        // Reload books without filters
+        BookManager.loadBooks('books-container');
+        
+        console.log('✅ All filters cleared and books reloaded');
     }
 };
 
@@ -4736,11 +4931,29 @@ const PageManager = {
 
     // Initialize filters on listing page
     initFilters() {
+        console.log('🔧 Initializing filters...');
+        
+        // Set up event listeners for all filter inputs
         const filterInputs = document.querySelectorAll('.filters-sidebar input, .filters-sidebar select');
+        console.log('🔧 Found filter inputs:', filterInputs.length);
+        
         filterInputs.forEach(input => {
-            input.addEventListener('change', () => {
+            console.log('🔧 Setting up listener for:', input.type, input.id || input.name);
+            
+            // For checkboxes and radio buttons, use 'change' event
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.addEventListener('change', () => {
+                    console.log('🔧 Filter changed:', input.type, input.id || input.name);
                     this.applyFilters();
-            });
+                });
+            }
+            // For text inputs, use 'input' event for real-time filtering
+            else if (input.type === 'text') {
+                input.addEventListener('input', () => {
+                    console.log('🔧 Text filter changed:', input.id || input.name, input.value);
+                    this.applyFilters();
+                });
+            }
         });
 
         // Price range slider
@@ -4751,8 +4964,12 @@ const PageManager = {
                 if (maxDisplay) {
                     maxDisplay.textContent = `$${e.target.value}`;
                 }
+                console.log('🔧 Price range changed:', e.target.value);
+                this.applyFilters();
             });
         }
+        
+        console.log('✅ Filters initialized');
     },
 
     // Apply filters
@@ -4767,22 +4984,39 @@ const PageManager = {
         
         // Genre filters
         const genreCheckboxes = document.querySelectorAll('.filters-sidebar input[type="checkbox"]:checked');
+        console.log('🔍 Found checked genre checkboxes:', genreCheckboxes.length);
         if (genreCheckboxes.length > 0) {
-            filters.genres = Array.from(genreCheckboxes).map(cb => cb.closest('label').textContent.trim());
+            filters.genres = Array.from(genreCheckboxes).map(cb => {
+                const label = cb.closest('label');
+                const text = label ? label.textContent.trim() : cb.nextElementSibling?.textContent?.trim() || '';
+                console.log('🔍 Genre checkbox:', cb.id, 'Text:', text);
+                return text;
+            }).filter(text => text.length > 0);
+            console.log('🔍 Selected genres:', filters.genres);
+        }
+        
+        // Author filter
+        const authorInput = document.getElementById('authorFilter');
+        if (authorInput && authorInput.value.trim()) {
+            filters.author = authorInput.value.trim();
+            console.log('🔍 Author filter:', filters.author);
         }
         
         // Price filter
         const priceRange = document.getElementById('priceRange');
         if (priceRange) {
-            filters.maxPrice = priceRange.value;
+            filters.maxPrice = parseInt(priceRange.value);
+            console.log('🔍 Price filter:', filters.maxPrice);
         }
         
         // Rating filter
         const ratingRadio = document.querySelector('.filters-sidebar input[name="rating"]:checked');
         if (ratingRadio) {
-            filters.minRating = ratingRadio.id.replace('r', '');
+            filters.minRating = parseInt(ratingRadio.id.replace('r', ''));
+            console.log('🔍 Rating filter:', filters.minRating);
         }
 
+        console.log('🔍 Final filters object:', filters);
         return filters;
     },
 
@@ -5325,6 +5559,9 @@ window.BookVault = {
     SellerManager,
     Utils
 };
+
+// Also expose PageManager directly for HTML onclick handlers
+window.PageManager = PageManager;
 
 // Debug helpers (remove in production)
 window.debugCart = {

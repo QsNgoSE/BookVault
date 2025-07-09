@@ -74,6 +74,16 @@ const BookVaultConfig = {
             BOOKS: '/admin/books',
             ORDERS: '/admin/orders',
             ANALYTICS: '/admin/analytics'
+        },
+        
+        // Seller
+        SELLER: {
+            CREATE_BOOK: '/books',
+            UPDATE_BOOK: '/books',
+            DELETE_BOOK: '/books',
+            MY_BOOKS: '/books/seller',
+            MY_ORDERS: '/orders/seller',
+            DASHBOARD_STATS: '/seller/stats'
         }
     },
     

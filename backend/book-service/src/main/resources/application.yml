@@ -146,11 +146,30 @@ spring:
         enabled: false
   
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL}}
-    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME}}
-    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD}}
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
-  
+    hikari:
+      maximum-pool-size: 10  # Reduced for Railway limits
+      minimum-idle: 2
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+      pool-name: BookServiceRailwayHikariCP
+  data:
+    redis:
+      host: ${REDIS_HOST:redis.railway.internal}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:nvJhLcRzJNaXJNUlLFEUCrcFZJMJbQiM}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 10000ms
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -199,4 +218,4 @@ management:
     readinessstate:
       enabled: true
     livenessstate:
-      enabled: true/ 
+      enabled: true

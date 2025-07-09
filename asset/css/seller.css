@@ -51,3 +51,37 @@
   border-width: 2px;
   font-weight: 600;
 }
+
+/* Image Upload Styles */
+#imagePreview {
+  border: 2px dashed #f59e0b;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #fff9ee;
+  text-align: center;
+}
+
+#previewImg {
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.input-group .btn-outline-secondary {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.input-group .btn-outline-secondary:hover {
+  background-color: #f59e0b;
+  border-color: #f59e0b;
+  color: white;
+}
+
+.form-control[type="file"] {
+  border-radius: 0.5rem 0 0 0.5rem;
+}
+
+.form-control[type="file"]:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
+}

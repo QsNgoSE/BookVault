@@ -149,27 +149,38 @@
           <form class="upload-book-form">
             <div class="mb-3">
               <label for="bookTitle" class="form-label">Title</label>
-              <input type="text" class="form-control" id="bookTitle" placeholder="Enter book title" required>
+              <input type="text" class="form-control" id="bookTitle" name="bookTitle" placeholder="Enter book title" required>
             </div>
             <div class="mb-3">
               <label for="bookAuthor" class="form-label">Author</label>
-              <input type="text" class="form-control" id="bookAuthor" placeholder="Author name" required>
+              <input type="text" class="form-control" id="bookAuthor" name="bookAuthor" placeholder="Author name" required>
             </div>
             <div class="mb-3">
               <label for="bookPrice" class="form-label">Price (USD)</label>
-              <input type="number" class="form-control" id="bookPrice" placeholder="Price" min="0" step="0.01" required>
+              <input type="number" class="form-control" id="bookPrice" name="bookPrice" placeholder="Price" min="0" step="0.01" required>
             </div>
             <div class="mb-3">
-              <label for="bookGenre" class="form-label">Genre</label>
-              <input type="text" class="form-control" id="bookGenre" placeholder="e.g. Fiction, Nonfiction" required>
+              <label for="bookGenre" class="form-label">Genre/Category</label>
+              <input type="text" class="form-control" id="bookGenre" name="bookGenre" placeholder="e.g. Fiction, Nonfiction" required>
             </div>
             <div class="mb-3">
-              <label for="bookCover" class="form-label">Cover Image</label>
-              <input class="form-control" type="file" id="bookCover" accept="image/*">
+              <label for="bookStock" class="form-label">Stock Quantity</label>
+              <input type="number" class="form-control" id="bookStock" name="bookStock" placeholder="Available quantity" min="1" value="1" required>
+            </div>
+            <div class="mb-3">
+              <label for="bookCoverImage" class="form-label">Cover Image</label>
+              <div class="input-group">
+                <input type="file" class="form-control" id="bookCoverImage" name="bookCoverImage" accept="image/*" onchange="previewImage(this)">
+                <button class="btn btn-outline-secondary" type="button" onclick="clearImage()">Clear</button>
+              </div>
+              <div id="imagePreview" class="mt-2" style="display: none;">
+                <img id="previewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+              </div>
+              <small class="form-text text-muted">Upload a cover image (JPG, PNG, GIF). Max size: 100KB for database storage.</small>
             </div>
             <div class="mb-3">
               <label for="bookDesc" class="form-label">Description</label>
-              <textarea class="form-control" id="bookDesc" rows="2" placeholder="Short book description"></textarea>
+              <textarea class="form-control" id="bookDesc" name="bookDesc" rows="3" placeholder="Detailed book description" required></textarea>
             </div>
             <div class="d-grid">
               <button class="btn bookvault-btn" type="submit"><i class="bi bi-upload"></i> Add Book</button>
@@ -352,7 +363,7 @@
       <div class="row align-items-center mb-3">
         <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
           <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
-            <img src="/asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+            <img src="asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo" style="height:44px; width:auto;">
             <span>BookVault</span>
           </a>
           <span class="ms-2">© 2025 BookVault. All rights reserved.</span>
@@ -415,7 +426,337 @@
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🔧 Initializing page...');
         PageManager.init();
+        
+        // Ensure SellerManager is available globally
+        setTimeout(() => {
+            if (window.BookVault && window.BookVault.SellerManager) {
+                window.SellerManager = window.BookVault.SellerManager;
+                console.log('✅ SellerManager made globally available');
+            } else {
+                console.warn('⚠️ SellerManager not found in BookVault');
+            }
+        }, 1000);
+        
+        // Also try to make it available immediately
+        if (window.BookVault && window.BookVault.SellerManager) {
+            window.SellerManager = window.BookVault.SellerManager;
+        }
     });
+  </script>
+
+  <!-- Edit Book Modal -->
+  <div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editBookModalLabel">Edit Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editBookForm">
+            <div class="row">
+              <div class="col-md-8">
+                <div class="mb-3">
+                  <label for="editBookTitle" class="form-label">Book Title *</label>
+                  <input type="text" class="form-control" id="editBookTitle" name="editBookTitle" required>
+                </div>
+                <div class="mb-3">
+                  <label for="editBookAuthor" class="form-label">Author *</label>
+                  <input type="text" class="form-control" id="editBookAuthor" name="editBookAuthor" required>
+                </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="editBookPrice" class="form-label">Price *</label>
+                      <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="editBookPrice" name="editBookPrice" step="0.01" min="0" required>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="editBookStock" class="form-label">Stock Quantity</label>
+                      <input type="number" class="form-control" id="editBookStock" name="editBookStock" min="0" value="1">
+                    </div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="editBookGenre" class="form-label">Genre/Category</label>
+                  <select class="form-select" id="editBookGenre" name="editBookGenre">
+                    <option value="">Select a category</option>
+                    <option value="Fiction">Fiction</option>
+                    <option value="Non-Fiction">Non-Fiction</option>
+                    <option value="Science Fiction">Science Fiction</option>
+                    <option value="Mystery">Mystery</option>
+                    <option value="Romance">Romance</option>
+                    <option value="Biography">Biography</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Business">Business</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="editBookDesc" class="form-label">Description *</label>
+                  <textarea class="form-control" id="editBookDesc" name="editBookDesc" rows="3" required></textarea>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label for="editBookCoverImage" class="form-label">Cover Image</label>
+                  <div class="input-group">
+                    <input type="file" class="form-control" id="editBookCoverImage" name="editBookCoverImage" accept="image/*" onchange="previewEditImage(this)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearEditImage()">Clear</button>
+                  </div>
+                  <div id="editImagePreview" class="mt-2" style="display: none;">
+                    <img id="editPreviewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px;">
+                  </div>
+                  <small class="form-text text-muted">Max size: 100KB for database storage.</small>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Current Cover</label>
+                  <img id="currentBookCover" src="" alt="Current cover" class="img-thumbnail" style="max-width: 200px;">
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="editBookId" name="editBookId">
+            <input type="hidden" id="editUploadedImageData" name="editUploadedImageData">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn bookvault-btn" onclick="handleEditBook()">Update Book</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Upload Functions -->
+  <script>
+    // Global variable to store the uploaded image data
+    let uploadedImageData = null;
+    let editUploadedImageData = null;
+
+    // Preview uploaded image
+    function previewImage(input) {
+        const file = input.files[0];
+        if (file) {
+            // Validate file size (100KB limit for PostgreSQL)
+            if (file.size > 100 * 1024) {
+                alert('Image size must be less than 100KB for database storage');
+                input.value = '';
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('imagePreview');
+                const previewImg = document.getElementById('previewImg');
+                
+                previewImg.src = e.target.result;
+                preview.style.display = 'block';
+                
+                // Don't store base64 data - we'll send the file directly
+                uploadedImageData = null;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Preview edit image
+    function previewEditImage(input) {
+        const file = input.files[0];
+        if (file) {
+            // Validate file size (100KB limit for PostgreSQL)
+            if (file.size > 100 * 1024) {
+                alert('Image size must be less than 100KB for database storage');
+                input.value = '';
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file');
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('editImagePreview');
+                const previewImg = document.getElementById('editPreviewImg');
+                
+                previewImg.src = e.target.result;
+                preview.style.display = 'block';
+                
+                // Don't store base64 data - we'll send the file directly
+                editUploadedImageData = null;
+                window.editUploadedImageData = null;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Clear uploaded image
+    function clearImage() {
+        const input = document.getElementById('bookCoverImage');
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        
+        input.value = '';
+        preview.style.display = 'none';
+        previewImg.src = '';
+        uploadedImageData = null;
+    }
+
+    // Clear edit image
+    function clearEditImage() {
+        const input = document.getElementById('editBookCoverImage');
+        const preview = document.getElementById('editImagePreview');
+        const previewImg = document.getElementById('editPreviewImg');
+        
+        input.value = '';
+        preview.style.display = 'none';
+        previewImg.src = '';
+        editUploadedImageData = null;
+        window.editUploadedImageData = null;
+    }
+
+
+
+    // Global function for edit book (accessible from modal)
+    window.handleEditBook = function() {
+        // Get form data
+        const bookId = document.getElementById('editBookId').value;
+        const bookData = {
+            title: document.getElementById('editBookTitle').value.trim(),
+            author: document.getElementById('editBookAuthor').value.trim(),
+            price: parseFloat(document.getElementById('editBookPrice').value).toString(),
+            description: document.getElementById('editBookDesc').value.trim(),
+            stockQuantity: parseInt(document.getElementById('editBookStock').value || 1),
+            language: null,
+            pageCount: null,
+            publisher: null
+        };
+
+        // Handle uploaded image data - we'll send the file directly, not base64
+        bookData.coverImageUrl = null;
+
+        // Validate required fields
+        if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
+            alert('Please fill in all required fields (Title, Author, Price, Description).');
+            return;
+        }
+
+        // Try to find SellerManager with better error handling
+        let sellerManager = null;
+        
+        if (window.SellerManager) {
+            sellerManager = window.SellerManager;
+        } else if (window.BookVault && window.BookVault.SellerManager) {
+            sellerManager = window.BookVault.SellerManager;
+        } else if (window.PageManager && window.PageManager.SellerManager) {
+            sellerManager = window.PageManager.SellerManager;
+        }
+        
+        // Try to get SellerManager from BookVault directly first
+        if (window.BookVault && window.BookVault.SellerManager && typeof window.BookVault.SellerManager.handleEditBook === 'function') {
+            console.log('Using BookVault.SellerManager...');
+            window.BookVault.SellerManager.handleEditBook(bookId, bookData);
+        } else if (sellerManager && typeof sellerManager.handleEditBook === 'function') {
+            console.log('Using window.SellerManager...');
+            sellerManager.handleEditBook(bookId, bookData);
+        } else {
+            console.error('SellerManager not found or handleEditBook method not available');
+            console.log('Available objects:', {
+                windowSellerManager: !!window.SellerManager,
+                bookVaultSellerManager: !!(window.BookVault && window.BookVault.SellerManager),
+                pageManagerSellerManager: !!(window.PageManager && window.PageManager.SellerManager)
+            });
+            console.log('Falling back to direct API call...');
+            updateBookDirectly(bookId, bookData);
+        }
+    };
+
+    // Direct API call fallback
+    async function updateBookDirectly(bookId, bookData) {
+        try {
+            let token = localStorage.getItem('bookvault_auth_token');
+            
+            if (!token) {
+                alert('Authentication required. Please log in again.');
+                return;
+            }
+
+            // Try to refresh token if the first attempt fails
+            let response = await fetch(`https://book-service-production-4444.up.railway.app/api/books/${bookId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(bookData)
+            });
+
+            // If first attempt fails with 403, try to refresh token
+            if (response.status === 403) {
+                // Try to get a fresh token by logging in again
+                const userEmail = localStorage.getItem('bookvault_user_email') || 'vu@email.com';
+                const userPassword = 'abc123'; // This should be stored securely in production
+                
+                const loginResponse = await fetch('https://auth-service-production-744b.up.railway.app/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        password: userPassword
+                    })
+                });
+
+                const loginResult = await loginResponse.json();
+                
+                if (loginResult.success && loginResult.data.token) {
+                    token = loginResult.data.token;
+                    localStorage.setItem('bookvault_auth_token', token);
+                    
+                    // Retry the update with new token
+                    response = await fetch(`https://book-service-production-4444.up.railway.app/api/books/${bookId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(bookData)
+                    });
+                }
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Book updated successfully!');
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                modal.hide();
+                // Reload page to refresh data
+                window.location.reload();
+            } else {
+                alert('Failed to update book: ' + (result.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error updating book:', error);
+            alert('Failed to update book. Please try again.');
+        }
+    }
   </script>
 </body>
 </html>

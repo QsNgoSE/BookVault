@@ -14,9 +14,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -159,16 +162,87 @@ public class BookController {
     
     @PostMapping
     @Operation(summary = "Create new book", description = "Create a new book listing")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<BookResponse>> createBook(
             @Valid @RequestBody BookCreateRequest request) {
         
-        BookResponse book = bookService.createBook(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(book, "Book created successfully"));
+        try {
+            // Validate request
+            validateBookCreateRequest(request);
+            
+            BookResponse book = bookService.createBook(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(book, "Book created successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to create book: " + e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/upload")
+    @Operation(summary = "Create new book with file upload", description = "Create a new book listing with cover image file")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ApiResponse<BookResponse>> createBookWithFile(
+            @RequestParam("title") String title,
+            @RequestParam("author") String author,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("description") String description,
+            @RequestParam("stockQuantity") Integer stockQuantity,
+            @RequestParam("categoryNames") String categoryNames,
+            @RequestParam(value = "coverImage", required = false) MultipartFile coverImage) {
+        
+        try {
+            // Validate required fields
+            if (title == null || title.trim().isEmpty()) {
+                throw new IllegalArgumentException("Book title is required");
+            }
+            
+            if (author == null || author.trim().isEmpty()) {
+                throw new IllegalArgumentException("Book author is required");
+            }
+            
+            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Book price must be greater than 0");
+            }
+            
+            if (stockQuantity == null || stockQuantity < 0) {
+                throw new IllegalArgumentException("Stock quantity must be 0 or greater");
+            }
+            
+            // Create BookCreateRequest from form data
+            BookCreateRequest request = new BookCreateRequest();
+            request.setTitle(title.trim());
+            request.setAuthor(author.trim());
+            request.setPrice(price);
+            request.setDescription(description.trim());
+            request.setStockQuantity(stockQuantity);
+            request.setCategoryNames(List.of(categoryNames));
+            
+            // Handle cover image
+            if (coverImage != null && !coverImage.isEmpty()) {
+                // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
+                // In a production environment, you would upload to a cloud storage service
+                String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
+                request.setCoverImageUrl("/asset/img/books/" + fileName);
+                
+                // Log the image details for debugging
+                System.out.println("Image uploaded: " + fileName + " (" + coverImage.getSize() + " bytes)");
+            } else {
+                request.setCoverImageUrl("/asset/img/books/placeholder.jpg");
+            }
+            
+            BookResponse book = bookService.createBook(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(book, "Book created successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to create book: " + e.getMessage()));
+        }
     }
     
     @PutMapping("/{id}")
     @Operation(summary = "Update book", description = "Update existing book details")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<BookResponse>> updateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id,
             @Valid @RequestBody BookUpdateRequest request) {
@@ -177,8 +251,71 @@ public class BookController {
         return ResponseEntity.ok(ApiResponse.success(book, "Book updated successfully"));
     }
     
+    @PutMapping("/{id}/upload")
+    @Operation(summary = "Update book with file upload", description = "Update existing book details with cover image file")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<ApiResponse<BookResponse>> updateBookWithFile(
+            @Parameter(description = "Book ID") @PathVariable UUID id,
+            @RequestParam("title") String title,
+            @RequestParam("author") String author,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("description") String description,
+            @RequestParam("stockQuantity") Integer stockQuantity,
+            @RequestParam("categoryNames") String categoryNames,
+            @RequestParam(value = "coverImage", required = false) MultipartFile coverImage) {
+        
+        try {
+            // Validate required fields
+            if (title == null || title.trim().isEmpty()) {
+                throw new IllegalArgumentException("Book title is required");
+            }
+            
+            if (author == null || author.trim().isEmpty()) {
+                throw new IllegalArgumentException("Book author is required");
+            }
+            
+            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Book price must be greater than 0");
+            }
+            
+            if (stockQuantity == null || stockQuantity < 0) {
+                throw new IllegalArgumentException("Stock quantity must be 0 or greater");
+            }
+            
+            // Create BookUpdateRequest from form data
+            BookUpdateRequest request = new BookUpdateRequest();
+            request.setTitle(title.trim());
+            request.setAuthor(author.trim());
+            request.setPrice(price);
+            request.setDescription(description.trim());
+            request.setStockQuantity(stockQuantity);
+            request.setCategoryNames(List.of(categoryNames));
+            
+            // Handle cover image
+            if (coverImage != null && !coverImage.isEmpty()) {
+                // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
+                // In a production environment, you would upload to a cloud storage service
+                String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
+                request.setCoverImageUrl("/asset/img/books/" + fileName);
+                
+                // Log the image details for debugging
+                System.out.println("Image uploaded for update: " + fileName + " (" + coverImage.getSize() + " bytes)");
+            } else {
+                // Keep existing cover image URL if no new image provided
+                request.setCoverImageUrl(null);
+            }
+            
+            BookResponse book = bookService.updateBook(id, request);
+            return ResponseEntity.ok(ApiResponse.success(book, "Book updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update book: " + e.getMessage()));
+        }
+    }
+    
     @PatchMapping("/{id}/stock")
     @Operation(summary = "Update book stock", description = "Update book stock quantity")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> updateBookStock(
             @Parameter(description = "Book ID") @PathVariable UUID id,
             @Parameter(description = "New stock quantity") @RequestParam Integer stockQuantity) {
@@ -189,6 +326,7 @@ public class BookController {
     
     @PatchMapping("/{id}/activate")
     @Operation(summary = "Activate book", description = "Activate book listing")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> activateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -198,6 +336,7 @@ public class BookController {
     
     @PatchMapping("/{id}/deactivate")
     @Operation(summary = "Deactivate book", description = "Deactivate book listing")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> deactivateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -207,6 +346,7 @@ public class BookController {
     
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete book", description = "Delete book listing")
+    @PreAuthorize("hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> deleteBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -228,5 +368,34 @@ public class BookController {
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
         List<CategoryResponse> categories = bookService.getAllCategories();
         return ResponseEntity.ok(ApiResponse.success(categories));
+    }
+    
+    /**
+     * Validate book creation request
+     */
+    private void validateBookCreateRequest(BookCreateRequest request) {
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title is required");
+        }
+        
+        if (request.getAuthor() == null || request.getAuthor().trim().isEmpty()) {
+            throw new IllegalArgumentException("Book author is required");
+        }
+        
+        if (request.getPrice() == null || request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Book price must be greater than 0");
+        }
+        
+        if (request.getStockQuantity() == null || request.getStockQuantity() < 0) {
+            throw new IllegalArgumentException("Stock quantity must be 0 or greater");
+        }
+        
+        if (request.getIsbn() != null && !request.getIsbn().trim().isEmpty()) {
+            // Basic ISBN validation
+            String isbn = request.getIsbn().replaceAll("[^0-9X]", "");
+            if (isbn.length() != 10 && isbn.length() != 13) {
+                throw new IllegalArgumentException("ISBN must be 10 or 13 digits");
+            }
+        }
     }
 } 

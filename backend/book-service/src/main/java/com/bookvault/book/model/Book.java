@@ -49,7 +49,7 @@ public class Book extends BaseEntity {
     @Column(name = "published_date")
     private LocalDate publishedDate;
     
-    @Column(name = "cover_image_url")
+    @Column(name = "cover_image_url", columnDefinition = "TEXT")
     private String coverImageUrl;
     
     @Column(name = "stock_quantity", nullable = false)
@@ -389,13 +389,45 @@ public class Book extends BaseEntity {
     }
     
     public void decrementStock(int quantity) {
+        if (stockQuantity == null) {
+            throw new IllegalArgumentException("Stock quantity is not initialized");
+        }
         if (stockQuantity < quantity) {
-            throw new IllegalArgumentException("Insufficient stock");
+            throw new IllegalArgumentException("Insufficient stock. Available: " + stockQuantity + ", Requested: " + quantity);
+        }
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
         }
         this.stockQuantity -= quantity;
     }
     
     public void incrementStock(int quantity) {
-        this.stockQuantity += quantity;
+        if (stockQuantity == null) {
+            this.stockQuantity = quantity;
+        } else {
+            this.stockQuantity += quantity;
+        }
+    }
+    
+    /**
+     * Reserve stock for an order (temporary hold)
+     */
+    public void reserveStock(int quantity) {
+        if (stockQuantity == null || stockQuantity < quantity) {
+            throw new IllegalArgumentException("Insufficient stock for reservation");
+        }
+        // In a real system, you might have a separate reserved_stock field
+        // For now, we'll just validate availability
+    }
+    
+    /**
+     * Release reserved stock
+     */
+    public void releaseReservedStock(int quantity) {
+        // In a real system, you would decrease reserved_stock
+        // For now, we'll just validate
+        if (quantity < 0) {
+            throw new IllegalArgumentException("Quantity must be positive");
+        }
     }
 } 

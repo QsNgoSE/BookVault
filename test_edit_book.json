@@ -1,0 +1,8 @@
+{
+  "title": "The Lean Startup - Updated",
+  "author": "Eric Ries",
+  "price": 22.99,
+  "description": "Updated description for testing",
+  "stockQuantity": 75,
+  "categoryNames": ["Business"]
+} 

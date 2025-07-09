@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
 // import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Simple DTO for updating books
@@ -35,18 +36,20 @@ public class BookUpdateRequest {
     private Integer stockQuantity;
     
     private String language;
-    
+
     @Min(value = 1, message = "Page count must be positive")
     private Integer pageCount;
     
     private String publisher;
+    
+    private List<String> categoryNames;
     
     // Constructors
     public BookUpdateRequest() {}
     
     public BookUpdateRequest(String title, String author, String description, BigDecimal price,
                             String coverImageUrl, Integer stockQuantity, String language,
-                            Integer pageCount, String publisher) {
+                            Integer pageCount, String publisher, List<String> categoryNames) {
         this.title = title;
         this.author = author;
         this.description = description;
@@ -56,6 +59,7 @@ public class BookUpdateRequest {
         this.language = language;
         this.pageCount = pageCount;
         this.publisher = publisher;
+        this.categoryNames = categoryNames;
     }
     
     // Builder pattern
@@ -73,6 +77,7 @@ public class BookUpdateRequest {
         private String language;
         private Integer pageCount;
         private String publisher;
+        private List<String> categoryNames;
         
         public Builder title(String title) {
             this.title = title;
@@ -119,9 +124,14 @@ public class BookUpdateRequest {
             return this;
         }
         
+        public Builder categoryNames(List<String> categoryNames) {
+            this.categoryNames = categoryNames;
+            return this;
+        }
+        
         public BookUpdateRequest build() {
             return new BookUpdateRequest(title, author, description, price, coverImageUrl,
-                                       stockQuantity, language, pageCount, publisher);
+                                       stockQuantity, language, pageCount, publisher, categoryNames);
         }
     }
     
@@ -196,5 +206,13 @@ public class BookUpdateRequest {
     
     public void setPublisher(String publisher) {
         this.publisher = publisher;
+    }
+    
+    public List<String> getCategoryNames() {
+        return categoryNames;
+    }
+    
+    public void setCategoryNames(List<String> categoryNames) {
+        this.categoryNames = categoryNames;
     }
 } 

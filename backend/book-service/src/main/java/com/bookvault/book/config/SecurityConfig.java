@@ -47,10 +47,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/books/author/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/books/isbn/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/books/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/books/seller/**").authenticated() // Seller-specific endpoints require auth
                 .requestMatchers(HttpMethod.GET, "/api/books").permitAll() // Allow public book browsing
                 
                 // Require authentication for write operations
                 .requestMatchers(HttpMethod.POST, "/api/books").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/books/upload").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/books/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/books/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/books/**").authenticated()

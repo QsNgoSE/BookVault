@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 /**
  * Service for order operations - creation, management, tracking, etc.
+ * Implements best practices for inventory management and transaction safety.
  */
 @Service
 @Transactional
@@ -41,85 +42,61 @@ public class OrderService {
     }
     
     /**
-     * Create a new order
+     * Create a new order with comprehensive inventory validation and management
      */
+    @Transactional
     public OrderResponse createOrder(UUID userId, CreateOrderRequest request) {
         log.info("Creating order for user: {}", userId);
         
-        // Generate unique order number
-        String orderNumber = generateOrderNumber();
-        
-        // Calculate total amount from items
-        BigDecimal totalAmount = calculateTotalAmount(request.getItems());
-        
-        // Create order
-        Order order = Order.builder()
-                .userId(userId)
-                .orderNumber(orderNumber)
-                .totalAmount(totalAmount)
-                .shippingCost(calculateShippingCost(request.getShippingCountry()))
-                .taxAmount(calculateTaxAmount(totalAmount))
-                .shippingAddress(request.getShippingAddress())
-                .shippingCity(request.getShippingCity())
-                .shippingState(request.getShippingState())
-                .shippingPostalCode(request.getShippingPostalCode())
-                .shippingCountry(request.getShippingCountry())
-                .paymentMethod(request.getPaymentMethod())
-                .customerEmail(request.getCustomerEmail())
-                .customerPhone(request.getCustomerPhone())
-                .customerName(request.getCustomerName())
-                .orderNotes(request.getOrderNotes())
-                .build();
-        
-        // Calculate final amount including shipping and tax
-        order.calculateFinalAmount();
-        
-        // Save order first
-        Order savedOrder = orderRepository.save(order);
-        
-        // Create and save order items
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            // Verify book exists and has sufficient stock
-            Book book = bookRepository.findById(itemRequest.getBookId())
-                    .orElseThrow(() -> new NotFoundException("Book not found: " + itemRequest.getBookId()));
+        try {
+            // Validate request
+            validateOrderRequest(request);
             
-            if (!book.isAvailable()) {
-                throw new BadRequestException("Book is not available: " + book.getTitle());
-            }
+            // Generate unique order number
+            String orderNumber = generateOrderNumber();
             
-            if (book.getStockQuantity() < itemRequest.getQuantity()) {
-                throw new BadRequestException("Insufficient stock for book: " + book.getTitle() + 
-                        ". Available: " + book.getStockQuantity() + ", Requested: " + itemRequest.getQuantity());
-            }
+            // Calculate total amount from items
+            BigDecimal totalAmount = calculateTotalAmount(request.getItems());
             
-            OrderItem orderItem = OrderItem.builder()
-                    .bookId(itemRequest.getBookId())
-                    .bookTitle(itemRequest.getBookTitle())
-                    .bookAuthor(itemRequest.getBookAuthor())
-                    .bookIsbn(itemRequest.getBookIsbn())
-                    .bookImageUrl(itemRequest.getBookImageUrl())
-                    .quantity(itemRequest.getQuantity())
-                    .unitPrice(itemRequest.getUnitPrice())
-                    .discountAmount(itemRequest.getDiscountAmount())
+            // Create order
+            Order order = Order.builder()
+                    .userId(userId)
+                    .orderNumber(orderNumber)
+                    .totalAmount(totalAmount)
+                    .shippingCost(calculateShippingCost(request.getShippingCountry()))
+                    .taxAmount(calculateTaxAmount(totalAmount))
+                    .shippingAddress(request.getShippingAddress())
+                    .shippingCity(request.getShippingCity())
+                    .shippingState(request.getShippingState())
+                    .shippingPostalCode(request.getShippingPostalCode())
+                    .shippingCountry(request.getShippingCountry())
+                    .paymentMethod(request.getPaymentMethod())
+                    .customerEmail(request.getCustomerEmail())
+                    .customerPhone(request.getCustomerPhone())
+                    .customerName(request.getCustomerName())
+                    .orderNotes(request.getOrderNotes())
                     .build();
             
-            // Calculate prices
-            orderItem.calculateTotalPrice();
+            // Calculate final amount including shipping and tax
+            order.calculateFinalAmount();
             
-            // Associate with order
-            savedOrder.addOrderItem(orderItem);
+            // Save order first
+            Order savedOrder = orderRepository.save(order);
             
-            // Update book stock
-            book.decrementStock(itemRequest.getQuantity());
-            bookRepository.save(book);
+            // Process order items with inventory management
+            processOrderItems(savedOrder, request.getItems());
+            
+            // Save order with items
+            savedOrder = orderRepository.save(savedOrder);
+            
+            log.info("Order created successfully: {} with {} items", orderNumber, savedOrder.getItemCount());
+            
+            return mapToOrderResponse(savedOrder);
+            
+        } catch (Exception e) {
+            log.error("Failed to create order for user: {}", userId, e);
+            throw new BadRequestException("Failed to create order: " + e.getMessage());
         }
-        
-        // Save order with items
-        savedOrder = orderRepository.save(savedOrder);
-        
-        log.info("Order created successfully: {}", orderNumber);
-        
-        return mapToOrderResponse(savedOrder);
     }
     
     /**
@@ -201,43 +178,49 @@ public class OrderService {
     }
     
     /**
-     * Update order status
+     * Update order status with comprehensive inventory management
      */
+    @Transactional
     public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus) {
         log.info("Updating order status - ID: {}, New Status: {}", orderId, newStatus);
         
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order not found with ID: " + orderId));
-        
-        OrderStatus oldStatus = order.getStatus();
-        
-        // Validate status transition
-        validateStatusTransition(oldStatus, newStatus);
-        
-        order.setStatus(newStatus);
-        order.setUpdatedAt(LocalDateTime.now());
-        
-        // Handle specific status transitions
-        if (newStatus == OrderStatus.SHIPPED && order.getTrackingNumber() == null) {
-            order.setTrackingNumber(generateTrackingNumber());
-            order.setEstimatedDeliveryDate(calculateEstimatedDeliveryDate());
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new NotFoundException("Order not found with ID: " + orderId));
+            
+            OrderStatus oldStatus = order.getStatus();
+            
+            // Validate status transition
+            validateStatusTransition(oldStatus, newStatus);
+            
+            // Handle inventory based on status transition
+            handleInventoryForStatusTransition(order, oldStatus, newStatus);
+            
+            // Update order status
+            order.setStatus(newStatus);
+            order.setUpdatedAt(LocalDateTime.now());
+            
+            // Handle specific status transitions
+            if (newStatus == OrderStatus.SHIPPED && order.getTrackingNumber() == null) {
+                order.setTrackingNumber(generateTrackingNumber());
+                order.setEstimatedDeliveryDate(calculateEstimatedDeliveryDate());
+            }
+            
+            if (newStatus == OrderStatus.DELIVERED) {
+                order.markAsDelivered();
+            }
+            
+            Order savedOrder = orderRepository.save(order);
+            
+            log.info("Order status updated - Order: {}, Old Status: {}, New Status: {}", 
+                    order.getOrderNumber(), oldStatus, newStatus);
+            
+            return mapToOrderResponse(savedOrder);
+            
+        } catch (Exception e) {
+            log.error("Failed to update order status - ID: {}, New Status: {}", orderId, newStatus, e);
+            throw new BadRequestException("Failed to update order status: " + e.getMessage());
         }
-        
-        if (newStatus == OrderStatus.DELIVERED) {
-            order.markAsDelivered();
-        }
-        
-        // If order is cancelled, restore stock
-        if (newStatus == OrderStatus.CANCELLED && oldStatus != OrderStatus.CANCELLED) {
-            restoreStockForOrder(order);
-        }
-        
-        Order savedOrder = orderRepository.save(order);
-        
-        log.info("Order status updated - Order: {}, Old Status: {}, New Status: {}", 
-                order.getOrderNumber(), oldStatus, newStatus);
-        
-        return mapToOrderResponse(savedOrder);
     }
     
     /**
@@ -440,15 +423,165 @@ public class OrderService {
     }
     
     /**
+     * Handle inventory changes based on order status transitions
+     */
+    private void handleInventoryForStatusTransition(Order order, OrderStatus oldStatus, OrderStatus newStatus) {
+        // If order is cancelled or returned, restore stock
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED) && 
+            oldStatus != OrderStatus.CANCELLED && oldStatus != OrderStatus.RETURNED) {
+            restoreStockForOrder(order);
+            log.info("Restored stock for order {} due to status change from {} to {}", 
+                order.getOrderNumber(), oldStatus, newStatus);
+        }
+        
+        // If order is confirmed from pending, ensure stock is still available
+        if (newStatus == OrderStatus.CONFIRMED && oldStatus == OrderStatus.PENDING) {
+            validateOrderStockAvailability(order);
+        }
+    }
+    
+    /**
+     * Validate that all items in the order still have sufficient stock
+     */
+    private void validateOrderStockAvailability(Order order) {
+        for (OrderItem item : order.getOrderItems()) {
+            Book book = bookRepository.findById(item.getBookId()).orElse(null);
+            if (book != null) {
+                if (!book.getIsActive()) {
+                    throw new BadRequestException("Book is no longer available: " + book.getTitle());
+                }
+                if (book.getStockQuantity() < item.getQuantity()) {
+                    throw new BadRequestException(
+                        String.format("Insufficient stock for book: %s. Available: %d, Required: %d", 
+                            book.getTitle(), book.getStockQuantity(), item.getQuantity())
+                    );
+                }
+            }
+        }
+    }
+    
+    /**
      * Restore stock for cancelled/returned order
      */
     private void restoreStockForOrder(Order order) {
         for (OrderItem item : order.getOrderItems()) {
             Book book = bookRepository.findById(item.getBookId()).orElse(null);
             if (book != null) {
-                book.incrementStock(item.getQuantity());
-                bookRepository.save(book);
-                log.info("Restored {} units of book {} to stock", item.getQuantity(), book.getTitle());
+                try {
+                    book.incrementStock(item.getQuantity());
+                    bookRepository.save(book);
+                    log.info("Restored {} units of book {} to stock (new total: {})", 
+                        item.getQuantity(), book.getTitle(), book.getStockQuantity());
+                } catch (Exception e) {
+                    log.error("Failed to restore stock for book: {}", book.getTitle(), e);
+                    throw new BadRequestException("Failed to restore stock for book: " + book.getTitle());
+                }
+            } else {
+                log.warn("Book not found for order item: {}", item.getBookId());
+            }
+        }
+    }
+
+    /**
+     * Validate book availability and stock
+     */
+    private void validateBookAvailability(Book book, int requestedQuantity) {
+        if (!book.getIsActive()) {
+            throw new BadRequestException("Book is not available: " + book.getTitle());
+        }
+        
+        if (book.getStockQuantity() == null || book.getStockQuantity() < requestedQuantity) {
+            throw new BadRequestException(
+                String.format("Insufficient stock for book: %s. Available: %d, Requested: %d", 
+                    book.getTitle(), 
+                    book.getStockQuantity() != null ? book.getStockQuantity() : 0, 
+                    requestedQuantity)
+            );
+        }
+        
+        if (requestedQuantity <= 0) {
+            throw new BadRequestException("Quantity must be greater than 0");
+        }
+    }
+
+    /**
+     * Update book stock with proper error handling
+     */
+    private void updateBookStock(Book book, int quantity) {
+        try {
+            book.decrementStock(quantity);
+            bookRepository.save(book);
+            log.info("Updated stock for book {}: {} -> {}", 
+                book.getTitle(), 
+                book.getStockQuantity() + quantity, 
+                book.getStockQuantity());
+        } catch (Exception e) {
+            log.error("Failed to update stock for book: {}", book.getTitle(), e);
+            throw new BadRequestException("Failed to update book stock: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Process order items with comprehensive inventory validation and management
+     */
+    private void processOrderItems(Order order, List<OrderItemRequest> items) {
+        for (OrderItemRequest itemRequest : items) {
+            // Verify book exists and has sufficient stock
+            Book book = bookRepository.findById(itemRequest.getBookId())
+                    .orElseThrow(() -> new NotFoundException("Book not found: " + itemRequest.getBookId()));
+            
+            // Validate book availability
+            validateBookAvailability(book, itemRequest.getQuantity());
+            
+            // Create order item
+            OrderItem orderItem = OrderItem.builder()
+                    .bookId(itemRequest.getBookId())
+                    .bookTitle(itemRequest.getBookTitle())
+                    .bookAuthor(itemRequest.getBookAuthor())
+                    .bookIsbn(itemRequest.getBookIsbn())
+                    .bookImageUrl(itemRequest.getBookImageUrl())
+                    .quantity(itemRequest.getQuantity())
+                    .unitPrice(itemRequest.getUnitPrice())
+                    .discountAmount(itemRequest.getDiscountAmount())
+                    .build();
+            
+            // Calculate prices
+            orderItem.calculateTotalPrice();
+            
+            // Associate with order
+            order.addOrderItem(orderItem);
+            
+            // Update book stock with proper error handling
+            updateBookStock(book, itemRequest.getQuantity());
+        }
+    }
+
+    /**
+     * Validate order request
+     */
+    private void validateOrderRequest(CreateOrderRequest request) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new BadRequestException("Order must contain at least one item");
+        }
+        
+        if (request.getCustomerEmail() == null || request.getCustomerEmail().trim().isEmpty()) {
+            throw new BadRequestException("Customer email is required");
+        }
+        
+        if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
+            throw new BadRequestException("Customer name is required");
+        }
+        
+        // Validate each item
+        for (OrderItemRequest item : request.getItems()) {
+            if (item.getBookId() == null) {
+                throw new BadRequestException("Book ID is required for all items");
+            }
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new BadRequestException("Quantity must be greater than 0 for all items");
+            }
+            if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException("Unit price must be greater than 0 for all items");
             }
         }
     }

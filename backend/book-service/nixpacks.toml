@@ -1,8 +1,5 @@
 [phases.build]
-cmds = [
-    "cd shared && mvn clean install -DskipTests -B",
-    "mvn clean package -DskipTests -B"
-]
+cmds = ["mvn clean package -DskipTests -B -pl book-service -am -Dmaven.repo.local=./.m2/repository"]
 
 [start]
-cmd = "java -Dserver.port=$PORT -jar target/*.jar"
+cmd = "java -jar target/*.jar"

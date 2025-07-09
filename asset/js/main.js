@@ -71,6 +71,14 @@ const CONFIG = {
             BASE: '/orders',
             USER: '/orders/user',
             ADMIN: '/orders/admin'
+        },
+        SELLER: {
+            BOOKS: '/books/seller',
+            CREATE_BOOK: '/books',
+            UPDATE_BOOK: '/books',
+            DELETE_BOOK: '/books',
+            ORDERS: '/orders/seller',
+            DASHBOARD: '/books/seller/stats'
         }
     }
 };
@@ -776,30 +784,122 @@ const AdminManager = {
             }
             
             // Load dashboard statistics
-            const statsResponse = await APIService.admin.getDashboardStats();
-            const stats = statsResponse.data || statsResponse;
-            this.displayDashboardStats(stats);
+            try {
+                const statsResponse = await APIService.admin.getDashboardStats();
+                console.log('📊 Stats response:', statsResponse);
+                
+                const stats = statsResponse.data || statsResponse;
+                this.displayDashboardStats(stats);
+            } catch (error) {
+                console.error('❌ Error loading dashboard stats:', error);
+                this.displayDashboardStats({});
+            }
             
             // Load users
-            const usersResponse = await APIService.admin.getUsers();
-            const users = usersResponse.data?.content || usersResponse.data || usersResponse.content || usersResponse;
-            this.displayUsers(users);
+            try {
+                const usersResponse = await APIService.admin.getUsers();
+                console.log('👥 Users response:', usersResponse);
+                
+                // Handle different response structures
+                let users = [];
+                if (usersResponse && typeof usersResponse === 'object') {
+                    if (Array.isArray(usersResponse)) {
+                        users = usersResponse;
+                    } else if (usersResponse.content && Array.isArray(usersResponse.content)) {
+                        users = usersResponse.content;
+                    } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
+                        users = usersResponse.data;
+                    } else if (usersResponse.data && usersResponse.data.content && Array.isArray(usersResponse.data.content)) {
+                        users = usersResponse.data.content;
+                    }
+                }
+                
+                console.log('👥 Processed users:', users);
+                this.displayUsers(users);
+            } catch (error) {
+                console.error('❌ Error loading users:', error);
+                this.displayUsers([]);
+            }
             
             // Load sellers
-            const sellersResponse = await APIService.admin.getSellers();
-            const sellers = sellersResponse.data?.content || sellersResponse.data || sellersResponse.content || sellersResponse;
-            this.displaySellers(sellers);
+            try {
+                const sellersResponse = await APIService.admin.getSellers();
+                console.log('🏪 Sellers response:', sellersResponse);
+                
+                // Handle different response structures
+                let sellers = [];
+                if (sellersResponse && typeof sellersResponse === 'object') {
+                    if (Array.isArray(sellersResponse)) {
+                        sellers = sellersResponse;
+                    } else if (sellersResponse.content && Array.isArray(sellersResponse.content)) {
+                        sellers = sellersResponse.content;
+                    } else if (sellersResponse.data && Array.isArray(sellersResponse.data)) {
+                        sellers = sellersResponse.data;
+                    } else if (sellersResponse.data && sellersResponse.data.content && Array.isArray(sellersResponse.data.content)) {
+                        sellers = sellersResponse.data.content;
+                    }
+                }
+                
+                console.log('🏪 Processed sellers:', sellers);
+                this.displaySellers(sellers);
+            } catch (error) {
+                console.error('❌ Error loading sellers:', error);
+                this.displaySellers([]);
+            }
             
             // Load books
-            const booksResponse = await APIService.books.getAll();
-            const books = booksResponse.data?.content || booksResponse.data || booksResponse.content || booksResponse;
-            this.displayBooks(books);
+            try {
+                const booksResponse = await APIService.books.getAll();
+                console.log('📚 Books response:', booksResponse);
+                
+                // Handle different response structures
+                let books = [];
+                if (booksResponse && typeof booksResponse === 'object') {
+                    if (Array.isArray(booksResponse)) {
+                        books = booksResponse;
+                    } else if (booksResponse.content && Array.isArray(booksResponse.content)) {
+                        books = booksResponse.content;
+                    } else if (booksResponse.data && Array.isArray(booksResponse.data)) {
+                        books = booksResponse.data;
+                    } else if (booksResponse.data && booksResponse.data.content && Array.isArray(booksResponse.data.content)) {
+                        books = booksResponse.data.content;
+                    }
+                }
+                
+                console.log('📚 Processed books:', books);
+                this.displayBooks(books);
+            } catch (error) {
+                console.error('❌ Error loading books:', error);
+                this.displayBooks([]);
+            }
             
             // Load orders if orders tab exists
             const ordersContainer = document.querySelector('#orders-tbody');
             if (ordersContainer) {
-                const orders = await APIService.order.admin.getAll();
-                this.displayOrders(orders.content || orders);
+                try {
+                    const ordersResponse = await APIService.order.admin.getAll();
+                    console.log('📦 Orders response:', ordersResponse);
+                    
+                    // Handle different response structures
+                    let orders = [];
+                    if (ordersResponse && typeof ordersResponse === 'object') {
+                        if (Array.isArray(ordersResponse)) {
+                            orders = ordersResponse;
+                        } else if (ordersResponse.content && Array.isArray(ordersResponse.content)) {
+                            orders = ordersResponse.content;
+                        } else if (ordersResponse.data && Array.isArray(ordersResponse.data)) {
+                            orders = ordersResponse.data;
+                        } else if (ordersResponse.data && ordersResponse.data.content && Array.isArray(ordersResponse.data.content)) {
+                            orders = ordersResponse.data.content;
+                        }
+                    }
+                    
+                    console.log('📦 Processed orders:', orders);
+                    this.displayOrders(orders);
+                } catch (error) {
+                    console.error('❌ Error loading orders:', error);
+                    this.displayOrders([]);
+                }
             }
             
         } catch (error) {
@@ -1173,7 +1273,21 @@ const AdminManager = {
         }
         console.log('📊 Displaying orders:', orders);
 
-        if (!orders || orders.length === 0) {
+        // Ensure orders is an array
+        if (!Array.isArray(orders)) {
+            console.warn('Orders is not an array:', orders);
+            container.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <i class="bi bi-exclamation-triangle display-4 text-muted mb-3"></i>
+                        <p class="text-muted">Invalid orders data format</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        if (orders.length === 0) {
             container.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-4">
@@ -1425,6 +1539,439 @@ const AdminManager = {
     }
 };
 
+// Seller Management - Real backend implementation
+const SellerManager = {
+    // Load seller dashboard with real backend data
+    async loadSellerDashboard() {
+        if (!this.isSeller()) {
+            Utils.showError('Access denied. Seller privileges required.');
+            return;
+        }
+        
+        try {
+            // Update seller name in the welcome badge
+            const currentUser = AuthManager.getCurrentUser();
+            const sellerNameElement = document.querySelector('#seller-name');
+            if (sellerNameElement && currentUser) {
+                sellerNameElement.textContent = currentUser.firstName || currentUser.name || 'Seller';
+            }
+            
+            // Load seller's books
+            const booksResponse = await APIService.seller.getMyBooks();
+            const books = booksResponse.data || booksResponse;
+            this.displaySellerBooks(books);
+            
+            // Load seller's orders
+            const ordersResponse = await APIService.seller.getMyOrders();
+            const orders = ordersResponse.data || ordersResponse;
+            this.displaySellerOrders(orders);
+            
+            // Load seller stats
+            const statsResponse = await APIService.seller.getDashboardStats();
+            const stats = statsResponse.data || statsResponse;
+            this.displaySellerStats(stats);
+            
+            // Initialize upload form
+            this.initSellerUploadForm();
+            
+        } catch (error) {
+            console.error('Failed to load seller dashboard:', error);
+            Utils.showError('Failed to load seller dashboard. Please try again.');
+        }
+    },
+
+    // Check if current user is seller
+    isSeller() {
+        const userRole = localStorage.getItem('bookvault_user_role');
+        return userRole === 'SELLER' || userRole === 'ADMIN';
+    },
+
+    // Display seller's books
+    displaySellerBooks(books) {
+        const container = document.querySelector('#products tbody');
+        if (!container) {
+            console.error('Products table body not found');
+            return;
+        }
+
+        if (!Array.isArray(books) || books.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No books found. Upload your first book to get started!</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        container.innerHTML = books.map(book => `
+            <tr data-book-id="${book.id}">
+                <td>
+                    <img src="${book.coverImageUrl || book.imageUrl || '/asset/img/books/placeholder.jpg'}" 
+                         class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="${book.title}">
+                </td>
+                <td>${book.title}</td>
+                <td>${book.author}</td>
+                <td>${Utils.formatCurrency(book.price)}</td>
+                <td>
+                    <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
+                        ${book.isActive ? 'Active' : 'Paused'}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-warning" 
+                                onclick="SellerManager.editBook('${book.id}')" 
+                                title="Edit Book">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="SellerManager.deleteBook('${book.id}')" 
+                                title="Delete Book">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    // Display seller's orders
+    displaySellerOrders(orders) {
+        const container = document.querySelector('#sold tbody');
+        if (!container) {
+            console.error('Sold items table body not found');
+            return;
+        }
+
+        if (!Array.isArray(orders) || orders.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <div class="text-muted">No orders found yet.</div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        container.innerHTML = orders.map(order => `
+            <tr>
+                <td>
+                    <img src="${order.book?.coverImageUrl || order.book?.imageUrl || '/asset/img/books/placeholder.jpg'}" 
+                         class="rounded" style="width: 46px; height: 60px;" alt="${order.book?.title || 'Book'}">
+                </td>
+                <td>${order.book?.title || 'N/A'}</td>
+                <td>${order.buyer?.firstName || 'N/A'} ${order.buyer?.lastName || ''}</td>
+                <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                <td>${Utils.formatCurrency(order.totalAmount)}</td>
+                <td>
+                    <span class="badge bg-${this.getOrderStatusColor(order.status)}">
+                        ${order.status}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    // Display seller stats
+    displaySellerStats(stats) {
+        const statProducts = document.getElementById('statProducts');
+        const statSold = document.getElementById('statSold');
+        const statRevenue = document.getElementById('statRevenue');
+        
+        if (statProducts) statProducts.textContent = stats.totalBooks || 0;
+        if (statSold) statSold.textContent = stats.totalSold || 0;
+        if (statRevenue) statRevenue.textContent = Utils.formatCurrency(stats.totalRevenue || 0);
+    },
+
+    // Initialize seller upload form
+    initSellerUploadForm() {
+        const uploadForm = document.querySelector('.upload-book-form');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', this.handleBookUpload.bind(this));
+        }
+    },
+
+    // Handle book upload
+    async handleBookUpload(event) {
+        event.preventDefault();
+        
+        const form = event.target;
+        
+        // Debug: Log form elements
+        console.log('Form elements:', {
+            bookTitle: form.bookTitle?.value,
+            bookAuthor: form.bookAuthor?.value,
+            bookPrice: form.bookPrice?.value,
+            bookDesc: form.bookDesc?.value,
+            bookStock: form.bookStock?.value,
+            bookCoverImage: form.bookCoverImage?.value,
+            bookGenre: form.bookGenre?.value
+        });
+        
+        // Validate required fields first
+        if (!form.bookTitle.value.trim() || !form.bookAuthor.value.trim() || 
+            !form.bookPrice.value || !form.bookDesc.value.trim()) {
+            Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
+            return;
+        }
+        
+        if (parseFloat(form.bookPrice.value) <= 0) {
+            Utils.showError('Price must be greater than 0.');
+            return;
+        }
+        
+        if (parseInt(form.bookStock?.value || 1) <= 0) {
+            Utils.showError('Stock quantity must be greater than 0.');
+            return;
+        }
+
+        try {
+                    // Create FormData to send file directly
+        const formData = new FormData();
+        formData.append('title', form.bookTitle.value.trim());
+        formData.append('author', form.bookAuthor.value.trim());
+        formData.append('price', form.bookPrice.value);
+        formData.append('description', form.bookDesc.value.trim());
+        formData.append('stockQuantity', form.bookStock?.value || 1);
+        formData.append('categoryNames', form.bookGenre?.value ? form.bookGenre.value.trim() : 'General');
+        
+        // Add image file if selected (no base64 conversion needed)
+        const imageFile = form.bookCoverImage.files[0];
+        if (imageFile) {
+            formData.append('coverImage', imageFile);
+        }
+
+            // Debug: Log the form data
+            console.log('FormData to send:', {
+                title: formData.get('title'),
+                author: formData.get('author'),
+                price: formData.get('price'),
+                description: formData.get('description'),
+                stockQuantity: formData.get('stockQuantity'),
+                categoryNames: formData.get('categoryNames'),
+                hasImage: !!imageFile
+            });
+
+            const response = await APIService.seller.createBookWithFile(formData);
+            Utils.showSuccess('Book uploaded successfully!');
+            
+            // Reset form
+            form.reset();
+            
+            // Reload seller dashboard
+            this.loadSellerDashboard();
+            
+        } catch (error) {
+            console.error('Error uploading book:', error);
+            Utils.showError('Failed to upload book. Please try again.');
+        }
+    },
+
+    // Edit book
+    async editBook(bookId) {
+        try {
+            const response = await APIService.books.getById(bookId);
+            const book = response.data || response;
+            
+            // Open edit modal with book data
+            this.openEditBookModal(book);
+            
+        } catch (error) {
+            console.error('Error loading book for edit:', error);
+            Utils.showError('Failed to load book details.');
+        }
+    },
+
+    // Open edit book modal
+    openEditBookModal(book) {
+        console.log('Opening edit modal for book:', book);
+        
+        // Populate the edit form
+        document.getElementById('editBookId').value = book.id;
+        document.getElementById('editBookTitle').value = book.title;
+        document.getElementById('editBookAuthor').value = book.author;
+        document.getElementById('editBookPrice').value = book.price;
+        document.getElementById('editBookStock').value = book.stockQuantity || 1;
+        document.getElementById('editBookDesc').value = book.description;
+        
+        // Set category if available
+        if (book.categories && book.categories.length > 0) {
+            document.getElementById('editBookGenre').value = book.categories[0].name;
+        }
+        
+        // Set current cover image
+        const currentCover = document.getElementById('currentBookCover');
+        if (book.coverImageUrl) {
+            currentCover.src = book.coverImageUrl;
+            currentCover.style.display = 'block';
+        } else {
+            currentCover.style.display = 'none';
+        }
+        
+        // Clear any previous edit image preview
+        const editImagePreview = document.getElementById('editImagePreview');
+        if (editImagePreview) editImagePreview.style.display = 'none';
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('editBookModal'));
+        modal.show();
+    },
+
+    // Handle edit book submission
+    async handleEditBook(bookId, bookData) {
+        // If no parameters provided, get data from form
+        if (!bookId || !bookData) {
+            bookId = document.getElementById('editBookId').value;
+            
+            // Check if there's a file upload
+            const imageFile = document.getElementById('editBookCoverImage').files[0];
+            
+            if (imageFile) {
+                // Use FormData for file upload
+                const formData = new FormData();
+                formData.append('title', document.getElementById('editBookTitle').value.trim());
+                formData.append('author', document.getElementById('editBookAuthor').value.trim());
+                formData.append('price', document.getElementById('editBookPrice').value);
+                formData.append('description', document.getElementById('editBookDesc').value.trim());
+                formData.append('stockQuantity', document.getElementById('editBookStock').value || 1);
+                formData.append('categoryNames', document.getElementById('editBookGenre').value ? document.getElementById('editBookGenre').value.trim() : 'General');
+                formData.append('coverImage', imageFile);
+
+                // Validate required fields
+                if (!formData.get('title') || !formData.get('author') || !formData.get('price') || !formData.get('description')) {
+                    Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
+                    return;
+                }
+
+                try {
+                    Utils.showLoading('Updating book...');
+                    
+                    // Use the file upload endpoint
+                    let response = await APIService.seller.updateBookWithFile(bookId, formData);
+                    
+                    if (response.success) {
+                        Utils.showSuccess('Book updated successfully!');
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                        modal.hide();
+                        // Reload seller dashboard
+                        this.loadSellerDashboard();
+                    } else {
+                        Utils.showError(response.message || 'Failed to update book');
+                    }
+                } catch (error) {
+                    console.error('Error updating book:', error);
+                    Utils.showError('Failed to update book. Please try again.');
+                } finally {
+                    Utils.hideLoading();
+                }
+            } else {
+                // No file upload, use regular JSON update
+                bookData = {
+                    title: document.getElementById('editBookTitle').value.trim(),
+                    author: document.getElementById('editBookAuthor').value.trim(),
+                    price: parseFloat(document.getElementById('editBookPrice').value).toString(),
+                    description: document.getElementById('editBookDesc').value.trim(),
+                    stockQuantity: parseInt(document.getElementById('editBookStock').value || 1),
+                    language: null,
+                    pageCount: null,
+                    publisher: null
+                };
+
+                // Handle uploaded image data - we'll send the file directly, not base64
+                bookData.coverImageUrl = null;
+
+                // Validate required fields
+                if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
+                    Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
+                    return;
+                }
+
+                try {
+                    Utils.showLoading('Updating book...');
+                    
+                    // Try the API call first
+                    let response = await APIService.seller.updateBook(bookId, bookData);
+                    
+                    if (response.success) {
+                        Utils.showSuccess('Book updated successfully!');
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                        modal.hide();
+                        // Reload seller dashboard
+                        this.loadSellerDashboard();
+                    } else {
+                        Utils.showError(response.message || 'Failed to update book');
+                    }
+                } catch (error) {
+                    console.error('Error updating book:', error);
+                    Utils.showError('Failed to update book. Please try again.');
+                } finally {
+                    Utils.hideLoading();
+                }
+            }
+        } else {
+            // Parameters provided, use regular update
+            try {
+                Utils.showLoading('Updating book...');
+                
+                // Try the API call first
+                let response = await APIService.seller.updateBook(bookId, bookData);
+                
+                if (response.success) {
+                    Utils.showSuccess('Book updated successfully!');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                    modal.hide();
+                    // Reload seller dashboard
+                    this.loadSellerDashboard();
+                } else {
+                    Utils.showError(response.message || 'Failed to update book');
+                }
+            } catch (error) {
+                console.error('Error updating book:', error);
+                Utils.showError('Failed to update book. Please try again.');
+            } finally {
+                Utils.hideLoading();
+            }
+        }
+    },
+
+    // Delete book
+    async deleteBook(bookId) {
+        if (!confirm('Are you sure you want to delete this book?')) {
+            return;
+        }
+
+        try {
+            await APIService.seller.deleteBook(bookId);
+            Utils.showSuccess('Book deleted successfully!');
+            
+            // Reload seller dashboard
+            this.loadSellerDashboard();
+            
+        } catch (error) {
+            console.error('Error deleting book:', error);
+            Utils.showError('Failed to delete book.');
+        }
+    },
+
+    // Get order status color
+    getOrderStatusColor(status) {
+        switch (status?.toUpperCase()) {
+            case 'PENDING': return 'warning';
+            case 'CONFIRMED': return 'info';
+            case 'SHIPPED': return 'primary';
+            case 'DELIVERED': return 'success';
+            case 'CANCELLED': return 'danger';
+            default: return 'secondary';
+        }
+    }
+};
+
 // Utility Functions
 const Utils = {
     // Format currency
@@ -1590,6 +2137,22 @@ const Utils = {
         alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
         alert.innerHTML = `
             <i class="bi bi-check-circle me-2"></i>${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 4000);
+    },
+
+    // Show info message
+    showInfo: (message, containerId = 'info-container') => {
+        const container = document.getElementById(containerId) || document.body;
+        
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-info alert-dismissible fade show position-fixed';
+        alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        alert.innerHTML = `
+            <i class="bi bi-info-circle me-2"></i>${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
@@ -1857,6 +2420,13 @@ const APIService = {
         const token = localStorage.getItem('bookvault_auth_token');
         if (token) {
             headers.Authorization = `Bearer ${token}`;
+        } else {
+            console.warn('⚠️ No auth token found for authenticated request');
+        }
+        
+        // For FormData requests, don't set Content-Type - let browser handle it
+        if (options.body instanceof FormData) {
+            delete headers['Content-Type'];
         }
         
         const requestOptions = {
@@ -1864,7 +2434,16 @@ const APIService = {
             headers
         };
         
-        console.log(`🌐 Making ${requestOptions.method || 'GET'} request to:`, url);
+        // Debug: Log the request details
+        console.log('🔍 Request Debug:', {
+            url: url,
+            method: requestOptions.method,
+            headers: headers,
+            hasBody: !!requestOptions.body,
+            bodyType: requestOptions.body ? requestOptions.body.constructor.name : 'none'
+        });
+        
+
         
         try {
             const response = await fetch(url, requestOptions);
@@ -1963,7 +2542,7 @@ const APIService = {
                 throw new Error(errorMessage);
             }
             
-            console.log('✅ Request successful:', { url, status: response.status, data });
+
             return data;
             
         } catch (error) {
@@ -2047,7 +2626,87 @@ const APIService = {
         updateUser: (userId, userData) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.USERS}/${userId}`, {
             method: 'PUT',
             body: JSON.stringify(userData)
-        })
+        }),
+        toggleSellerStatus: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}/toggle`, { method: 'PATCH' }),
+        deleteSeller: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}`, { method: 'DELETE' })
+    },
+
+    // Seller API calls - Real backend implementation
+    seller: {
+        getMyBooks: () => {
+            const currentUser = AuthManager.getCurrentUser();
+            const sellerId = currentUser?.id || currentUser?.userId;
+            return APIService.makeRequest(`/books/seller/${sellerId}`);
+        },
+        createBook: (bookData) => {
+            // Debug authentication
+            const token = localStorage.getItem('bookvault_auth_token');
+            const userRole = localStorage.getItem('bookvault_user_role');
+            const currentUser = AuthManager.getCurrentUser();
+            
+            console.log('🔐 Book Upload Debug:', {
+                token: token ? 'Present' : 'Missing',
+                userRole: userRole,
+                currentUser: currentUser,
+                bookData: bookData
+            });
+            
+            return APIService.makeRequest(CONFIG.ENDPOINTS.SELLER.CREATE_BOOK, { 
+                method: 'POST', 
+                body: JSON.stringify(bookData) 
+            });
+        },
+        createBookWithFile: (formData) => {
+            // Debug authentication
+            const token = localStorage.getItem('bookvault_auth_token');
+            const userRole = localStorage.getItem('bookvault_user_role');
+            const currentUser = AuthManager.getCurrentUser();
+            
+            console.log('🔐 Book Upload with File Debug:', {
+                token: token ? 'Present' : 'Missing',
+                userRole: userRole,
+                currentUser: currentUser,
+                hasImage: formData.has('coverImage')
+            });
+            
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.CREATE_BOOK}/upload`, { 
+                method: 'POST', 
+                body: formData
+                // Don't set headers - let makeRequest handle Authorization and Content-Type
+            });
+        },
+        updateBook: (bookId, bookData) => {
+            console.log('🔍 Debug: Sending book data for update:', JSON.stringify(bookData, null, 2));
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.UPDATE_BOOK}/${bookId}`, { 
+                method: 'PUT', 
+                body: JSON.stringify(bookData) 
+            });
+        },
+        updateBookWithFile: (bookId, formData) => {
+            console.log('🔍 Debug: Sending book data with file for update');
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.UPDATE_BOOK}/${bookId}/upload`, { 
+                method: 'PUT', 
+                body: formData
+                // Don't set headers - let makeRequest handle Authorization and Content-Type
+            });
+        },
+        deleteBook: (bookId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DELETE_BOOK}/${bookId}`, { method: 'DELETE' }),
+        getMyOrders: () => {
+            // For now, return empty array since backend doesn't have this endpoint yet
+            return Promise.resolve({
+                data: []
+            });
+        },
+        getDashboardStats: () => {
+            // For now, return mock stats since backend doesn't have this endpoint yet
+            return Promise.resolve({
+                data: {
+                    totalBooks: 0,
+                    totalSold: 0,
+                    totalRevenue: 0
+                }
+            });
+        }
     },
 
     // User API calls - Currently not implemented in backend  
@@ -2881,6 +3540,9 @@ const PageManager = {
             case 'cart':
                 this.initCartPage();
                 break;
+            case 'seller':
+                this.initSellerPage();
+                break;
             default:
                 console.log('ℹ️ No specific initialization for page:', currentPage);
         }
@@ -3377,6 +4039,12 @@ const PageManager = {
             // DOM already loaded
             this.performCartInit();
         }
+    },
+
+    // Initialize seller page
+    initSellerPage() {
+        console.log('🏪 Initializing Seller Page...');
+        SellerManager.loadSellerDashboard();
     },
 
     // Perform actual cart initialization
@@ -4654,6 +5322,7 @@ window.BookVault = {
     AdminManager,
     BookManager,
     UserManager,
+    SellerManager,
     Utils
 };
 

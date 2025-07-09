@@ -47,9 +47,6 @@ public class BookCreateRequest {
     @Min(value = 0, message = "Stock quantity must not be negative")
     private Integer stockQuantity;
     
-    @NotNull(message = "Seller ID is required")
-    private UUID sellerId;
-    
     private String language;
     
     @Min(value = 1, message = "Page count must be positive")
@@ -64,7 +61,7 @@ public class BookCreateRequest {
     public BookCreateRequest() {}
     
     public BookCreateRequest(String title, String author, String isbn, String description, BigDecimal price,
-                            LocalDate publishedDate, String coverImageUrl, Integer stockQuantity, UUID sellerId,
+                            LocalDate publishedDate, String coverImageUrl, Integer stockQuantity,
                             String language, Integer pageCount, String publisher, List<String> categoryNames) {
         this.title = title;
         this.author = author;
@@ -74,7 +71,6 @@ public class BookCreateRequest {
         this.publishedDate = publishedDate;
         this.coverImageUrl = coverImageUrl;
         this.stockQuantity = stockQuantity;
-        this.sellerId = sellerId;
         this.language = language;
         this.pageCount = pageCount;
         this.publisher = publisher;
@@ -95,7 +91,6 @@ public class BookCreateRequest {
         private LocalDate publishedDate;
         private String coverImageUrl;
         private Integer stockQuantity;
-        private UUID sellerId;
         private String language;
         private Integer pageCount;
         private String publisher;
@@ -141,11 +136,6 @@ public class BookCreateRequest {
             return this;
         }
         
-        public Builder sellerId(UUID sellerId) {
-            this.sellerId = sellerId;
-            return this;
-        }
-        
         public Builder language(String language) {
             this.language = language;
             return this;
@@ -168,7 +158,7 @@ public class BookCreateRequest {
         
         public BookCreateRequest build() {
             return new BookCreateRequest(title, author, isbn, description, price, publishedDate,
-                                       coverImageUrl, stockQuantity, sellerId, language, pageCount,
+                                       coverImageUrl, stockQuantity, language, pageCount,
                                        publisher, categoryNames);
         }
     }
@@ -236,14 +226,6 @@ public class BookCreateRequest {
     
     public void setStockQuantity(Integer stockQuantity) {
         this.stockQuantity = stockQuantity;
-    }
-    
-    public UUID getSellerId() {
-        return sellerId;
-    }
-    
-    public void setSellerId(UUID sellerId) {
-        this.sellerId = sellerId;
     }
     
     public String getLanguage() {

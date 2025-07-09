@@ -4,6 +4,7 @@ import com.bookvault.book.dto.*;
 import com.bookvault.book.model.*;
 import com.bookvault.book.repository.*;
 import com.bookvault.shared.dto.PagedResponse;
+import com.bookvault.shared.exception.BadRequestException;
 import com.bookvault.shared.exception.NotFoundException;
 // import lombok.RequiredArgsConstructor;
 // import lombok.extern.slf4j.Slf4j;
@@ -13,11 +14,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 /**
  * Simple Book Service - Core functionality only
@@ -116,61 +120,82 @@ public class BookService {
     
     // Create book
     public BookResponse createBook(BookCreateRequest request) {
-        // Create book entity
-        Book book = Book.builder()
-                .title(request.getTitle())
-                .author(request.getAuthor())
-                .isbn(request.getIsbn())
-                .description(request.getDescription())
-                .price(request.getPrice())
-                .publishedDate(request.getPublishedDate())
-                .coverImageUrl(request.getCoverImageUrl())
-                .stockQuantity(request.getStockQuantity())
-                .sellerId(request.getSellerId())
-                .language(request.getLanguage())
-                .pageCount(request.getPageCount())
-                .publisher(request.getPublisher())
-                .isActive(true)
-                .reviewCount(0)
-                .build();
-        
-        Book savedBook = bookRepository.save(book);
-        
-        // Add categories
-        if (request.getCategoryNames() != null && !request.getCategoryNames().isEmpty()) {
-            for (String categoryName : request.getCategoryNames()) {
-                Category category = categoryRepository.findByNameAndIsActiveTrue(categoryName)
-                        .orElseGet(() -> {
-                            Category newCategory = Category.builder()
-                                    .name(categoryName)
-                                    .isActive(true)
-                                    .build();
-                            return categoryRepository.save(newCategory);
-                        });
-                
-                BookCategory bookCategory = BookCategory.builder()
-                        .book(savedBook)
-                        .category(category)
-                        .isPrimary(request.getCategoryNames().indexOf(categoryName) == 0)
-                        .build();
-                
+        try {
+            log.info("Creating book with request: {}", request);
+            
+            // Get current user ID and set as seller
+            UUID currentUserId = getCurrentUserId();
+            log.info("Current user ID: {}", currentUserId);
+            
+            // Create book entity
+            Book book = Book.builder()
+                    .title(request.getTitle())
+                    .author(request.getAuthor())
+                    .isbn(request.getIsbn())
+                    .description(request.getDescription())
+                    .price(request.getPrice())
+                    .publishedDate(request.getPublishedDate())
+                    .coverImageUrl(request.getCoverImageUrl())
+                    .stockQuantity(request.getStockQuantity())
+                    .sellerId(currentUserId) // Set current user as seller
+                    .language(request.getLanguage())
+                    .pageCount(request.getPageCount())
+                    .publisher(request.getPublisher())
+                    .isActive(true)
+                    .reviewCount(0)
+                    .build();
+            
+            log.info("Built book entity: {}", book);
+            Book savedBook = bookRepository.save(book);
+            log.info("Saved book: {}", savedBook.getId());
+            
+            // Add categories
+            if (request.getCategoryNames() != null && !request.getCategoryNames().isEmpty()) {
+                log.info("Processing categories: {}", request.getCategoryNames());
+                // Always use a mutable list for bookCategories
                 if (savedBook.getBookCategories() == null) {
-                    savedBook.setBookCategories(List.of(bookCategory));
-                } else {
+                    savedBook.setBookCategories(new ArrayList<>());
+                }
+                for (String categoryName : request.getCategoryNames()) {
+                    Category category = categoryRepository.findByNameAndIsActiveTrue(categoryName)
+                            .orElseGet(() -> {
+                                Category newCategory = Category.builder()
+                                        .name(categoryName)
+                                        .isActive(true)
+                                        .build();
+                                return categoryRepository.save(newCategory);
+                            });
+
+                    BookCategory bookCategory = BookCategory.builder()
+                            .book(savedBook)
+                            .category(category)
+                            .isPrimary(request.getCategoryNames().indexOf(categoryName) == 0)
+                            .build();
+
                     savedBook.getBookCategories().add(bookCategory);
                 }
+                savedBook = bookRepository.save(savedBook);
+                log.info("Saved book with categories: {}", savedBook.getId());
             }
-            savedBook = bookRepository.save(savedBook);
+            
+            log.info("Created new book: {} by {}", savedBook.getTitle(), savedBook.getAuthor());
+            return mapToResponse(savedBook);
+        } catch (Exception e) {
+            log.error("Error creating book: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create book: " + e.getMessage(), e);
         }
-        
-        log.info("Created new book: {} by {}", savedBook.getTitle(), savedBook.getAuthor());
-        return mapToResponse(savedBook);
     }
     
     // Update book
     public BookResponse updateBook(UUID id, BookUpdateRequest request) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
+        
+        // Check if current user is the seller of this book
+        UUID currentUserId = getCurrentUserId();
+        if (!book.getSellerId().equals(currentUserId)) {
+            throw new SecurityException("You can only update your own books");
+        }
         
         // Update fields
         if (request.getTitle() != null) book.setTitle(request.getTitle());
@@ -184,17 +209,111 @@ public class BookService {
         if (request.getPublisher() != null) book.setPublisher(request.getPublisher());
         
         Book savedBook = bookRepository.save(book);
+        
+        // Update categories if provided
+        if (request.getCategoryNames() != null && !request.getCategoryNames().isEmpty()) {
+            log.info("Processing category updates: {}", request.getCategoryNames());
+            
+            // Clear existing categories
+            if (savedBook.getBookCategories() != null) {
+                savedBook.getBookCategories().clear();
+            } else {
+                savedBook.setBookCategories(new ArrayList<>());
+            }
+            
+            // Add new categories
+            for (String categoryName : request.getCategoryNames()) {
+                Category category = categoryRepository.findByNameAndIsActiveTrue(categoryName)
+                        .orElseGet(() -> {
+                            Category newCategory = Category.builder()
+                                    .name(categoryName)
+                                    .isActive(true)
+                                    .build();
+                            return categoryRepository.save(newCategory);
+                        });
+
+                BookCategory bookCategory = BookCategory.builder()
+                        .book(savedBook)
+                        .category(category)
+                        .isPrimary(request.getCategoryNames().indexOf(categoryName) == 0)
+                        .build();
+
+                savedBook.getBookCategories().add(bookCategory);
+            }
+            savedBook = bookRepository.save(savedBook);
+            log.info("Updated book with categories: {}", savedBook.getId());
+        }
+        
         log.info("Updated book: {}", savedBook.getId());
         return mapToResponse(savedBook);
     }
     
-    // Update stock
+    // Get current user ID from security context
+    private UUID getCurrentUserId() {
+        try {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            log.info("Principal type: {}, value: {}", principal.getClass().getSimpleName(), principal);
+            
+            if (principal instanceof UUID) {
+                return (UUID) principal;
+            } else if (principal instanceof String) {
+                return UUID.fromString((String) principal);
+            } else {
+                log.error("Unexpected principal type: {}", principal.getClass().getName());
+                throw new SecurityException("User not authenticated - unexpected principal type: " + principal.getClass().getName());
+            }
+        } catch (Exception e) {
+            log.error("Error getting current user ID: {}", e.getMessage(), e);
+            throw new SecurityException("User not authenticated: " + e.getMessage());
+        }
+    }
+    
+    // Update stock with validation
+    @Transactional
     public void updateBookStock(UUID id, Integer stockQuantity) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
-        book.setStockQuantity(stockQuantity);
-        bookRepository.save(book);
-        log.info("Updated stock for book {}: {}", id, stockQuantity);
+        try {
+            Book book = bookRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
+            
+            if (stockQuantity < 0) {
+                throw new BadRequestException("Stock quantity cannot be negative");
+            }
+            
+            book.setStockQuantity(stockQuantity);
+            bookRepository.save(book);
+            log.info("Updated stock for book {}: {} -> {}", id, book.getTitle(), stockQuantity);
+        } catch (Exception e) {
+            log.error("Failed to update stock for book: {}", id, e);
+            throw new BadRequestException("Failed to update book stock: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Bulk update stock for multiple books (for admin operations)
+     */
+    @Transactional
+    public void bulkUpdateStock(Map<UUID, Integer> stockUpdates) {
+        try {
+            for (Map.Entry<UUID, Integer> entry : stockUpdates.entrySet()) {
+                UUID bookId = entry.getKey();
+                Integer newStock = entry.getValue();
+                
+                if (newStock < 0) {
+                    throw new BadRequestException("Stock quantity cannot be negative for book: " + bookId);
+                }
+                
+                Book book = bookRepository.findById(bookId)
+                        .orElseThrow(() -> new NotFoundException("Book not found with ID: " + bookId));
+                
+                book.setStockQuantity(newStock);
+                bookRepository.save(book);
+                
+                log.info("Updated stock for book {}: {} -> {}", book.getTitle(), bookId, newStock);
+            }
+        } catch (Exception e) {
+            log.error("Failed to bulk update stock", e);
+            throw new BadRequestException("Failed to bulk update stock: " + e.getMessage());
+        }
     }
     
     // Activate book
@@ -215,9 +334,15 @@ public class BookService {
     
     // Delete book
     public void deleteBook(UUID id) {
-        if (!bookRepository.existsById(id)) {
-            throw new NotFoundException("Book not found with ID: " + id);
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
+        
+        // Check if current user is the seller of this book
+        UUID currentUserId = getCurrentUserId();
+        if (!book.getSellerId().equals(currentUserId)) {
+            throw new SecurityException("You can only delete your own books");
         }
+        
         bookRepository.deleteById(id);
         log.info("Deleted book: {}", id);
     }

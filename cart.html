@@ -172,7 +172,7 @@
       <div class="row align-items-center mb-3">
         <div class="col-md-6 d-flex align-items-center mb-2 mb-md-0">
           <a class="navbar-brand d-flex align-items-center gap-2" href="index.html">
-            <img src="asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo">
+            <img src="asset/img/logo/BookVault_Logo_4K.png" alt="BookVault Logo" style="height:44px; width:auto;">
             <span>BookVault</span>
           </a>
           <span class="ms-2">© 2025 BookVault. All rights reserved.</span>
@@ -198,24 +198,7 @@
   <script>
     // Initialize cart page when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🛒 Cart Page - Starting initialization...');
-        
-        // Debug cart state
-        console.log('🔍 Debug cart initialization:');
-        console.log('  - PageManager available:', typeof PageManager);
-        console.log('  - CartManager available:', typeof CartManager);
-        console.log('  - Current page path:', window.location.pathname);
-        
-        // Check if cart container exists
-        const container = document.getElementById('cart-container');
-        console.log('  - Cart container found:', !!container);
-        
-        if (container) {
-            console.log('  - Container element:', container);
-        }
-        
         // Initialize PageManager which will handle cart initialization properly
-        console.log('🚀 Calling PageManager.init()...');
         PageManager.init();
     });
   </script>

@@ -77,8 +77,10 @@ const CONFIG = {
             CREATE_BOOK: '/books',
             UPDATE_BOOK: '/books',
             DELETE_BOOK: '/books',
-            ORDERS: '/orders/seller',
-            DASHBOARD: '/books/seller/stats'
+            ORDERS: '/books/seller/orders',
+            DASHBOARD: '/books/seller/stats',
+            REVENUE: '/books/seller/revenue',
+            STATS: '/books/seller/stats'
         }
     }
 };
@@ -1415,7 +1417,7 @@ const AdminManager = {
                         <span class="fw-medium text-success">${Utils.formatCurrency(order.totalAmount || order.total || 0)}</span>
                     </td>
                     <td>
-                        <small class="text-muted">${new Date(order.createdDate || order.orderDate).toLocaleDateString()}</small>
+                        <small class="text-muted">${new Date(order.createdAt || order.createdDate || order.orderDate).toLocaleDateString()}</small>
                     </td>
                     <td>
                         <span class="badge bg-${statusColor}">${order.status || 'PENDING'}</span>
@@ -1464,6 +1466,11 @@ const AdminManager = {
     // Update order status
     async updateOrderStatus(orderId, newStatus) {
         try {
+            if (!AuthManager.isAdmin()) {
+                Utils.showError('You need admin privileges to update order status.');
+                return;
+            }
+            
             await APIService.order.admin.updateStatus(orderId, newStatus);
             Utils.showSuccess(`Order status updated to ${newStatus.replace('_', ' ').toLowerCase()}.`);
             this.loadAdminDashboard();
@@ -1496,7 +1503,7 @@ const AdminManager = {
                                     <strong>Customer:</strong> ${order.customerFullName}
                                 </div>
                                 <div class="col-md-4">
-                                    <strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleDateString()}
+                                    <strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}
                                 </div>
                                 <div class="col-md-4">
                                     <strong>Status:</strong> <span class="badge bg-${statusColor}">${order.status}</span>
@@ -1639,6 +1646,8 @@ const SellerManager = {
         }
         
         try {
+            console.log('🔄 Loading seller dashboard...');
+            
             // Update seller name in the welcome badge
             const currentUser = AuthManager.getCurrentUser();
             const sellerNameElement = document.querySelector('#seller-name');
@@ -1646,25 +1655,27 @@ const SellerManager = {
                 sellerNameElement.textContent = currentUser.firstName || currentUser.name || 'Seller';
             }
             
-            // Load seller's books
             const booksResponse = await APIService.seller.getMyBooks();
             const books = booksResponse.data || booksResponse;
             this.displaySellerBooks(books);
             
-            // Load seller's orders
             const ordersResponse = await APIService.seller.getMyOrders();
             const orders = ordersResponse.data || ordersResponse;
             this.displaySellerOrders(orders);
             
             // Load seller revenue analytics
+            console.log('💰 Loading revenue analytics...');
             try {
                 const revenueResponse = await APIService.seller.getRevenueAnalytics();
+                console.log('💰 Revenue response:', revenueResponse);
                 const revenue = revenueResponse.data || revenueResponse;
                 this.displaySellerRevenueAnalytics(revenue);
             } catch (error) {
-                console.error('Failed to load revenue analytics:', error);
+                console.error('❌ Failed to load revenue analytics:', error);
                 // Fallback to basic stats
+                console.log('🔄 Falling back to basic stats...');
                 const statsResponse = await APIService.seller.getDashboardStats();
+                console.log('📊 Stats response:', statsResponse);
                 const stats = statsResponse.data || statsResponse;
                 this.displaySellerStats(stats);
             }
@@ -1673,7 +1684,7 @@ const SellerManager = {
             this.initSellerUploadForm();
             
         } catch (error) {
-            console.error('Failed to load seller dashboard:', error);
+            console.error('❌ Failed to load seller dashboard:', error);
             Utils.showError('Failed to load seller dashboard. Please try again.');
         }
     },
@@ -1787,7 +1798,7 @@ const SellerManager = {
                 </td>
                 <td>${order.book?.title || 'N/A'}</td>
                 <td>${order.buyer?.firstName || 'N/A'} ${order.buyer?.lastName || ''}</td>
-                <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                <td>${new Date(order.createdAt).toLocaleDateString()}</td>
                 <td>${Utils.formatCurrency(order.totalAmount)}</td>
                 <td>
                     <span class="badge bg-${this.getOrderStatusColor(order.status)}">
@@ -1830,6 +1841,12 @@ const SellerManager = {
         if (window.Chart && revenue.revenueBreakdown) {
             const monthlyCtx = document.getElementById('chartMonth');
             if (monthlyCtx) {
+                // Destroy existing chart if it exists
+                const existingMonthlyChart = Chart.getChart(monthlyCtx);
+                if (existingMonthlyChart) {
+                    existingMonthlyChart.destroy();
+                }
+                
                 const monthlyData = revenue.revenueBreakdown.slice(0, 4).reverse();
                 new Chart(monthlyCtx, {
                     type: 'line',
@@ -1854,6 +1871,12 @@ const SellerManager = {
             // Yearly revenue chart
             const yearlyCtx = document.getElementById('chartYear');
             if (yearlyCtx) {
+                // Destroy existing chart if it exists
+                const existingYearlyChart = Chart.getChart(yearlyCtx);
+                if (existingYearlyChart) {
+                    existingYearlyChart.destroy();
+                }
+                
                 const yearlyData = revenue.revenueBreakdown.slice(0, 4);
                 new Chart(yearlyCtx, {
                     type: 'bar',
@@ -1914,7 +1937,7 @@ const SellerManager = {
                              class="rounded" style="width: 46px; height: 60px;" alt="${order.bookTitle}"></td>
                     <td>${order.bookTitle}</td>
                     <td>${order.customerName}</td>
-                    <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                    <td>${new Date(order.createdAt).toLocaleDateString()}</td>
                     <td>${Utils.formatCurrency(order.totalPrice)}</td>
                     <td><span class="badge bg-${this.getOrderStatusColor(order.orderStatus)}">${order.orderStatus}</span></td>
                 </tr>
@@ -2969,6 +2992,7 @@ const APIService = {
         getMyBooks: () => {
             const currentUser = AuthManager.getCurrentUser();
             const sellerId = currentUser?.id || currentUser?.userId;
+            console.log('🔍 Getting books for seller:', sellerId, 'User:', currentUser);
             return APIService.makeRequest(`/books/seller/${sellerId}`);
         },
         createBook: (bookData) => {
@@ -3025,8 +3049,20 @@ const APIService = {
         },
         deleteBook: (bookId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DELETE_BOOK}/${bookId}`, { method: 'DELETE' }),
         getMyOrders: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.ORDERS}`),
-        getDashboardStats: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DASHBOARD_STATS}`),
-        getRevenueAnalytics: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.REVENUE}`)
+        getDashboardStats: () => {
+            console.log('🔍 Debug: CONFIG.ENDPOINTS.SELLER.DASHBOARD =', CONFIG.ENDPOINTS.SELLER.DASHBOARD);
+            console.log('🔍 Debug: Full endpoint URL =', `${CONFIG.ENDPOINTS.SELLER.DASHBOARD}`);
+            console.log('🔍 Debug: CONFIG object =', CONFIG);
+            console.log('🔍 Debug: CONFIG.ENDPOINTS =', CONFIG.ENDPOINTS);
+            console.log('🔍 Debug: CONFIG.ENDPOINTS.SELLER =', CONFIG.ENDPOINTS.SELLER);
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DASHBOARD}`);
+        },
+        getRevenueAnalytics: () => {
+            const currentUser = AuthManager.getCurrentUser();
+            const sellerId = currentUser?.id || currentUser?.userId;
+            console.log('💰 Getting revenue analytics for seller:', sellerId);
+            return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.REVENUE}`);
+        }
     },
 
     // User API calls - Currently not implemented in backend  
@@ -3098,10 +3134,15 @@ const APIService = {
             getAll: (page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/all?page=${page}&size=${size}`),
             getStats: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/statistics`),
             getByStatus: (status, page = 0, size = 10) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/status/${status}?page=${page}&size=${size}`),
-            updateStatus: (orderId, status) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/${orderId}/status`, {
-                method: 'PUT',
-                body: JSON.stringify({ status })
-            })
+            updateStatus: (orderId, status) => {
+                console.log('🔍 Debug - API Request:');
+                console.log('URL:', `${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/${orderId}/status?status=${status}`);
+                console.log('Method: PUT');
+                console.log('Headers:', { 'Authorization': 'Bearer ' + (localStorage.getItem('bookvault_auth_token') ? '***' : 'No token') });
+                return APIService.makeRequest(`${CONFIG.ENDPOINTS.ORDERS.BASE}/admin/${orderId}/status?status=${status}`, {
+                    method: 'PUT'
+                });
+            }
         }
     }
 };
@@ -4892,7 +4933,7 @@ const PageManager = {
                                 <td><img src="${firstItem?.bookImageUrl || '/asset/img/books/placeholder.jpg'}" 
                                          style="width: 44px; height: 60px; object-fit: cover;" class="rounded" alt=""></td>
                                 <td>${firstItem?.bookTitle || 'Order Items'}</td>
-                                <td>${new Date(order.orderDate).toLocaleDateString()}</td>
+                                <td>${new Date(order.createdAt).toLocaleDateString()}</td>
                                 <td>${Utils.formatCurrency(order.totalAmount)}</td>
                                 <td><span class="badge bg-${statusColor}">${order.status}</span></td>
                                 <td>
@@ -4995,7 +5036,7 @@ const PageManager = {
                         <div class="modal-body">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <strong>Order Date:</strong> ${new Date(order.orderDate).toLocaleDateString()}
+                                    <strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}
                                 </div>
                                 <div class="col-md-6">
                                     <strong>Status:</strong> <span class="badge bg-${statusColor}">${order.status}</span>
@@ -5216,7 +5257,16 @@ const PageManager = {
     // Apply filters
     applyFilters() {
         const filters = this.getActiveFilters();
-        BookManager.loadBooksWithFilters('books-container', filters);
+        
+        // Check if there are any active filters
+        const hasActiveFilters = this.hasActiveFilters(filters);
+        
+        if (hasActiveFilters) {
+            console.log('🔍 Applying active filters:', filters);
+            BookManager.loadBooksWithFilters('books-container', filters);
+        } else {
+            console.log('🔍 No active filters, skipping filter application');
+        }
     },
 
     // Get active filters

@@ -18,7 +18,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     /**
      * Find order items by order ID
      */
-    List<OrderItem> findByOrderId(UUID orderId);
+    List<OrderItem> findByOrder_Id(UUID orderId);
     
     /**
      * Find order items by book ID
@@ -28,7 +28,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     /**
      * Count order items by order ID
      */
-    long countByOrderId(UUID orderId);
+    long countByOrder_Id(UUID orderId);
     
     /**
      * Count order items by book ID
@@ -73,56 +73,22 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
     java.math.BigDecimal getTotalRevenueByBookId(@Param("bookId") UUID bookId);
     
     // Seller-specific queries
-    @Query("SELECT SUM(oi.finalPrice) FROM OrderItem oi " +
+    @Query("SELECT COALESCE(SUM(oi.finalPrice), 0) FROM OrderItem oi " +
            "JOIN Book b ON oi.bookId = b.id " +
            "WHERE b.sellerId = :sellerId")
     java.math.BigDecimal getTotalRevenueBySellerId(@Param("sellerId") UUID sellerId);
     
-    @Query("SELECT SUM(oi.quantity) FROM OrderItem oi " +
+    @Query("SELECT COALESCE(SUM(oi.quantity), 0) FROM OrderItem oi " +
            "JOIN Book b ON oi.bookId = b.id " +
            "WHERE b.sellerId = :sellerId")
     Long getTotalQuantityBySellerId(@Param("sellerId") UUID sellerId);
     
-    @Query("SELECT COUNT(DISTINCT oi.orderId) FROM OrderItem oi " +
+    @Query("SELECT COALESCE(COUNT(DISTINCT oi.order.id), 0) FROM OrderItem oi " +
            "JOIN Book b ON oi.bookId = b.id " +
            "WHERE b.sellerId = :sellerId")
     Long getOrderCountBySellerId(@Param("sellerId") UUID sellerId);
     
-    @Query("SELECT SUM(oi.finalPrice) FROM OrderItem oi " +
-           "JOIN Book b ON oi.bookId = b.id " +
-           "WHERE b.sellerId = :sellerId " +
-           "AND oi.createdAt >= :startDate")
-    java.math.BigDecimal getRevenueBySellerIdAndPeriod(@Param("sellerId") UUID sellerId, @Param("period") String period);
+
     
-    @Query("SELECT oi.bookId, oi.bookTitle, oi.bookAuthor, oi.bookImageUrl, " +
-           "SUM(oi.quantity) as totalSold, SUM(oi.finalPrice) as totalRevenue, " +
-           "AVG(b.rating) as averageRating " +
-           "FROM OrderItem oi " +
-           "JOIN Book b ON oi.bookId = b.id " +
-           "WHERE b.sellerId = :sellerId " +
-           "GROUP BY oi.bookId, oi.bookTitle, oi.bookAuthor, oi.bookImageUrl " +
-           "ORDER BY totalRevenue DESC")
-    List<Object[]> findTopPerformingBooksBySellerId(@Param("sellerId") UUID sellerId);
-    
-    @Query("SELECT DATE_FORMAT(oi.createdAt, '%Y-%m') as period, " +
-           "SUM(oi.finalPrice) as revenue, " +
-           "COUNT(DISTINCT oi.orderId) as orderCount, " +
-           "SUM(oi.quantity) as itemsSold " +
-           "FROM OrderItem oi " +
-           "JOIN Book b ON oi.bookId = b.id " +
-           "WHERE b.sellerId = :sellerId " +
-           "GROUP BY period " +
-           "ORDER BY period DESC")
-    List<Object[]> getRevenueBreakdownBySellerId(@Param("sellerId") UUID sellerId);
-    
-    @Query("SELECT o.orderId, o.orderNumber, oi.bookTitle, oi.bookAuthor, oi.bookImageUrl, " +
-           "oi.quantity, oi.unitPrice, oi.finalPrice, o.customerName, o.customerEmail, " +
-           "o.createdAt, o.status " +
-           "FROM OrderItem oi " +
-           "JOIN Book b ON oi.bookId = b.id " +
-           "JOIN Order o ON oi.orderId = o.id " +
-           "WHERE b.sellerId = :sellerId " +
-           "ORDER BY o.createdAt DESC " +
-           "LIMIT 20")
-    List<Object[]> findRecentOrdersBySellerId(@Param("sellerId") UUID sellerId);
+
 } 

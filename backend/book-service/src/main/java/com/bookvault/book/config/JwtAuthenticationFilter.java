@@ -48,6 +48,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String requestPath = request.getRequestURI();
         String method = request.getMethod();
         
+        // CRITICAL: Allow OPTIONS requests to pass through for CORS preflight
+        if ("OPTIONS".equals(method)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         // OPTIMIZATION: Skip JWT processing for public GET endpoints
         if ("GET".equals(method) && isPublicEndpoint(requestPath)) {
             filterChain.doFilter(request, response);
@@ -62,6 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             requestPath.startsWith("/api/books/isbn/"))) {
             filterChain.doFilter(request, response);
             return;
+        }
+        
+        // IMPORTANT: Seller endpoints require authentication
+        if (requestPath.startsWith("/api/books/seller/")) {
+            // Continue with JWT authentication for seller endpoints
         }
         
         String authHeader = request.getHeader("Authorization");

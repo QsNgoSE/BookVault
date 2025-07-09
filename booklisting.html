@@ -231,29 +231,35 @@
         console.log('✅ BookVault App initialized successfully');
       }
       
-      // Load books using BookManager from main.js
-      setTimeout(() => {
-        if (typeof window.BookManager !== 'undefined') {
-          window.BookManager.loadBooks('books-container');
-        } else if (typeof BookManager !== 'undefined') {
-          BookManager.loadBooks('books-container');
-        } else if (typeof window.BookVault !== 'undefined' && window.BookVault.BookManager) {
-          window.BookVault.BookManager.loadBooks('books-container');
-        } else {
-          // Fallback to direct API call
-          const bookServiceUrl = window.BookVaultConfig ? 
-              window.BookVaultConfig.production.BOOK_SERVICE_URL : 
-              'https://book-service-production-4444.up.railway.app/api';
-          fetch(`${bookServiceUrl}/books?page=0&size=12`)
-            .then(response => response.json())
-            .then(data => {
-              // The BookManager should handle the display
-            })
-            .catch(error => {
-              console.error('Error loading books via fallback:', error);
-            });
-        }
-      }, 1000); // Give main.js time to load
+      // Check if we have a search query - if so, don't load books here as PageManager will handle it
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('search');
+      
+      if (!searchQuery) {
+        // Only load books if there's no search query (PageManager will handle search)
+        setTimeout(() => {
+          if (typeof window.BookManager !== 'undefined') {
+            window.BookManager.loadBooks('books-container');
+          } else if (typeof BookManager !== 'undefined') {
+            BookManager.loadBooks('books-container');
+          } else if (typeof window.BookVault !== 'undefined' && window.BookVault.BookManager) {
+            window.BookVault.BookManager.loadBooks('books-container');
+          } else {
+            // Fallback to direct API call
+            const bookServiceUrl = window.BookVaultConfig ? 
+                window.BookVaultConfig.production.BOOK_SERVICE_URL : 
+                'https://book-service-production-4444.up.railway.app/api';
+            fetch(`${bookServiceUrl}/books?page=0&size=12`)
+              .then(response => response.json())
+              .then(data => {
+                // The BookManager should handle the display
+              })
+              .catch(error => {
+                console.error('Error loading books via fallback:', error);
+              });
+          }
+        }, 1000); // Give main.js time to load
+      }
     });
 
 

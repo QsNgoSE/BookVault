@@ -85,6 +85,194 @@ const CONFIG = {
     }
 };
 
+// Avatar Management
+const AvatarManager = {
+    // Mock avatars available for selection
+    mockAvatars: [
+        'asset/img/avatars/avatar-1.png',
+        'asset/img/avatars/avatar-2.png', 
+        'asset/img/avatars/avatar-3.png',
+        'asset/img/avatars/avatar-4.png',
+        'asset/img/avatars/avatar-5.png',
+        'asset/img/avatars/avatar-6.png',
+        'asset/img/avatars/avatar-7.png',
+        'asset/img/avatars/avatar-8.png'
+    ],
+
+    // Get user's current avatar
+    getCurrentAvatar(userId) {
+        // First check if we have avatar URL from backend (user profile)
+        const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+        if (userProfile.avatarUrl) {
+            console.log('🖼️ Using avatar from backend profile:', userProfile.avatarUrl);
+            return userProfile.avatarUrl;
+        }
+        
+        // Fallback to localStorage (legacy support)
+        const storedAvatar = localStorage.getItem(`bookvault_avatar_${userId}`);
+        if (storedAvatar) {
+            console.log('🖼️ Using avatar from localStorage:', storedAvatar);
+            return storedAvatar;
+        }
+        
+        // Default avatar
+        console.log('🖼️ Using default avatar');
+        return 'asset/img/avatars/default-avatar.png';
+    },
+
+    // Set user's avatar
+    setUserAvatar(userId, avatarUrl) {
+        // Save to localStorage for immediate effect
+        localStorage.setItem(`bookvault_avatar_${userId}`, avatarUrl);
+        
+        // Also try to save to backend (async, non-blocking)
+        const currentUser = AuthManager.getCurrentUser();
+        if (currentUser && (currentUser.userId === userId || currentUser.id === userId)) {
+            console.log('🔄 Syncing avatar to backend:', avatarUrl);
+            APIService.auth.updateProfile(currentUser.userId || currentUser.id, { avatarUrl })
+                .then(response => {
+                    console.log('✅ Avatar synced to backend successfully');
+                    // Update stored user profile
+                    const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+                    userProfile.avatarUrl = avatarUrl;
+                    localStorage.setItem('bookvault_user_profile', JSON.stringify(userProfile));
+                })
+                .catch(error => {
+                    console.log('⚠️ Could not sync avatar to backend:', error.message);
+                    // Don't show error to user, localStorage still works
+                });
+        }
+        
+        this.updateAvatarDisplay();
+    },
+
+    // Update avatar display throughout the UI
+    updateAvatarDisplay() {
+        const currentUser = AuthManager.getCurrentUser();
+        if (!currentUser) {
+            // No user logged in, set default avatar
+            const avatarElements = document.querySelectorAll('.user-avatar-img, .profile-avatar');
+            avatarElements.forEach(element => {
+                element.src = 'asset/img/avatars/default-avatar.png';
+            });
+            return;
+        }
+
+        const avatar = this.getCurrentAvatar(currentUser.id);
+        const avatarElements = document.querySelectorAll('.user-avatar-img, .profile-avatar');
+        avatarElements.forEach(element => {
+            element.src = avatar;
+        });
+        
+        console.log('🖼️ Updated avatar display for user:', currentUser.id, 'with avatar:', avatar);
+    },
+
+    // Clean up avatar data for a specific user (called on logout)
+    cleanupUserAvatar(userId) {
+        if (!userId) return;
+        
+        localStorage.removeItem(`bookvault_avatar_${userId}`);
+        console.log('🖼️ Cleaned up avatar data for user:', userId);
+    },
+
+    // Initialize avatar on page load
+    initializeAvatar() {
+        const currentUser = AuthManager.getCurrentUser();
+        if (!currentUser) {
+            console.log('🖼️ No user logged in, using default avatar');
+            this.updateAvatarDisplay();
+            return;
+        }
+        
+        // Clean up any orphaned avatar data from other users
+        this.cleanupOtherUserAvatars(currentUser.id);
+        
+        // Load and display current user's avatar
+        this.updateAvatarDisplay();
+        
+        console.log('🖼️ Avatar initialized for user:', currentUser.id);
+    },
+
+    // Clean up avatar data from other users (prevent cross-user contamination)
+    cleanupOtherUserAvatars(currentUserId) {
+        // If no current user ID, skip cleanup to be safe
+        if (!currentUserId) {
+            console.log('🖼️ No current user ID provided, skipping avatar cleanup');
+            return;
+        }
+        
+        const keys = Object.keys(localStorage);
+        const avatarKeys = keys.filter(key => key.startsWith('bookvault_avatar_'));
+        
+        avatarKeys.forEach(key => {
+            const userId = key.replace('bookvault_avatar_', '');
+            if (userId !== String(currentUserId)) {
+                localStorage.removeItem(key);
+                console.log('🖼️ Cleaned up orphaned avatar data for user:', userId);
+            }
+        });
+    },
+
+    // Show avatar selection modal
+    showAvatarModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'avatarModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Choose Avatar</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            ${this.mockAvatars.map((avatar, index) => `
+                                <div class="col-3">
+                                    <div class="avatar-option text-center" onclick="AvatarManager.selectAvatar('${avatar}')" style="cursor: pointer;">
+                                        <img src="${avatar}" class="img-fluid rounded-circle mb-2" style="width: 80px; height: 80px; object-fit: cover; border: 3px solid transparent;" alt="Avatar ${index + 1}">
+                                        <small class="d-block">Avatar ${index + 1}</small>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        modal.addEventListener('hidden.bs.modal', () => modal.remove());
+    },
+
+    // Select an avatar
+    selectAvatar(avatarUrl) {
+        const currentUser = AuthManager.getCurrentUser();
+        if (!currentUser) return;
+
+        // Highlight selected avatar
+        document.querySelectorAll('.avatar-option img').forEach(img => {
+            img.style.border = '3px solid transparent';
+        });
+        event.target.style.border = '3px solid #f59e0b';
+
+        // Set the avatar
+        this.setUserAvatar(currentUser.id, avatarUrl);
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('avatarModal'));
+        modal.hide();
+
+        Utils.showSuccess('Avatar updated successfully!');
+    }
+};
+
 // Shopping Cart Management
 const CartManager = {
     // Get cart from localStorage
@@ -124,8 +312,24 @@ const CartManager = {
         this.updateCartUI();
     },
 
-    // Add item to cart
+    // Check if user can purchase (only regular users)
+    canUserPurchase() {
+        const userRole = AuthManager.getUserRole();
+        return userRole === 'USER' || !AuthManager.isLoggedIn();
+    },
+
+    // Add item to cart - with seller restriction
     addToCart(book, quantity = 1) {
+        // Check if user can purchase (only regular users)
+        if (!this.canUserPurchase()) {
+            const userRole = AuthManager.getUserRole();
+            const errorMessage = userRole === 'ADMIN' 
+                ? 'Administrators cannot purchase books. Please use the admin panel to manage books.'
+                : 'Sellers cannot purchase books. This feature is restricted for sellers.';
+            Utils.showError(errorMessage);
+            return false;
+        }
+
         console.log('🛍️ AddToCart called with:', { 
             book: { id: book.id, title: book.title, author: book.author, price: book.price }, 
             quantity 
@@ -134,14 +338,6 @@ const CartManager = {
         // Validate required book data
         if (!book || !book.id || !book.title || !book.author || book.price == null || book.price <= 0) {
             console.error('❌ Invalid book data provided to addToCart:', book);
-            console.error('❌ Validation details:', {
-                hasBook: !!book,
-                hasId: !!(book?.id),
-                hasTitle: !!(book?.title),
-                hasAuthor: !!(book?.author),
-                hasValidPrice: book?.price != null && book?.price > 0,
-                actualPrice: book?.price
-            });
             Utils.showError('Unable to add book to cart. Missing book information.');
             return false;
         }
@@ -309,9 +505,21 @@ const CartManager = {
         return this.getCart().reduce((count, item) => count + item.quantity, 0);
     },
 
-    // Update cart UI elements
+    // Update cart UI elements - with seller restriction
     updateCartUI() {
         const itemCount = this.getCartItemCount();
+        const userRole = AuthManager.getUserRole();
+        
+        // Hide cart for sellers and admins
+        if (userRole === 'SELLER' || userRole === 'ADMIN') {
+            const cartElements = document.querySelectorAll('#cart-badge, #guest-cart-badge, #cart-link, .cart-icon');
+            cartElements.forEach(element => {
+                if (element) {
+                    element.style.display = 'none';
+                }
+            });
+            return;
+        }
         
         // Update specific cart badges by ID (for our enhanced navigation)
         const specificBadges = [
@@ -573,8 +781,18 @@ const CartManager = {
 
 // Checkout and Order Management
 const CheckoutManager = {
-    // Start checkout process
+    // Start checkout process - with seller restriction
     startCheckout() {
+        // Check if user can purchase (only regular users)
+        if (!CartManager.canUserPurchase()) {
+            const userRole = AuthManager.getUserRole();
+            const errorMessage = userRole === 'ADMIN' 
+                ? 'Administrators cannot purchase books. Please use the admin panel to manage books.'
+                : 'Sellers cannot purchase books. This feature is restricted for sellers.';
+            Utils.showError(errorMessage);
+            return;
+        }
+
         const cart = CartManager.getCart();
         if (cart.length === 0) {
             Utils.showError('Your cart is empty!');
@@ -833,6 +1051,105 @@ const CheckoutManager = {
     }
 };
 
+// Wishlist Manager
+const WishlistManager = {
+    // Get wishlist from localStorage
+    getWishlist() {
+        const user = AuthManager.getCurrentUser();
+        if (!user) return [];
+        
+        const wishlist = localStorage.getItem(`bookvault_wishlist_${user.id}`);
+        return wishlist ? JSON.parse(wishlist) : [];
+    },
+
+    // Save wishlist to localStorage
+    saveWishlist(wishlist) {
+        const user = AuthManager.getCurrentUser();
+        if (!user) return;
+        
+        localStorage.setItem(`bookvault_wishlist_${user.id}`, JSON.stringify(wishlist));
+        this.updateWishlistDisplay();
+    },
+
+    // Add book to wishlist
+    addToWishlist(book) {
+        const user = AuthManager.getCurrentUser();
+        if (!user) {
+            Utils.showError('Please log in to add books to your wishlist.');
+            return;
+        }
+
+        const wishlist = this.getWishlist();
+        const existingBook = wishlist.find(item => String(item.id) === String(book.id));
+        
+        if (existingBook) {
+            Utils.showError('This book is already in your wishlist.');
+            return;
+        }
+
+        wishlist.push({
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            price: book.price,
+            imageUrl: book.coverImageUrl || book.imageUrl || 'asset/img/books/placeholder.jpg',
+            addedAt: new Date().toISOString()
+        });
+
+        this.saveWishlist(wishlist);
+        Utils.showSuccess(`"${book.title}" added to your wishlist!`);
+    },
+
+    // Remove book from wishlist
+    removeFromWishlist(bookId) {
+        const wishlist = this.getWishlist();
+        const filteredWishlist = wishlist.filter(item => String(item.id) !== String(bookId));
+        
+        this.saveWishlist(filteredWishlist);
+        Utils.showSuccess('Book removed from wishlist.');
+    },
+
+    // Update wishlist display
+    updateWishlistDisplay() {
+        const container = document.querySelector('#wishlist .row');
+        if (!container) return;
+
+        const wishlist = this.getWishlist();
+        
+        if (wishlist.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="bi bi-heart display-4 text-muted mb-3"></i>
+                    <h5>Your wishlist is empty</h5>
+                    <p class="text-muted">Save books you love to your wishlist!</p>
+                    <a href="booklisting.html" class="btn bookvault-btn">Browse Books</a>
+                </div>
+            `;
+        } else {
+            container.innerHTML = wishlist.map(book => `
+                <div class="col-6 col-md-3 mb-4">
+                    <div class="recommend-card h-100" style="cursor: pointer;">
+                        <img class="recommend-cover" src="${book.imageUrl}" alt="${book.title}" 
+                             onclick="window.location.href='book-details.html?id=${book.id}'">
+                        <div class="recommend-title" onclick="window.location.href='book-details.html?id=${book.id}'">${book.title}</div>
+                        <div class="recommend-author">${book.author}</div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning rounded-pill me-1" 
+                                    onclick="CartManager.addToCart({id: '${book.id}', title: '${book.title}', author: '${book.author}', price: ${book.price}, imageUrl: '${book.imageUrl}'})">
+                                <i class="bi bi-cart-plus"></i> Add to Cart
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger rounded-pill" 
+                                    onclick="WishlistManager.removeFromWishlist('${book.id}')">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+};
+
 // Admin Management System
 const AdminManager = {
         // Load admin dashboard with real backend data
@@ -1035,7 +1352,7 @@ const AdminManager = {
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="user-avatar me-2">
-                            <i class="bi bi-person-circle fs-4 text-muted"></i>
+                            <img src="${AvatarManager.getCurrentAvatar(user.id)}" class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;" alt="Avatar">
                         </div>
                         <div>
                             <div class="fw-medium">${user.firstName || user.name || 'N/A'} ${user.lastName || ''}</div>
@@ -1065,6 +1382,11 @@ const AdminManager = {
                             <i class="bi bi-${user.isActive ? 'pause-circle' : 'check-circle'}"></i>
                         </button>
                         <button class="btn btn-sm btn-info" 
+                                onclick="AdminManager.editUser('${user.id}')"
+                                title="Edit User">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" 
                                 onclick="AdminManager.resetUserPassword('${user.id}')"
                                 title="Reset Password">
                             <i class="bi bi-key"></i>
@@ -1190,24 +1512,6 @@ const AdminManager = {
         }
 
         container.innerHTML = books.map(book => {
-            // Determine stock status for admin view
-            let stockStatus = '';
-            let stockClass = '';
-            
-            if (book.stockQuantity <= 0) {
-                stockStatus = 'Out of Stock';
-                stockClass = 'danger';
-            } else if (book.stockQuantity < 5) {
-                stockStatus = `${book.stockQuantity} left`;
-                stockClass = 'warning';
-            } else if (book.stockQuantity < 10) {
-                stockStatus = `${book.stockQuantity} (Low)`;
-                stockClass = 'warning';
-            } else {
-                stockStatus = `${book.stockQuantity}`;
-                stockClass = 'success';
-            }
-
             return `
                 <tr data-book-id="${book.id}">
                     <td>
@@ -1226,15 +1530,10 @@ const AdminManager = {
                         <span class="text-muted">${book.author || 'N/A'}</span>
                     </td>
                     <td>
-                        <span class="badge bg-light text-dark">${book.category || book.genre || 'N/A'}</span>
+                        <span class="badge bg-light text-dark">${book.categories?.[0]?.name || book.category || book.genre || 'N/A'}</span>
                     </td>
                     <td>
                         <span class="fw-medium text-success">${Utils.formatCurrency(book.price)}</span>
-                    </td>
-                    <td>
-                        <span class="badge bg-${stockClass}">
-                            ${stockStatus}
-                        </span>
                     </td>
                     <td>
                         <span class="badge bg-${book.isActive ? 'success' : 'warning'}">
@@ -1242,13 +1541,13 @@ const AdminManager = {
                         </span>
                     </td>
                     <td>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-warning" 
+                        <div class="btn-group d-flex" role="group">
+                            <button class="btn btn-sm btn-outline-warning flex-fill" 
                                     onclick="AdminManager.editBook('${book.id}')"
                                     title="Edit Book">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" 
+                            <button class="btn btn-sm btn-outline-danger flex-fill" 
                                     onclick="AdminManager.deleteBook('${book.id}')"
                                     title="Delete Book">
                                 <i class="bi bi-trash"></i>
@@ -1286,6 +1585,116 @@ const AdminManager = {
                 console.error('Error resetting password:', error);
                 Utils.showError('Failed to reset password.');
             }
+        }
+    },
+
+    // Edit user
+    async editUser(userId) {
+        try {
+            // Get user data first
+            const users = await APIService.admin.getUsers();
+            const usersData = users.data || users.content || users;
+            const user = usersData.find(u => u.id === userId);
+            
+            if (!user) {
+                Utils.showError('User not found.');
+                return;
+            }
+
+            // Show edit modal
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'editUserModal';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editUserForm">
+                                <div class="text-center mb-3">
+                                    <img src="${AvatarManager.getCurrentAvatar(user.id)}" class="rounded-circle mb-2" 
+                                         style="width: 80px; height: 80px; object-fit: cover;" alt="Avatar">
+                                    <br>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="AvatarManager.showAvatarModal()">
+                                        Change Avatar
+                                    </button>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="editFirstName" value="${user.firstName || ''}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="editLastName" value="${user.lastName || ''}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="editEmail" value="${user.email}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Role</label>
+                                    <select class="form-select" id="editRole" required>
+                                        <option value="USER" ${user.role === 'USER' ? 'selected' : ''}>User</option>
+                                        <option value="SELLER" ${user.role === 'SELLER' ? 'selected' : ''}>Seller</option>
+                                        <option value="ADMIN" ${user.role === 'ADMIN' ? 'selected' : ''}>Admin</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editIsActive" ${user.isActive ? 'checked' : ''}>
+                                        <label class="form-check-label" for="editIsActive">
+                                            Active Account
+                                        </label>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="AdminManager.saveUserChanges('${userId}')">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            modal.addEventListener('hidden.bs.modal', () => modal.remove());
+        } catch (error) {
+            console.error('Error loading user for edit:', error);
+            Utils.showError('Failed to load user details.');
+        }
+    },
+
+    // Save user changes
+    async saveUserChanges(userId) {
+        try {
+            const userData = {
+                firstName: document.getElementById('editFirstName').value.trim(),
+                lastName: document.getElementById('editLastName').value.trim(),
+                email: document.getElementById('editEmail').value.trim(),
+                role: document.getElementById('editRole').value,
+                isActive: document.getElementById('editIsActive').checked
+            };
+
+            await APIService.admin.updateUser(userId, userData);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+            
+            // Reload dashboard
+            this.loadAdminDashboard();
+            
+            Utils.showSuccess('User updated successfully.');
+        } catch (error) {
+            console.error('Error updating user:', error);
+            Utils.showError('Failed to update user.');
         }
     },
 
@@ -1332,26 +1741,247 @@ const AdminManager = {
         }
     },
 
-    // Edit book
+    // Edit book (admin)
     async editBook(bookId) {
-        // For now, show an alert - you can implement a full edit modal later
-        Utils.showInfo(`Edit functionality for book ID: ${bookId} will be available in a future update.`);
-        
-        // TODO: Implement book editing modal
-        // This could open a modal with form fields to edit book details
-        // and call APIService.books.update(bookId, updatedData)
+        try {
+            console.log('📝 Admin editing book:', bookId);
+            
+            // Load book details and categories in parallel
+            const [bookResponse, categoriesResponse] = await Promise.all([
+                APIService.books.getById(bookId),
+                APIService.books.getCategories()
+            ]);
+            
+            const book = bookResponse.data || bookResponse;
+            const categories = categoriesResponse.data || categoriesResponse;
+            
+            console.log('📚 Loaded book for edit:', book);
+            console.log('📂 Loaded categories:', categories);
+
+            // Create modal HTML with category dropdown
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.id = 'adminEditBookModal';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Book - ${book.title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Title *</label>
+                                            <input type="text" class="form-control" id="adminEditTitle" value="${book.title}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Author *</label>
+                                            <input type="text" class="form-control" id="adminEditAuthor" value="${book.author}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Price ($)</label>
+                                            <input type="number" class="form-control" id="adminEditPrice" value="${book.price}" step="0.01" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Stock Quantity</label>
+                                            <input type="number" class="form-control" id="adminEditStock" value="${book.stockQuantity || 0}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" id="adminEditDesc" rows="6" required>${book.description || ''}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Category</label>
+                                            <select class="form-select" id="adminEditCategory" required>
+                                                <option value="">Select a category...</option>
+                                                ${this.generateCategoryOptions(categories, book.categories?.[0]?.name)}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="adminEditActive" ${book.isActive ? 'checked' : ''}>
+                                                <label class="form-check-label" for="adminEditActive">
+                                                    Book is Active
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="AdminManager.saveBookChanges('${bookId}')">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+
+            modal.addEventListener('hidden.bs.modal', () => modal.remove());
+            
+        } catch (error) {
+            console.error('❌ Error loading book for edit:', error);
+            Utils.showError('Failed to load book details for editing.');
+        }
     },
 
-    // Delete book
-    async deleteBook(bookId) {
-        if (confirm('Are you sure you want to delete this book?')) {
+    // Helper function to generate category options
+    generateCategoryOptions(categories, selectedCategory) {
+        if (!Array.isArray(categories)) {
+            console.warn('Categories is not an array, using fallback options');
+            const fallbackOptions = [
+                'Fiction', 'Non-Fiction', 'Science Fiction', 'Mystery', 'Romance', 
+                'Biography', 'Technology', 'Business', 'General'
+            ];
+            return fallbackOptions.map(category => 
+                `<option value="${category}" ${category === selectedCategory ? 'selected' : ''}>${category}</option>`
+            ).join('');
+        }
+
+        return categories
+            .filter(category => category.isActive !== false)
+            .map(category => {
+                const isSelected = category.name === selectedCategory || category.id === selectedCategory;
+                return `<option value="${category.name}" ${isSelected ? 'selected' : ''}>${category.name}</option>`;
+            })
+            .join('');
+    },
+
+    // Save book changes (admin)
+    async saveBookChanges(bookId) {
+        try {
+            console.log('💾 Admin saving book changes for:', bookId);
+            
+            const categorySelect = document.getElementById('adminEditCategory');
+            const selectedCategoryName = categorySelect.options[categorySelect.selectedIndex]?.text || categorySelect.value;
+            
+            const bookData = {
+                title: document.getElementById('adminEditTitle').value.trim(),
+                author: document.getElementById('adminEditAuthor').value.trim(),
+                price: parseFloat(document.getElementById('adminEditPrice').value),
+                description: document.getElementById('adminEditDesc').value.trim(),
+                stockQuantity: parseInt(document.getElementById('adminEditStock').value),
+                isActive: document.getElementById('adminEditActive').checked,
+                // Use the selected category name as a list (backend expects List<String>)
+                categoryNames: [selectedCategoryName || 'General']
+            };
+
+            // Validate required fields
+            if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
+                Utils.showError('Please fill in all required fields.');
+                return;
+            }
+
+            // Try to update using admin permissions - attempt different approaches
+            let response;
             try {
-                await APIService.admin.deleteBook(bookId);
-                this.loadAdminDashboard();
-                Utils.showSuccess('Book deleted successfully.');
+                // First try: Use admin update endpoint if it exists
+                response = await APIService.admin.updateBook(bookId, bookData);
+            } catch (adminError) {
+                console.log('Admin endpoint failed, trying seller endpoint with admin token');
+                // Second try: Use seller endpoint with admin authorization
+                response = await APIService.seller.updateBook(bookId, bookData);
+            }
+            
+            console.log('✅ Book updated successfully by admin');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('adminEditBookModal'));
+            modal.hide();
+            
+            // Reload dashboard
+            this.loadAdminDashboard();
+            
+            Utils.showSuccess('Book updated successfully.');
+            
+        } catch (error) {
+            console.error('❌ Error updating book:', error);
+            if (error.message.includes('403')) {
+                Utils.showError('Admin permissions issue. The backend may need to be updated to allow admin book editing.');
+            } else if (error.message.includes('404')) {
+                Utils.showError('Book not found.');
+            } else {
+                Utils.showError('Failed to update book. Please try again.');
+            }
+        }
+    },
+
+    // Delete book (admin)
+    async deleteBook(bookId) {
+        if (confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
+            try {
+                console.log('🗑️ Admin attempting to delete book:', bookId);
+                
+                // Show loading state
+                Utils.showLoading('Deleting book...');
+                
+                // Try multiple approaches for admin book deletion
+                let deleteSuccessful = false;
+                let lastError = null;
+                
+                // Approach 1: Try admin-specific delete endpoint
+                try {
+                    await APIService.admin.deleteBook(bookId);
+                    deleteSuccessful = true;
+                    console.log('✅ Book deleted using admin endpoint');
+                } catch (adminError) {
+                    console.log('❌ Admin endpoint failed:', adminError.message);
+                    lastError = adminError;
+                    
+                    // Approach 2: Try seller endpoint with admin token (since admin should have all permissions)
+                    try {
+                        await APIService.seller.deleteBook(bookId);
+                        deleteSuccessful = true;
+                        console.log('✅ Book deleted using seller endpoint with admin token');
+                    } catch (sellerError) {
+                        console.log('❌ Seller endpoint also failed:', sellerError.message);
+                        lastError = sellerError;
+                        
+                        // Approach 3: Try direct book service call
+                        try {
+                            await APIService.makeRequest(`/books/${bookId}`, { method: 'DELETE' }, CONFIG.BOOK_SERVICE_URL);
+                            deleteSuccessful = true;
+                            console.log('✅ Book deleted using direct API call');
+                        } catch (directError) {
+                            console.log('❌ Direct API call also failed:', directError.message);
+                            lastError = directError;
+                        }
+                    }
+                }
+                
+                if (deleteSuccessful) {
+                    console.log('✅ Book deleted successfully by admin');
+                    this.loadAdminDashboard();
+                    Utils.showSuccess('Book deleted successfully.');
+                } else {
+                    throw lastError;
+                }
+                
             } catch (error) {
-                console.error('Error deleting book:', error);
-                Utils.showError('Failed to delete book.');
+                console.error('❌ All deletion attempts failed:', error);
+                
+                if (error.message.includes('403')) {
+                    Utils.showError('Permission denied. The backend authorization may need to be updated to allow admin book deletion. Please contact the system administrator.');
+                } else if (error.message.includes('404')) {
+                    Utils.showError('Book not found. It may have already been deleted.');
+                    // Reload dashboard anyway to refresh the view
+                    this.loadAdminDashboard();
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    Utils.showError('Network error. Please check your connection and try again.');
+                } else {
+                    Utils.showError(`Failed to delete book: ${error.message}`);
+                }
+            } finally {
+                Utils.hideLoading();
             }
         }
     },
@@ -1424,17 +2054,7 @@ const AdminManager = {
                     </td>
                     <td>
                         <div class="d-flex gap-1 align-items-center">
-                            <select class="form-select form-select-sm" style="width: 120px;" 
-                                    onchange="AdminManager.updateOrderStatus('${order.id}', this.value)">
-                                <option value="PENDING" ${order.status === 'PENDING' ? 'selected' : ''}>Pending</option>
-                                <option value="CONFIRMED" ${order.status === 'CONFIRMED' ? 'selected' : ''}>Confirmed</option>
-                                <option value="PROCESSING" ${order.status === 'PROCESSING' ? 'selected' : ''}>Processing</option>
-                                <option value="SHIPPED" ${order.status === 'SHIPPED' ? 'selected' : ''}>Shipped</option>
-                                <option value="OUT_FOR_DELIVERY" ${order.status === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>Out for Delivery</option>
-                                <option value="DELIVERED" ${order.status === 'DELIVERED' ? 'selected' : ''}>Delivered</option>
-                                <option value="CANCELLED" ${order.status === 'CANCELLED' ? 'selected' : ''}>Cancelled</option>
-                                <option value="REFUNDED" ${order.status === 'REFUNDED' ? 'selected' : ''}>Refunded</option>
-                            </select>
+                            ${this.generateStatusDropdown(order.id, order.status)}
                             <button class="btn btn-sm btn-info" 
                                     onclick="AdminManager.viewOrderDetails('${order.id}')"
                                     title="View Details">
@@ -1456,11 +2076,16 @@ const AdminManager = {
     getOrderStatusColor(status) {
         switch (status?.toUpperCase()) {
             case 'DELIVERED': return 'success';
-            case 'PROCESSING': case 'CONFIRMED': case 'SHIPPED': case 'OUT_FOR_DELIVERY': return 'warning';
-            case 'CANCELLED': case 'REFUNDED': return 'danger';
+            case 'PROCESSING': case 'CONFIRMED': case 'SHIPPED': return 'warning';
+            case 'CANCELLED': case 'REFUNDED': case 'RETURNED': return 'danger';
             case 'PENDING': return 'secondary';
             default: return 'secondary';
         }
+    },
+
+    // Load user orders (for external calls)
+    async loadUserOrders() {
+        return PageManager.loadUserOrders();
     },
 
     // Update order status
@@ -1471,6 +2096,13 @@ const AdminManager = {
                 return;
             }
             
+            // Get current order to check if status is actually changing
+            const currentOrder = await APIService.order.getById(orderId);
+            if (currentOrder.status === newStatus) {
+                console.log('Status unchanged, skipping update');
+                return;
+            }
+            
             await APIService.order.admin.updateStatus(orderId, newStatus);
             Utils.showSuccess(`Order status updated to ${newStatus.replace('_', ' ').toLowerCase()}.`);
             this.loadAdminDashboard();
@@ -1478,6 +2110,59 @@ const AdminManager = {
             console.error('Error updating order status:', error);
             Utils.showError('Failed to update order status.');
         }
+    },
+
+    // Get valid status transitions based on current status
+    getValidStatusTransitions(currentStatus) {
+        const transitions = {
+            'PENDING': [
+                { value: 'CONFIRMED', label: 'Confirm Order' },
+                { value: 'CANCELLED', label: 'Cancel Order' }
+            ],
+            'CONFIRMED': [
+                { value: 'PROCESSING', label: 'Mark Processing' },
+                { value: 'CANCELLED', label: 'Cancel Order' }
+            ],
+            'PROCESSING': [
+                { value: 'SHIPPED', label: 'Mark Shipped' },
+                { value: 'CANCELLED', label: 'Cancel Order' }
+            ],
+            'SHIPPED': [
+                { value: 'DELIVERED', label: 'Mark Delivered' }
+            ],
+            // Final states - no further transitions allowed
+            'DELIVERED': [],
+            'CANCELLED': [],
+            'REFUNDED': [],
+            'RETURNED': []
+        };
+        
+        return transitions[currentStatus] || [];
+    },
+
+    // Generate status dropdown with only valid transitions
+    generateStatusDropdown(orderId, currentStatus) {
+        const validTransitions = this.getValidStatusTransitions(currentStatus);
+        
+        if (validTransitions.length === 0) {
+            // No valid transitions, show current status as disabled
+            return `<span class="badge bg-${this.getOrderStatusColor(currentStatus)}">${currentStatus}</span>`;
+        }
+        
+        // Create dropdown with current status and valid transitions
+        const options = [
+            `<option value="${currentStatus}" selected>${currentStatus}</option>`,
+            ...validTransitions.map(transition => 
+                `<option value="${transition.value}">${transition.label}</option>`
+            )
+        ];
+        
+        return `
+            <select class="form-select form-select-sm" style="width: 140px;" 
+                    onchange="AdminManager.updateOrderStatus('${orderId}', this.value)">
+                ${options.join('')}
+            </select>
+        `;
     },
 
     // View order details in admin panel
@@ -1554,13 +2239,9 @@ const AdminManager = {
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                             <select class="form-select me-2" style="width: auto;" onchange="AdminManager.updateOrderStatus('${order.id}', this.value)">
                                 <option value="">Update Status...</option>
-                                <option value="CONFIRMED">Confirm Order</option>
-                                <option value="PROCESSING">Mark Processing</option>
-                                <option value="SHIPPED">Mark Shipped</option>
-                                <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
-                                <option value="DELIVERED">Mark Delivered</option>
-                                <option value="CANCELLED">Cancel Order</option>
-                                <option value="REFUNDED">Process Refund</option>
+                                ${AdminManager.getValidStatusTransitions(order.status).map(status => `
+                                    <option value="${status.value}">${status.label}</option>
+                                `).join('')}
                             </select>
                         </div>
                     </div>
@@ -2076,37 +2757,92 @@ const SellerManager = {
             formData.append('categoryIds', selectedCategoryId);
             formData.append('categoryNames', selectedCategoryName);
             
-            // Add image file if selected (no base64 conversion needed)
-            const imageFile = form.bookCoverImage.files[0];
-            if (imageFile) {
-                formData.append('coverImage', imageFile);
+            // Handle image input - check if user selected URL option
+            const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
+            const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
+            
+            if (selectedSource === 'url') {
+                // Use URL input
+                const imageUrl = document.getElementById('bookCoverUrl')?.value?.trim();
+                if (imageUrl) {
+                    // For URL input, send as JSON instead of FormData
+                    const bookData = {
+                        title: form.bookTitle.value.trim(),
+                        author: form.bookAuthor.value.trim(),
+                        price: parseFloat(form.bookPrice.value),
+                        description: form.bookDesc.value.trim(),
+                        stockQuantity: parseInt(form.bookStock?.value || 1),
+                        categoryNames: [selectedCategoryName],
+                        coverImageUrl: imageUrl
+                    };
+                    
+                    console.log('Sending book data with URL:', bookData);
+                    const response = await APIService.seller.createBook(bookData);
+                    Utils.showSuccess('Book uploaded successfully!');
+                } else {
+                    // No URL provided, send without image
+                    const bookData = {
+                        title: form.bookTitle.value.trim(),
+                        author: form.bookAuthor.value.trim(),
+                        price: parseFloat(form.bookPrice.value),
+                        description: form.bookDesc.value.trim(),
+                        stockQuantity: parseInt(form.bookStock?.value || 1),
+                        categoryNames: [selectedCategoryName],
+                        coverImageUrl: null
+                    };
+                    
+                    console.log('Sending book data without image:', bookData);
+                    const response = await APIService.seller.createBook(bookData);
+                    Utils.showSuccess('Book uploaded successfully!');
+                }
+            } else {
+                // Use file upload
+                const imageFile = form.bookCoverImage.files[0];
+                if (imageFile) {
+                    formData.append('coverImage', imageFile);
+                }
+
+                // Debug: Log the form data
+                console.log('FormData to send:', {
+                    title: formData.get('title'),
+                    author: formData.get('author'),
+                    price: formData.get('price'),
+                    description: formData.get('description'),
+                    stockQuantity: formData.get('stockQuantity'),
+                    categoryIds: formData.get('categoryIds'),
+                    categoryNames: formData.get('categoryNames'),
+                    hasImage: !!imageFile
+                });
+
+                const response = await APIService.seller.createBookWithFile(formData);
+                Utils.showSuccess('Book uploaded successfully!');
             }
-
-            // Debug: Log the form data
-            console.log('FormData to send:', {
-                title: formData.get('title'),
-                author: formData.get('author'),
-                price: formData.get('price'),
-                description: formData.get('description'),
-                stockQuantity: formData.get('stockQuantity'),
-                categoryIds: formData.get('categoryIds'),
-                categoryNames: formData.get('categoryNames'),
-                hasImage: !!imageFile
-            });
-
-            const response = await APIService.seller.createBookWithFile(formData);
-            Utils.showSuccess('Book uploaded successfully!');
             
             // Reset form
             form.reset();
             
             // Clear image preview
-            const imagePreview = document.getElementById('imagePreview');
-            if (imagePreview) imagePreview.style.display = 'none';
+            const preview = document.getElementById('imagePreview');
+            if (preview) {
+                preview.style.display = 'none';
+            }
             
-            // Reload seller dashboard
-            this.loadSellerDashboard();
+            // Reset image source selection
+            const fileSourceRadio = document.getElementById('imageSourceFile');
+            if (fileSourceRadio) {
+                fileSourceRadio.checked = true;
+                // Trigger change event to reset sections
+                if (typeof toggleImageSource === 'function') {
+                    toggleImageSource('file');
+                }
+            }
             
+            // Refresh seller dashboard
+            setTimeout(() => {
+                if (typeof this.loadSellerDashboard === 'function') {
+                    this.loadSellerDashboard();
+                }
+            }, 1000);
         } catch (error) {
             console.error('Error uploading book:', error);
             Utils.showError('Failed to upload book. Please try again.');
@@ -2290,20 +3026,39 @@ const SellerManager = {
 
     // Delete book
     async deleteBook(bookId) {
-        if (!confirm('Are you sure you want to delete this book?')) {
+        if (!confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
             return;
         }
 
         try {
+            console.log('🗑️ Attempting to delete book:', bookId);
+            
+            // Show loading state
+            Utils.showLoading('Deleting book...');
+            
             await APIService.seller.deleteBook(bookId);
+            console.log('✅ Book deleted successfully');
+            
             Utils.showSuccess('Book deleted successfully!');
             
             // Reload seller dashboard
             this.loadSellerDashboard();
             
         } catch (error) {
-            console.error('Error deleting book:', error);
-            Utils.showError('Failed to delete book.');
+            console.error('❌ Error deleting book:', error);
+            
+            // Show specific error message based on error type
+            if (error.message.includes('403')) {
+                Utils.showError('You do not have permission to delete this book.');
+            } else if (error.message.includes('404')) {
+                Utils.showError('Book not found. It may have already been deleted.');
+            } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                Utils.showError('Network error. Please check your connection and try again.');
+            } else {
+                Utils.showError('Failed to delete book. Please try again.');
+            }
+        } finally {
+            Utils.hideLoading();
         }
     },
 
@@ -2521,6 +3276,13 @@ const Utils = {
         
         document.body.appendChild(alert);
         setTimeout(() => alert.remove(), 4000);
+    },
+
+    // Phone number validation
+    isValidPhoneNumber: (phone) => {
+        // Basic phone number validation (supports various formats)
+        const phoneRegex = /^[\+]?[\d\s\-\(\)]{8,20}$/;
+        return phoneRegex.test(phone);
     }
 };
 
@@ -2586,6 +3348,11 @@ const AuthManager = {
         const currentUser = this.getCurrentUser();
         console.log('🚪 Logging out user:', currentUser?.email || 'Unknown');
         
+        // Clear user-specific avatar data first (before clearing profile)
+        if (currentUser && currentUser.id) {
+            AvatarManager.cleanupUserAvatar(currentUser.id);
+        }
+        
         // Clear authentication data
         localStorage.removeItem('bookvault_auth_token');
         localStorage.removeItem('bookvault_user_role'); 
@@ -2632,8 +3399,14 @@ const AuthManager = {
             }
             if (guestNav) guestNav.classList.add('d-none');
             
-            // Show cart for logged-in users
-            if (cartLink) cartLink.classList.remove('d-none');
+            // Show cart for regular users only (not sellers or admins)
+            if (cartLink) {
+                if (role === 'USER') {
+                    cartLink.classList.remove('d-none');
+                } else {
+                    cartLink.classList.add('d-none');
+                }
+            }
             
             // Update user name in dropdown
             if (userNameSpan && user) {
@@ -2690,10 +3463,10 @@ const AuthManager = {
             }
         });
 
-        // User-only navigation items
+        // User-only navigation items (hide for admin)
         const userNavItems = document.querySelectorAll('.user-only-nav');
         userNavItems.forEach(item => {
-            if (role === 'USER' || role === 'SELLER' || role === 'ADMIN') {
+            if (role === 'USER' || role === 'SELLER') {
                 item.classList.remove('d-none');
             } else {
                 item.classList.add('d-none');
@@ -2716,7 +3489,7 @@ const AuthManager = {
             this.addMainNavItem(mainNav, 'admin.html', 'Admin Panel', 'bi-shield-check', 'role-nav-item admin-main-nav');
         }
         
-        if (role === 'SELLER' || role === 'ADMIN') {
+        if (role === 'SELLER') {
             this.addMainNavItem(mainNav, 'seller.html', 'Seller Hub', 'bi-shop', 'role-nav-item seller-main-nav');
         }
     },
@@ -2983,8 +3756,13 @@ const APIService = {
             method: 'PUT',
             body: JSON.stringify(userData)
         }),
-        toggleSellerStatus: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}/toggle`, { method: 'PATCH' }),
-        deleteSeller: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}`, { method: 'DELETE' })
+        toggleSellerStatus: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}/status`, { method: 'PUT' }),
+        deleteSeller: (sellerId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.ADMIN.SELLERS}/${sellerId}`, { method: 'DELETE' }),
+        deleteBook: (bookId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.BOOKS.BASE}/${bookId}`, { method: 'DELETE' }),
+        updateBook: (bookId, bookData) => APIService.makeRequest(`${CONFIG.ENDPOINTS.BOOKS.BASE}/${bookId}`, { 
+            method: 'PUT', 
+            body: JSON.stringify(bookData) 
+        })
     },
 
     // Seller API calls - Real backend implementation
@@ -3230,9 +4008,11 @@ window.BookManager = {
                             <div class="mt-auto">
                                 <div class="d-flex justify-content-between">
                                     <a href="book-details.html?id=${book.id}" class="btn btn-primary btn-sm">View Details</a>
-                                    <button class="btn btn-outline-warning btn-sm" onclick="window.BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
-                                        <i class="bi bi-heart"></i>
-                                    </button>
+                                    ${AuthManager.getUserRole() === 'USER' ? `
+                                        <button class="btn btn-outline-warning btn-sm" onclick="window.BookManager.addToWishlist('${book.id}')" title="Add to Wishlist">
+                                            <i class="bi bi-heart"></i>
+                                        </button>
+                                    ` : ''}
                                 </div>
                                 <div class="mt-2">
                                     <small class="${stockClass}">${stockStatus}</small>
@@ -3295,8 +4075,12 @@ window.BookManager = {
                 return;
             }
 
-            await APIService.user.addToWishlist(user.id, bookId);
-            Utils.showSuccess('Book added to wishlist!');
+            // Get book details first
+            const bookResponse = await APIService.books.getById(bookId);
+            const book = bookResponse.data || bookResponse;
+            
+            // Add to wishlist using WishlistManager
+            WishlistManager.addToWishlist(book);
         } catch (error) {
             Utils.showError('Failed to add book to wishlist.');
             console.error('Error adding to wishlist:', error);
@@ -3710,23 +4494,17 @@ const UserManager = {
                                     <strong>Status:</strong> <span class="badge bg-${statusColor}">${order.status}</span>
                                 </div>
                             </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <strong>Order Number:</strong> ${order.orderNumber || 'N/A'}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Payment Method:</strong> ${order.paymentMethodDisplayName || order.paymentMethod}
-                                </div>
-                            </div>
                             ${order.trackingNumber ? `
                                 <div class="row mb-3">
-                                    <div class="col-md-12">
+                                    <div class="col-md-6">
                                         <strong>Tracking Number:</strong> ${order.trackingNumber}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Payment Method:</strong> ${order.paymentMethod}
                                     </div>
                                 </div>
                             ` : ''}
-                            
-                            <h6 class="mt-4">Order Items:</h6>
+                            <h6>Items:</h6>
                             <div class="order-items">
                                 ${orderItems.map(item => `
                                     <div class="d-flex align-items-center gap-3 mb-3 p-3 border rounded">
@@ -4057,10 +4835,15 @@ const PageManager = {
                 userNameSpan.textContent = displayName;
             }
             
-            // Show cart link
+            // Show cart link only for regular users
             const cartLink = document.getElementById('cart-link');
             if (cartLink) {
-                cartLink.classList.remove('d-none');
+                const role = AuthManager.getUserRole();
+                if (role === 'USER') {
+                    cartLink.classList.remove('d-none');
+                } else {
+                    cartLink.classList.add('d-none');
+                }
             }
             
             // Handle role-specific navigation
@@ -4077,7 +4860,7 @@ const PageManager = {
                     const elements = document.querySelectorAll(selector);
                     elements.forEach(element => {
                         if (role === userRole || (userRole === 'SELLER' && role === 'ADMIN') || 
-                            (userRole === 'USER' && ['USER', 'SELLER', 'ADMIN'].includes(role))) {
+                            (userRole === 'USER' && ['USER', 'SELLER'].includes(role))) {
                             element.classList.remove('d-none');
                         } else {
                             element.classList.add('d-none');
@@ -4132,6 +4915,9 @@ const PageManager = {
         // Update navigation with full authentication state
         AuthManager.updateNavigation();
         
+        // Initialize avatar system
+        AvatarManager.initializeAvatar();
+        
         // Handle page-specific authentication requirements
         this.handleAuthenticationRequirements();
         
@@ -4180,7 +4966,7 @@ const PageManager = {
                 position: 'top-center' 
             });
             setTimeout(() => {
-                window.location.href = isLoggedIn ? 'user.html' : 'index.html';
+                window.location.href = isLoggedIn ? this.getUserDashboardUrl(userRole) : 'index.html';
             }, 2000);
             return;
         }
@@ -4193,8 +4979,34 @@ const PageManager = {
                 position: 'top-center' 
             });
             setTimeout(() => {
-                window.location.href = isLoggedIn ? 'user.html' : 'index.html';
+                window.location.href = isLoggedIn ? this.getUserDashboardUrl(userRole) : 'index.html';
             }, 2000);
+            return;
+        }
+
+        // Prevent admin from accessing user/seller dashboard
+        if (currentPage === 'user' && userRole === 'ADMIN') {
+            console.warn('🚫 Admin should not access user dashboard');
+            Utils.showError('Admins should use the admin dashboard.', { 
+                title: 'Redirecting to Admin Dashboard',
+                position: 'top-center' 
+            });
+            setTimeout(() => {
+                window.location.href = 'admin.html';
+            }, 1500);
+            return;
+        }
+
+        // Prevent seller from accessing user dashboard (redirect to seller dashboard)
+        if (currentPage === 'user' && userRole === 'SELLER') {
+            console.warn('🏪 Seller should not access user dashboard');
+            Utils.showError('Sellers should use the seller dashboard.', { 
+                title: 'Redirecting to Seller Dashboard',
+                position: 'top-center' 
+            });
+            setTimeout(() => {
+                window.location.href = 'seller.html';
+            }, 1500);
             return;
         }
         
@@ -4202,17 +5014,21 @@ const PageManager = {
         if (['login', 'register'].includes(currentPage) && isLoggedIn) {
             console.log('🔄 User already logged in, redirecting to dashboard');
             setTimeout(() => {
-                switch (userRole) {
-                    case 'ADMIN':
-                        window.location.href = 'admin.html';
-                        break;
-                    case 'SELLER':
-                        window.location.href = 'seller.html';
-                        break;
-                    default:
-                        window.location.href = 'user.html';
-                }
+                window.location.href = this.getUserDashboardUrl(userRole);
             }, 1000);
+        }
+    },
+
+    // Get appropriate dashboard URL for user role
+    getUserDashboardUrl(userRole) {
+        switch (userRole) {
+            case 'ADMIN':
+                return 'admin.html';
+            case 'SELLER':
+                return 'seller.html';
+            case 'USER':
+            default:
+                return 'user.html';
         }
     },
     
@@ -4330,6 +5146,14 @@ const PageManager = {
     // Manual logout as fallback
     manualLogout() {
         console.log('🚪 Executing manual logout...');
+        
+        // Get current user before clearing to remove user-specific data
+        const currentUser = AuthManager.getCurrentUser();
+        
+        // Clear user-specific avatar data first
+        if (currentUser && currentUser.id) {
+            AvatarManager.cleanupUserAvatar(currentUser.id);
+        }
         
         // Clear authentication data
         localStorage.removeItem('bookvault_auth_token');
@@ -4598,16 +5422,10 @@ const PageManager = {
                 // Redirect based on user role
                 setTimeout(() => {
                     const role = AuthManager.getUserRole();
-                    switch (role) {
-                        case 'ADMIN':
-                            window.location.href = 'admin.html';
-                            break;
-                        case 'SELLER':
-                            window.location.href = 'seller.html';
-                            break;
-                        default:
-                            window.location.href = 'user.html';
-                    }
+                    console.log('🔄 Redirecting user with role:', role);
+                    const dashboardUrl = PageManager.getUserDashboardUrl(role);
+                    console.log('🔄 Dashboard URL:', dashboardUrl);
+                    window.location.href = dashboardUrl;
                 }, 1500);
             } else {
                 // Handle specific error cases
@@ -4709,16 +5527,10 @@ const PageManager = {
                     { position: 'top-center' });
                 
                 setTimeout(() => {
-                    switch (response.role) {
-                        case 'ADMIN':
-                            window.location.href = 'admin.html';
-                            break;
-                        case 'SELLER':
-                            window.location.href = 'seller.html';
-                            break;
-                        default:
-                            window.location.href = 'user.html';
-                    }
+                    console.log('🔄 Redirecting new user with role:', response.role);
+                    const dashboardUrl = PageManager.getUserDashboardUrl(response.role);
+                    console.log('🔄 Dashboard URL:', dashboardUrl);
+                    window.location.href = dashboardUrl;
                 }, 2000);
             }
         } catch (error) {
@@ -4852,11 +5664,14 @@ const PageManager = {
             // Update user profile display
             this.displayUserProfile(user);
             
+            // Update avatar display
+            AvatarManager.updateAvatarDisplay();
+            
             // Load user orders
             this.loadUserOrders();
             
             // Load user wishlist
-            this.loadUserWishlist();
+            WishlistManager.updateWishlistDisplay();
         }
     },
 
@@ -4872,6 +5687,22 @@ const PageManager = {
             }
             if (emailElement) {
                 emailElement.textContent = user.email || '';
+            }
+
+            // Add avatar and change avatar button if not already present
+            const avatarContainer = profileContainer.querySelector('.avatar-container');
+            if (!avatarContainer) {
+                const avatarHTML = `
+                    <div class="avatar-container text-center mb-3">
+                        <img src="${AvatarManager.getCurrentAvatar(user.id)}" class="profile-avatar rounded-circle mb-2" 
+                             style="width: 80px; height: 80px; object-fit: cover;" alt="Profile Avatar">
+                        <br>
+                        <button class="btn btn-sm btn-outline-primary" onclick="AvatarManager.showAvatarModal()">
+                            <i class="bi bi-camera"></i> Change Avatar
+                        </button>
+                    </div>
+                `;
+                profileContainer.insertAdjacentHTML('afterbegin', avatarHTML);
             }
         }
     },
@@ -5177,15 +6008,22 @@ const PageManager = {
                     `;
         } else {
                     container.innerHTML = wishlist.map(book => `
-                        <div class="col-6 col-md-3">
-                            <div class="recommend-card h-100">
-                                <img class="recommend-cover" src="${book.imageUrl || '/asset/img/books/placeholder.jpg'}" alt="${book.title}">
-                                <div class="recommend-title">${book.title}</div>
+                        <div class="col-6 col-md-3 mb-4">
+                            <div class="recommend-card h-100" style="cursor: pointer;">
+                                <img class="recommend-cover" src="${book.imageUrl}" alt="${book.title}" 
+                                     onclick="window.location.href='book-details.html?id=${book.id}'">
+                                <div class="recommend-title" onclick="window.location.href='book-details.html?id=${book.id}'">${book.title}</div>
                                 <div class="recommend-author">${book.author}</div>
-                                <button class="btn btn-sm btn-warning rounded-pill mt-2" 
-                                        onclick="CartManager.addToCart({id: ${book.id}, title: '${book.title}', author: '${book.author}', price: ${book.price}, imageUrl: '${book.imageUrl}'})">
-                                    Add to Cart
-                                </button>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-warning rounded-pill me-1" 
+                                            onclick="CartManager.addToCart({id: '${book.id}', title: '${book.title}', author: '${book.author}', price: ${book.price}, imageUrl: '${book.imageUrl}'})">
+                                        <i class="bi bi-cart-plus"></i> Add to Cart
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill" 
+                                            onclick="WishlistManager.removeFromWishlist('${book.id}')">
+                                        <i class="bi bi-heart-fill"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `).join('');
@@ -5497,6 +6335,32 @@ const PageManager = {
         console.log('🔧 setupBookActions called with book:', book);
         console.log('🔧 Current DOM state:', document.readyState);
         
+        // Check if user is seller/admin and hide purchasing buttons
+        const userRole = AuthManager.getUserRole();
+        const cannotPurchase = userRole === 'SELLER' || userRole === 'ADMIN';
+        
+        if (cannotPurchase) {
+            console.log(`🏪 User is ${userRole} - hiding purchase buttons`);
+            // Hide purchase-related buttons for sellers and admins
+            const purchaseButtons = document.querySelectorAll('.add-to-cart-btn, .buy-now-btn');
+            purchaseButtons.forEach(btn => {
+                btn.style.display = 'none';
+            });
+            
+            // Show appropriate message
+            const buttonContainer = document.querySelector('.book-actions');
+            if (buttonContainer) {
+                const message = document.createElement('div');
+                message.className = 'alert alert-info';
+                const messageText = userRole === 'ADMIN' 
+                    ? 'Administrators cannot purchase books. Use the admin panel to manage books.'
+                    : 'Sellers cannot purchase books. You can view details only.';
+                message.innerHTML = `<i class="bi bi-info-circle me-2"></i>${messageText}`;
+                buttonContainer.appendChild(message);
+            }
+            return;
+        }
+        
         // Wait a moment for DOM to be fully ready
         setTimeout(() => {
             // Add to Cart buttons - improved approach without cloning
@@ -5552,6 +6416,16 @@ const PageManager = {
         console.log('⚡ HandleBuyNow called', { book });
         console.log('⚡ CartManager available:', typeof CartManager);
         console.log('⚡ CheckoutManager available:', typeof CheckoutManager);
+        
+        // Check if user can purchase (only regular users)
+        if (!CartManager.canUserPurchase()) {
+            const userRole = AuthManager.getUserRole();
+            const errorMessage = userRole === 'ADMIN' 
+                ? 'Administrators cannot purchase books. Please use the admin panel to manage books.'
+                : 'Sellers cannot purchase books. This feature is restricted for sellers.';
+            Utils.showError(errorMessage);
+            return;
+        }
         
         let bookData = book;
         
@@ -5764,6 +6638,14 @@ function immediateLogoutFix() {
                 // Immediate logout
                 console.log('🚪 Executing immediate logout...');
                 
+                // Get current user before clearing to remove user-specific data
+                const currentUser = AuthManager.getCurrentUser();
+                
+                // Clear user-specific avatar data first
+                if (currentUser && currentUser.id) {
+                    AvatarManager.cleanupUserAvatar(currentUser.id);
+                }
+                
                 // Clear auth data
                 localStorage.removeItem('bookvault_auth_token');
                 localStorage.removeItem('bookvault_user_role'); 
@@ -5900,6 +6782,8 @@ window.BookVault = {
     BookManager,
     UserManager,
     SellerManager,
+    AvatarManager,
+    WishlistManager,
     Utils
 };
 
@@ -5978,6 +6862,15 @@ window.debugAuth = {
     
     forceLogout: () => {
         console.log('🧪 Force logout - no confirmation dialog');
+        
+        // Get current user before clearing to remove user-specific data
+        const currentUser = AuthManager.getCurrentUser();
+        
+        // Clear user-specific avatar data first
+        if (currentUser && currentUser.id) {
+            AvatarManager.cleanupUserAvatar(currentUser.id);
+        }
+        
         localStorage.removeItem('bookvault_auth_token');
         localStorage.removeItem('bookvault_user_role'); 
         localStorage.removeItem('bookvault_user_profile');
@@ -6048,6 +6941,14 @@ window.debugAuth = {
 // GLOBAL IMMEDIATE LOGOUT FUNCTION - Call from console: testLogoutNow()
 window.testLogoutNow = function() {
     console.log('🧪 TESTING LOGOUT NOW!');
+    
+    // Get current user before clearing to remove user-specific data
+    const currentUser = AuthManager.getCurrentUser();
+    
+    // Clear user-specific avatar data first
+    if (currentUser && currentUser.id) {
+        AvatarManager.cleanupUserAvatar(currentUser.id);
+    }
     
     // Clear auth data immediately
     localStorage.removeItem('bookvault_auth_token');

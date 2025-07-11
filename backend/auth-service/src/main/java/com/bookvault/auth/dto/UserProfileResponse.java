@@ -19,6 +19,7 @@ public class UserProfileResponse {
     private String firstName;
     private String lastName;
     private String phone;
+    private String avatarUrl;
     private UserRole role;
     private Boolean isActive;
     private Boolean isVerified;
@@ -27,13 +28,14 @@ public class UserProfileResponse {
     // Constructors
     public UserProfileResponse() {}
     
-    public UserProfileResponse(UUID id, String email, String firstName, String lastName, String phone, 
+    public UserProfileResponse(UUID id, String email, String firstName, String lastName, String phone, String avatarUrl,
                               UserRole role, Boolean isActive, Boolean isVerified, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;
+        this.avatarUrl = avatarUrl;
         this.role = role;
         this.isActive = isActive;
         this.isVerified = isVerified;
@@ -51,6 +53,7 @@ public class UserProfileResponse {
         private String firstName;
         private String lastName;
         private String phone;
+        private String avatarUrl;
         private UserRole role;
         private Boolean isActive;
         private Boolean isVerified;
@@ -81,6 +84,11 @@ public class UserProfileResponse {
             return this;
         }
         
+        public Builder avatarUrl(String avatarUrl) {
+            this.avatarUrl = avatarUrl;
+            return this;
+        }
+        
         public Builder role(UserRole role) {
             this.role = role;
             return this;
@@ -102,7 +110,7 @@ public class UserProfileResponse {
         }
         
         public UserProfileResponse build() {
-            return new UserProfileResponse(id, email, firstName, lastName, phone, role, isActive, isVerified, createdAt);
+            return new UserProfileResponse(id, email, firstName, lastName, phone, avatarUrl, role, isActive, isVerified, createdAt);
         }
     }
     
@@ -145,6 +153,14 @@ public class UserProfileResponse {
     
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+    
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
     
     public UserRole getRole() {

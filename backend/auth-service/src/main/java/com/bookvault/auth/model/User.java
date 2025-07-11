@@ -1,17 +1,23 @@
 package com.bookvault.auth.model;
 
-import com.bookvault.shared.enums.UserRole;
-import com.bookvault.shared.model.BaseEntity;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import java.util.Collection;
+import java.util.List;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.List;
+import com.bookvault.shared.enums.UserRole;
+import com.bookvault.shared.model.BaseEntity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Simple User entity for authentication
@@ -44,6 +50,10 @@ public class User extends BaseEntity implements UserDetails {
     @Size(max = 20, message = "Phone must not exceed 20 characters")
     private String phone;
     
+    @Column(name = "avatar_url")
+    @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
+    private String avatarUrl;
+    
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private UserRole role = UserRole.USER;
@@ -57,12 +67,13 @@ public class User extends BaseEntity implements UserDetails {
     // Constructors
     public User() {}
     
-    public User(String email, String password, String firstName, String lastName, String phone, UserRole role, Boolean isActive, Boolean isVerified) {
+    public User(String email, String password, String firstName, String lastName, String phone, String avatarUrl, UserRole role, Boolean isActive, Boolean isVerified) {
         this.email = email;
         this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;
+        this.avatarUrl = avatarUrl;
         this.role = role != null ? role : UserRole.USER;
         this.isActive = isActive != null ? isActive : true;
         this.isVerified = isVerified != null ? isVerified : false;
@@ -79,6 +90,7 @@ public class User extends BaseEntity implements UserDetails {
         private String firstName;
         private String lastName;
         private String phone;
+        private String avatarUrl;
         private UserRole role = UserRole.USER;
         private Boolean isActive = true;
         private Boolean isVerified = false;
@@ -108,6 +120,11 @@ public class User extends BaseEntity implements UserDetails {
             return this;
         }
         
+        public Builder avatarUrl(String avatarUrl) {
+            this.avatarUrl = avatarUrl;
+            return this;
+        }
+        
         public Builder role(UserRole role) {
             this.role = role;
             return this;
@@ -124,7 +141,7 @@ public class User extends BaseEntity implements UserDetails {
         }
         
         public User build() {
-            return new User(email, password, firstName, lastName, phone, role, isActive, isVerified);
+            return new User(email, password, firstName, lastName, phone, avatarUrl, role, isActive, isVerified);
         }
     }
     
@@ -159,6 +176,14 @@ public class User extends BaseEntity implements UserDetails {
     
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+    
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
     
     public UserRole getRole() {

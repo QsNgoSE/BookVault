@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -195,9 +196,9 @@ public class BookService {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
         
-        // Check if current user is the seller of this book
+        // Check if current user is the seller of this book OR is an admin
         UUID currentUserId = getCurrentUserId();
-        if (!book.getSellerId().equals(currentUserId)) {
+        if (!isCurrentUserAdmin() && !book.getSellerId().equals(currentUserId)) {
             throw new SecurityException("You can only update your own books");
         }
         
@@ -279,6 +280,12 @@ public class BookService {
             Book book = bookRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
             
+            // Check if current user is the seller of this book OR is an admin
+            UUID currentUserId = getCurrentUserId();
+            if (!isCurrentUserAdmin() && !book.getSellerId().equals(currentUserId)) {
+                throw new SecurityException("You can only update stock for your own books");
+            }
+            
             if (stockQuantity < 0) {
                 throw new BadRequestException("Stock quantity cannot be negative");
             }
@@ -324,6 +331,13 @@ public class BookService {
     public void activateBook(UUID id) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
+        
+        // Check if current user is the seller of this book OR is an admin
+        UUID currentUserId = getCurrentUserId();
+        if (!isCurrentUserAdmin() && !book.getSellerId().equals(currentUserId)) {
+            throw new SecurityException("You can only activate your own books");
+        }
+        
         book.setIsActive(true);
         bookRepository.save(book);
     }
@@ -332,6 +346,13 @@ public class BookService {
     public void deactivateBook(UUID id) {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
+        
+        // Check if current user is the seller of this book OR is an admin
+        UUID currentUserId = getCurrentUserId();
+        if (!isCurrentUserAdmin() && !book.getSellerId().equals(currentUserId)) {
+            throw new SecurityException("You can only deactivate your own books");
+        }
+        
         book.setIsActive(false);
         bookRepository.save(book);
     }
@@ -341,9 +362,9 @@ public class BookService {
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with ID: " + id));
         
-        // Check if current user is the seller of this book
+        // Check if current user is the seller of this book OR is an admin
         UUID currentUserId = getCurrentUserId();
-        if (!book.getSellerId().equals(currentUserId)) {
+        if (!isCurrentUserAdmin() && !book.getSellerId().equals(currentUserId)) {
             throw new SecurityException("You can only delete your own books");
         }
         
@@ -588,5 +609,23 @@ public class BookService {
         // Simplified revenue growth calculation
         // TODO: Implement proper month-over-month comparison
         return BigDecimal.ZERO;
+    }
+
+    /**
+     * Check if current user has admin role
+     */
+    private boolean isCurrentUserAdmin() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getAuthorities() == null) {
+                return false;
+            }
+            
+            return authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+        } catch (Exception e) {
+            log.error("Error checking admin role: {}", e.getMessage());
+            return false;
+        }
     }
 } 

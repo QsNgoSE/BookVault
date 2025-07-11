@@ -101,6 +101,39 @@ public class AdminController {
     }
     
     /**
+     * Delete seller (soft delete)
+     */
+    @DeleteMapping("/sellers/{sellerId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSeller(@PathVariable UUID sellerId) {
+        log.info("Admin: Deleting seller - ID: {}", sellerId);
+        
+        adminService.deleteUser(sellerId);
+        
+        return ResponseEntity.ok(
+            ApiResponse.success(null, "Seller deleted successfully")
+        );
+    }
+    
+    /**
+     * Toggle seller status (activate/suspend)
+     */
+    @PutMapping("/sellers/{sellerId}/status")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> toggleSellerStatus(@PathVariable UUID sellerId) {
+        log.info("Admin: Toggling seller status - ID: {}", sellerId);
+        
+        AdminUserResponse seller = adminService.getUserById(sellerId);
+        String action = seller.getIsActive() ? "suspend" : "activate";
+        
+        AdminUserResponse updatedSeller = adminService.updateUserStatus(sellerId, action);
+        
+        String message = "activate".equals(action) ? "Seller activated successfully" : "Seller suspended successfully";
+        
+        return ResponseEntity.ok(
+            ApiResponse.success(updatedSeller, message)
+        );
+    }
+    
+    /**
      * Get all regular users
      */
     @GetMapping("/regular-users")

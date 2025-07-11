@@ -150,6 +150,7 @@ public class AuthService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .isActive(user.getIsActive())
                 .isVerified(user.getIsVerified())
@@ -172,6 +173,9 @@ public class AuthService {
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
         
         User savedUser = userRepository.save(user);
         log.info("Updated user profile: {}", savedUser.getEmail());
@@ -182,6 +186,7 @@ public class AuthService {
                 .firstName(savedUser.getFirstName())
                 .lastName(savedUser.getLastName())
                 .phone(savedUser.getPhone())
+                .avatarUrl(savedUser.getAvatarUrl())
                 .role(savedUser.getRole())
                 .isActive(savedUser.getIsActive())
                 .isVerified(savedUser.getIsVerified())
@@ -206,6 +211,7 @@ public class AuthService {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .isActive(user.getIsActive())
                 .isVerified(user.getIsVerified())

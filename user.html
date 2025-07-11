@@ -106,11 +106,23 @@
   <section class="user-hero">
     <div class="container">
       <div class="dashboard-card d-flex flex-wrap align-items-center gap-4 justify-content-center mb-0">
-        <img src="https://randomuser.me/api/portraits/men/57.jpg" class="profile-avatar" alt="User Avatar">
+        <div class="avatar-container text-center">
+          <img src="asset/img/avatars/default-avatar.png" class="profile-avatar rounded-circle mb-2" 
+               style="width: 80px; height: 80px; object-fit: cover;" alt="User Avatar">
+          <br>
+          <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-primary" onclick="AvatarManager.showAvatarModal()">
+              <i class="bi bi-camera"></i> Gallery
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="showCustomAvatarModal()">
+              <i class="bi bi-link-45deg"></i> Custom URL
+            </button>
+          </div>
+        </div>
         <div class="text-start flex-grow-1" style="max-width:500px;">
-          <div class="fs-5 fw-bold" style="color:#d18e07;">Hello, Alex Nguyen!</div>
-          <div class="mb-1 text-muted">alex.nguyen@email.com</div>
-          <div class="mb-2 small"><i class="bi bi-geo-alt text-warning"></i> Ho Chi Minh City, Vietnam</div>
+          <div class="fs-5 fw-bold" style="color:#d18e07;">Hello, User!</div>
+          <div class="mb-1 text-muted">user@email.com</div>
+          <div class="mb-2 small"><i class="bi bi-geo-alt text-warning"></i> Location</div>
           <button class="btn btn-outline-warning profile-edit-btn btn-sm px-3 mt-1"><i class="bi bi-pencil"></i> Edit Profile</button>
         </div>
       </div>
@@ -316,6 +328,84 @@
     </div>
   </div>
 
+  <!-- CUSTOM AVATAR MODAL -->
+  <div class="modal fade" id="customAvatarModal" tabindex="-1" aria-labelledby="customAvatarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customAvatarModalLabel">
+            <i class="bi bi-link-45deg text-success"></i> Custom Avatar URL
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="customAvatarUrl" class="form-label">Avatar Image URL</label>
+            <div class="input-group">
+              <input type="url" class="form-control" id="customAvatarUrl" placeholder="https://example.com/avatar.jpg" 
+                     oninput="previewCustomAvatar(this)" 
+                     onchange="previewCustomAvatar(this)" 
+                     onpaste="setTimeout(() => previewCustomAvatar(this), 100)">
+              <button class="btn btn-outline-secondary" type="button" onclick="clearCustomAvatar()">Clear</button>
+            </div>
+            <div class="mt-2">
+              <small class="form-text text-muted">
+                <strong>💡 CORS-friendly avatar services (recommended):</strong><br>
+                • <a href="https://i.pravatar.cc" target="_blank">Pravatar</a> - Random avatars (e.g., https://i.pravatar.cc/300)<br>
+                • <a href="https://robohash.org" target="_blank">RoboHash</a> - Unique robot avatars<br>
+                • <a href="https://picsum.photos" target="_blank">Lorem Picsum</a> - Random photos (e.g., https://picsum.photos/300)<br>
+                • <a href="https://via.placeholder.com" target="_blank">Placeholder</a> - Solid color avatars<br>
+                • <strong>GitHub:</strong> For GitHub users, use https://github.com/USERNAME.png<br>
+                • <strong>Gravatar:</strong> If you have one, use https://www.gravatar.com/avatar/HASH<br>
+                <br>
+                <strong>⚠️ Note:</strong> Some websites block cross-origin requests. If you get CORS errors, try the services above.
+              </small>
+            </div>
+            
+            <!-- Quick Test Examples -->
+            <div class="mt-2">
+              <small class="text-muted">
+                <strong>🚀 Quick Examples (click to try):</strong>
+              </small>
+              <div class="mt-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://i.pravatar.cc/300?u=1')">
+                  Random Avatar 1
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://i.pravatar.cc/300?u=2')">
+                  Random Avatar 2
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://robohash.org/user1?size=300x300')">
+                  Robot Avatar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://picsum.photos/300/300?random=1')">
+                  Random Photo
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Avatar Preview -->
+          <div id="customAvatarPreview" class="text-center" style="display: none;">
+            <img id="customAvatarImg" src="" alt="Avatar Preview" class="rounded-circle mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+            <div>
+              <small id="customAvatarStatus" class="text-success">✅ Avatar loaded successfully</small>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="saveCustomAvatar()" id="saveCustomAvatarBtn" disabled>
+            <i class="bi bi-check-circle"></i> Use This Avatar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- NEWSLETTER BAR -->
   <section class="newsletter-bar text-center mt-5">
     <div class="container">
@@ -377,6 +467,9 @@
       
       // Update user profile display
       updateUserProfile();
+      
+      // Initialize avatar display
+      AvatarManager.updateAvatarDisplay();
       
       // Initialize edit profile functionality
       initEditProfile();
@@ -482,7 +575,7 @@
           }
           
           // Validate phone number if provided
-          if (updateData.phone && !isValidPhoneNumber(updateData.phone)) {
+          if (updateData.phone && !Utils.isValidPhoneNumber(updateData.phone)) {
             throw new Error('Please enter a valid phone number');
           }
           
@@ -541,12 +634,263 @@
       });
     }
 
-    // Phone number validation
-    function isValidPhoneNumber(phone) {
-      // Basic phone number validation (supports various formats)
-      const phoneRegex = /^[\+]?[\d\s\-\(\)]{8,20}$/;
-      return phoneRegex.test(phone);
+    // Custom Avatar Functionality
+    function showCustomAvatarModal() {
+      const modal = new bootstrap.Modal(document.getElementById('customAvatarModal'));
+      modal.show();
     }
+
+    function previewCustomAvatar(input) {
+      const url = input.value.trim();
+      const statusElement = document.getElementById('customAvatarStatus');
+      const saveButton = document.getElementById('saveCustomAvatarBtn');
+      const preview = document.getElementById('customAvatarPreview');
+      
+      console.log('🖼️ previewCustomAvatar called with URL:', url);
+      
+      if (!url) {
+        console.log('❌ No URL provided, hiding preview');
+        preview.style.display = 'none';
+        saveButton.disabled = true;
+        return;
+      }
+      
+      // Reset status and show loading
+      statusElement.textContent = '⏳ Loading image...';
+      statusElement.className = 'text-info';
+      saveButton.disabled = true;
+      preview.style.display = 'block'; // Show preview container even while loading
+      
+      // Basic URL validation
+      try {
+        const urlObj = new URL(url);
+        console.log('✅ URL format is valid:', urlObj.href);
+        
+        // Check if it looks like an image URL
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        const hasImageExtension = imageExtensions.some(ext => 
+          urlObj.pathname.toLowerCase().includes(`.${ext}`)
+        );
+        
+        // Check for CORS-friendly services
+        const corsServices = [
+          'unsplash.com', 'images.unsplash.com', 'source.unsplash.com',
+          'pixabay.com', 'cdn.pixabay.com',
+          'pexels.com', 'images.pexels.com',
+          'picsum.photos', 'lorem.picsum.photos',
+          'via.placeholder.com', 'placeholder.com',
+          'gravatar.com', 'www.gravatar.com',
+          'robohash.org', 'www.robohash.org',
+          'i.pravatar.cc', 'pravatar.cc',
+          'api.adorable.io', 'adorable.io',
+          'github.com', 'githubusercontent.com',
+          'cdn.jsdelivr.net', 'unpkg.com'
+        ];
+        
+        const isCorsService = corsServices.some(service => urlObj.hostname.includes(service));
+        
+        if (!hasImageExtension && !isCorsService) {
+          console.log('⚠️ URL might not be an image or may have CORS issues');
+          statusElement.textContent = '⚠️ This URL might not be an image or may have CORS restrictions. Consider using services like Unsplash, Pixabay, or Gravatar.';
+          statusElement.className = 'text-warning';
+        }
+        
+      } catch (e) {
+        console.log('❌ Invalid URL format:', e.message);
+        statusElement.textContent = '❌ Invalid URL format. Please enter a valid URL starting with http:// or https://';
+        statusElement.className = 'text-danger';
+        preview.style.display = 'none';
+        return;
+      }
+
+      // Use a different approach to avoid CORS issues
+      // Instead of pre-validating, we'll try to load directly into the preview
+      const previewImg = document.getElementById('customAvatarImg');
+      
+      // Create a new image element for testing
+      const testImg = document.createElement('img');
+      testImg.style.display = 'none';
+      document.body.appendChild(testImg);
+      
+      // Set up load handlers
+      testImg.onload = function() {
+        console.log('✅ Image loaded successfully:', url);
+        console.log('📏 Image dimensions:', testImg.naturalWidth, 'x', testImg.naturalHeight);
+        
+        // Show preview
+        previewImg.src = url;
+        preview.style.display = 'block';
+        
+        // Update status
+        statusElement.textContent = `✅ Avatar loaded successfully (${testImg.naturalWidth}×${testImg.naturalHeight}px)`;
+        statusElement.className = 'text-success';
+        saveButton.disabled = false;
+        
+        // Clean up
+        document.body.removeChild(testImg);
+        console.log('✅ Save button enabled');
+      };
+      
+      testImg.onerror = function() {
+        console.log('❌ Failed to load image:', url);
+        
+        // Try alternative approach - load directly into preview
+        console.log('🔄 Trying direct preview load...');
+        previewImg.onload = function() {
+          console.log('✅ Direct preview load successful');
+          statusElement.textContent = '✅ Avatar loaded successfully (preview mode)';
+          statusElement.className = 'text-success';
+          saveButton.disabled = false;
+          preview.style.display = 'block';
+        };
+        
+        previewImg.onerror = function() {
+          console.log('❌ Direct preview load also failed, trying proxy...');
+          
+          // Last resort - try using the backend proxy
+          const proxyUrl = `${window.CONFIG.API_BASE_URL}/api/books/proxy-image?url=${encodeURIComponent(url)}`;
+          console.log('🔄 Trying proxy URL:', proxyUrl);
+          
+          previewImg.onload = function() {
+            console.log('✅ Proxy load successful');
+            statusElement.textContent = '✅ Avatar loaded successfully (via proxy)';
+            statusElement.className = 'text-success';
+            saveButton.disabled = false;
+            preview.style.display = 'block';
+          };
+          
+          previewImg.onerror = function() {
+            console.log('❌ Proxy load also failed');
+            statusElement.textContent = '❌ Unable to load image from this URL. Please check the URL and try again.';
+            statusElement.className = 'text-danger';
+            preview.style.display = 'none';
+            saveButton.disabled = true;
+          };
+          
+          // Try the proxy
+          previewImg.src = proxyUrl;
+        };
+        
+        // Try loading directly into preview img
+        previewImg.src = url;
+        
+        // Clean up test image
+        document.body.removeChild(testImg);
+      };
+      
+      // Add timeout to prevent hanging
+      setTimeout(() => {
+        if (statusElement.textContent === '⏳ Loading image...') {
+          console.log('⏰ Image loading timeout');
+          statusElement.textContent = '❌ Image loading timeout. Please try a different URL.';
+          statusElement.className = 'text-danger';
+          preview.style.display = 'none';
+          saveButton.disabled = true;
+          
+          // Clean up if still exists
+          if (document.body.contains(testImg)) {
+            document.body.removeChild(testImg);
+          }
+        }
+      }, 10000); // 10 second timeout
+      
+      console.log('🔄 Starting image load test...');
+      testImg.src = url;
+    }
+
+    function clearCustomAvatar() {
+      document.getElementById('customAvatarUrl').value = '';
+      document.getElementById('customAvatarPreview').style.display = 'none';
+      document.getElementById('saveCustomAvatarBtn').disabled = true;
+    }
+
+    function saveCustomAvatar() {
+      const url = document.getElementById('customAvatarUrl').value.trim();
+      const currentUser = AuthManager.getCurrentUser();
+      
+      if (!url || !currentUser) {
+        Utils.showError('Please provide a valid avatar URL and ensure you are logged in.');
+        return;
+      }
+      
+      // Check if we're using the proxy URL for display
+      const previewImg = document.getElementById('customAvatarImg');
+      const isUsingProxy = previewImg.src.includes('/proxy-image?url=');
+      
+      // If using proxy, save the proxy URL for consistent display
+      const saveUrl = isUsingProxy ? previewImg.src : url;
+      
+      console.log('💾 Saving custom avatar to backend:', saveUrl);
+      
+      // Show loading state
+      const saveButton = document.getElementById('saveCustomAvatarBtn');
+      const originalText = saveButton.textContent;
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+      
+      // Prepare update data
+      const updateData = {
+        avatarUrl: saveUrl
+      };
+      
+      // Save to backend via profile update API
+      APIService.auth.updateProfile(currentUser.userId || currentUser.id, updateData)
+        .then(response => {
+          console.log('✅ Avatar saved to backend:', response);
+          
+          // Also save to localStorage for immediate UI update
+          localStorage.setItem(`bookvault_avatar_${currentUser.id}`, saveUrl);
+          
+          // Update stored user profile with new avatar URL
+          const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+          userProfile.avatarUrl = saveUrl;
+          localStorage.setItem('bookvault_user_profile', JSON.stringify(userProfile));
+          
+          // Update avatar display
+          AvatarManager.updateAvatarDisplay();
+          
+          // Hide modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('customAvatarModal'));
+          modal.hide();
+          
+          // Show success message
+          Utils.showSuccess('Custom avatar saved successfully! Your avatar will now sync across all devices.');
+          
+          // Clear form
+          clearCustomAvatar();
+        })
+        .catch(error => {
+          console.error('❌ Error saving avatar to backend:', error);
+          
+          // Fallback to localStorage only
+          console.log('📱 Falling back to localStorage only...');
+          localStorage.setItem(`bookvault_avatar_${currentUser.id}`, saveUrl);
+          
+          // Update avatar display
+          AvatarManager.updateAvatarDisplay();
+          
+          // Hide modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('customAvatarModal'));
+          modal.hide();
+          
+          // Show warning message
+          Utils.showError('Avatar saved locally, but could not sync to server. It may not appear on other devices.');
+          
+          // Clear form
+          clearCustomAvatar();
+        })
+        .finally(() => {
+          // Reset button state
+          saveButton.disabled = false;
+          saveButton.innerHTML = originalText;
+        });
+    }
+
+    function setCustomAvatarUrl(url) {
+      document.getElementById('customAvatarUrl').value = url;
+      previewCustomAvatar(document.getElementById('customAvatarUrl'));
+    }
+
   </script>
 </body>
 </html>

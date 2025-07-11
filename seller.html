@@ -100,12 +100,23 @@
   <!-- SELLER DETAILS -->
 <section class="container mb-4">
   <div class="dashboard-card d-flex flex-wrap align-items-center gap-4">
-    <img src="https://randomuser.me/api/portraits/men/32.jpg"
-         class="rounded-circle border border-warning"
-         style="width:80px;height:80px;object-fit:cover;"
-         alt="Seller Avatar">
+    <div class="avatar-container text-center">
+      <img src="asset/img/avatars/default-avatar.png"
+           class="profile-avatar rounded-circle border border-warning mb-2"
+           style="width:80px;height:80px;object-fit:cover;"
+           alt="Seller Avatar">
+      <br>
+                <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-primary" onclick="AvatarManager.showAvatarModal()">
+              <i class="bi bi-camera"></i> Gallery
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="showCustomAvatarModal()">
+              <i class="bi bi-link-45deg"></i> Custom URL
+            </button>
+          </div>
+    </div>
     <div class="flex-grow-1">
-      <h4 class="mb-0 fw-bold" style="color:#d18e07;">BookBarn by John Doe</h4>
+      <h4 class="mb-0 fw-bold" style="color:#d18e07;">BookStore by Seller</h4>
       <div class="mb-1" style="color:#856100;">Premium Book Seller • Since 2022</div>
       <div class="mb-2 small">
         <span class="me-3"><i class="bi bi-geo-alt text-warning"></i> London, UK</span>
@@ -124,7 +135,7 @@
       <div class="mb-2" style="color:#646464;">
         Sharing my love of books with readers worldwide. Specializing in rare editions, children’s stories, and trending bestsellers.
       </div>
-      <button class="btn btn-outline-warning btn-sm rounded-pill px-3 mt-2">
+      <button class="btn btn-outline-warning btn-sm rounded-pill px-3 mt-2" onclick="showEditSellerProfileModal()">
         <i class="bi bi-pencil"></i> Edit Profile
       </button>
     </div>
@@ -172,14 +183,55 @@
             </div>
             <div class="mb-3">
               <label for="bookCoverImage" class="form-label">Cover Image</label>
-              <div class="input-group">
-                <input type="file" class="form-control" id="bookCoverImage" name="bookCoverImage" accept="image/*" onchange="previewImage(this)">
-                <button class="btn btn-outline-secondary" type="button" onclick="clearImage()">Clear</button>
+              
+              <!-- Image Source Selection -->
+              <div class="mb-2">
+                <div class="btn-group w-100" role="group" aria-label="Image source selection">
+                  <input type="radio" class="btn-check" name="imageSource" id="imageSourceFile" value="file" checked>
+                  <label class="btn btn-outline-primary" for="imageSourceFile">
+                    <i class="bi bi-upload"></i> Upload File
+                  </label>
+                  
+                  <input type="radio" class="btn-check" name="imageSource" id="imageSourceUrl" value="url">
+                  <label class="btn btn-outline-primary" for="imageSourceUrl">
+                    <i class="bi bi-link-45deg"></i> Use URL
+                  </label>
+                </div>
               </div>
+
+              <!-- File Upload Section -->
+              <div id="fileUploadSection">
+                <div class="input-group">
+                  <input type="file" class="form-control" id="bookCoverImage" name="bookCoverImage" accept="image/*" onchange="previewImage(this)">
+                  <button class="btn btn-outline-secondary" type="button" onclick="clearImage()">Clear</button>
+                </div>
+                <small class="form-text text-muted">Upload JPG, PNG, or GIF. Max size: 100KB for database storage.</small>
+              </div>
+
+              <!-- URL Input Section -->
+              <div id="urlInputSection" style="display: none;">
+                <div class="input-group">
+                  <input type="url" class="form-control" id="bookCoverUrl" name="bookCoverUrl" placeholder="https://example.com/book-cover.jpg" onchange="previewImageUrl(this)">
+                  <button class="btn btn-outline-secondary" type="button" onclick="clearImageUrl()">Clear</button>
+                </div>
+                <div class="mt-2">
+                  <small class="form-text text-muted">
+                    <strong>💡 Where to find good book cover images:</strong><br>
+                    • <a href="https://unsplash.com" target="_blank">Unsplash</a> - Free high-quality images<br>
+                    • <a href="https://pixabay.com" target="_blank">Pixabay</a> - Free images and illustrations<br>
+                    • <a href="https://pexels.com" target="_blank">Pexels</a> - Free stock photos<br>
+                    • <strong>Tip:</strong> Right-click on any image → "Copy image address" → Paste here
+                  </small>
+                </div>
+              </div>
+
+              <!-- Image Preview -->
               <div id="imagePreview" class="mt-2" style="display: none;">
                 <img id="previewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                <div class="mt-1">
+                  <small class="text-success" id="imageStatus">✅ Image loaded successfully</small>
+                </div>
               </div>
-              <small class="form-text text-muted">Upload a cover image (JPG, PNG, GIF). Max size: 100KB for database storage.</small>
             </div>
             <div class="mb-3">
               <label for="bookDesc" class="form-label">Description</label>
@@ -232,6 +284,7 @@
                     <th>Author</th>
                     <th>Price</th>
                     <th>Status</th>
+                    <th>Quantity</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -242,6 +295,7 @@
                     <td>Atomic Habits</td>
                     <td>James Clear</td>
                     <td>$16.99</td>
+                    <td>15</td>
                     <td><span class="badge bg-success">Active</span></td>
                     <td>
                       <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
@@ -253,6 +307,7 @@
                     <td>Educated</td>
                     <td>Tara Westover</td>
                     <td>$13.99</td>
+                    <td>8</td>
                     <td><span class="badge bg-success">Active</span></td>
                     <td>
                       <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
@@ -264,6 +319,7 @@
                     <td>The Great Gatsby</td>
                     <td>F. Scott Fitzgerald</td>
                     <td>$10.99</td>
+                    <td>0</td>
                     <td><span class="badge bg-warning text-dark">Paused</span></td>
                     <td>
                       <button class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></button>
@@ -273,6 +329,18 @@
                   <!-- Add more rows as needed -->
                 </tbody>
               </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3" id="productsPaginationContainer" style="display: none;">
+              <div class="text-muted">
+                Showing <span id="productsShowingStart">0</span> to <span id="productsShowingEnd">0</span> of <span id="productsTotalCount">0</span> products
+              </div>
+              <nav aria-label="Product pagination">
+                <ul class="pagination pagination-sm mb-0" id="productsPagination">
+                  <!-- Pagination will be dynamically generated -->
+                </ul>
+              </nav>
             </div>
           </div>
           <!-- Sold Items -->
@@ -374,36 +442,44 @@
   <script>
     // Simple demo data; replace with backend data
     if(window.Chart){
-      var ctxM = document.getElementById('chartMonth').getContext('2d');
-      new Chart(ctxM, {
-        type: 'line',
-        data: {
-          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-          datasets: [{
-            label: 'Revenue',
-            data: [120, 210, 280, 240],
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245,158,11,0.12)',
-            tension: .3,
-            fill: true
-          }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
+      // Check if monthly chart element exists
+      const monthlyChartElement = document.getElementById('chartMonth');
+      if (monthlyChartElement) {
+        var ctxM = monthlyChartElement.getContext('2d');
+        new Chart(ctxM, {
+          type: 'line',
+          data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+              label: 'Revenue',
+              data: [120, 210, 280, 240],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245,158,11,0.12)',
+              tension: .3,
+              fill: true
+            }]
+          },
+          options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+      }
 
-      var ctxY = document.getElementById('chartYear').getContext('2d');
-      new Chart(ctxY, {
-        type: 'bar',
-        data: {
-          labels: ['2021', '2022', '2023', '2024'],
-          datasets: [{
-            label: 'Annual Revenue',
-            data: [2200, 5400, 5970, 7890],
-            backgroundColor: '#f59e0b'
-          }]
-        },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-      });
+      // Check if yearly chart element exists
+      const yearlyChartElement = document.getElementById('chartYear');
+      if (yearlyChartElement) {
+        var ctxY = yearlyChartElement.getContext('2d');
+        new Chart(ctxY, {
+          type: 'bar',
+          data: {
+            labels: ['2021', '2022', '2023', '2024'],
+            datasets: [{
+              label: 'Annual Revenue',
+              data: [2200, 5400, 5970, 7890],
+              backgroundColor: '#f59e0b'
+            }]
+          },
+          options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+      }
     }
   </script>
 
@@ -412,6 +488,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         console.log('🔧 Initializing page...');
         PageManager.init();
+        
+        // Initialize avatar display
+        AvatarManager.updateAvatarDisplay();
         
         // Ensure SellerManager is available globally
         setTimeout(() => {
@@ -490,14 +569,52 @@
               <div class="col-md-4">
                 <div class="mb-3">
                   <label for="editBookCoverImage" class="form-label">Cover Image</label>
-                  <div class="input-group">
-                    <input type="file" class="form-control" id="editBookCoverImage" name="editBookCoverImage" accept="image/*" onchange="previewEditImage(this)">
-                    <button class="btn btn-outline-secondary" type="button" onclick="clearEditImage()">Clear</button>
+                  
+                  <!-- Image Source Selection -->
+                  <div class="mb-2">
+                    <div class="btn-group w-100" role="group" aria-label="Edit image source selection">
+                      <input type="radio" class="btn-check" name="editImageSource" id="editImageSourceFile" value="file" checked>
+                      <label class="btn btn-outline-primary" for="editImageSourceFile">
+                        <i class="bi bi-upload"></i> Upload File
+                      </label>
+                      
+                      <input type="radio" class="btn-check" name="editImageSource" id="editImageSourceUrl" value="url">
+                      <label class="btn btn-outline-primary" for="editImageSourceUrl">
+                        <i class="bi bi-link-45deg"></i> Use URL
+                      </label>
+                    </div>
                   </div>
+
+                  <!-- File Upload Section -->
+                  <div id="editFileUploadSection">
+                    <div class="input-group">
+                      <input type="file" class="form-control" id="editBookCoverImage" name="editBookCoverImage" accept="image/*" onchange="previewEditImage(this)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearEditImage()">Clear</button>
+                    </div>
+                    <small class="form-text text-muted">Max size: 100KB for database storage.</small>
+                  </div>
+
+                  <!-- URL Input Section -->
+                  <div id="editUrlInputSection" style="display: none;">
+                    <div class="input-group">
+                      <input type="url" class="form-control" id="editBookCoverUrl" name="editBookCoverUrl" placeholder="https://example.com/book-cover.jpg" onchange="previewEditImageUrl(this)">
+                      <button class="btn btn-outline-secondary" type="button" onclick="clearEditImageUrl()">Clear</button>
+                    </div>
+                    <div class="mt-2">
+                      <small class="form-text text-muted">
+                        <strong>💡 Find quality book images:</strong><br>
+                        • <a href="https://unsplash.com" target="_blank">Unsplash</a> • <a href="https://pixabay.com" target="_blank">Pixabay</a> • <a href="https://pexels.com" target="_blank">Pexels</a>
+                      </small>
+                    </div>
+                  </div>
+
+                  <!-- Edit Image Preview -->
                   <div id="editImagePreview" class="mt-2" style="display: none;">
                     <img id="editPreviewImg" src="" alt="Preview" class="img-thumbnail" style="max-width: 200px;">
+                    <div class="mt-1">
+                      <small class="text-success" id="editImageStatus">✅ Image loaded successfully</small>
+                    </div>
                   </div>
-                  <small class="form-text text-muted">Max size: 100KB for database storage.</small>
                 </div>
                 <div class="mb-3">
                   <label class="form-label">Current Cover</label>
@@ -517,11 +634,139 @@
     </div>
   </div>
 
+  <!-- CUSTOM AVATAR MODAL -->
+  <div class="modal fade" id="customAvatarModal" tabindex="-1" aria-labelledby="customAvatarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customAvatarModalLabel">
+            <i class="bi bi-link-45deg text-success"></i> Custom Avatar URL
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="customAvatarUrl" class="form-label">Avatar Image URL</label>
+            <div class="input-group">
+              <input type="url" class="form-control" id="customAvatarUrl" placeholder="https://example.com/avatar.jpg" 
+                     oninput="previewCustomAvatar(this)" 
+                     onchange="previewCustomAvatar(this)" 
+                     onpaste="setTimeout(() => previewCustomAvatar(this), 100)">
+              <button class="btn btn-outline-secondary" type="button" onclick="clearCustomAvatar()">Clear</button>
+            </div>
+            <div class="mt-2">
+              <small class="form-text text-muted">
+                <strong>💡 CORS-friendly avatar services (recommended):</strong><br>
+                • <a href="https://i.pravatar.cc" target="_blank">Pravatar</a> - Random avatars (e.g., https://i.pravatar.cc/300)<br>
+                • <a href="https://robohash.org" target="_blank">RoboHash</a> - Unique robot avatars<br>
+                • <a href="https://picsum.photos" target="_blank">Lorem Picsum</a> - Random photos (e.g., https://picsum.photos/300)<br>
+                • <a href="https://via.placeholder.com" target="_blank">Placeholder</a> - Solid color avatars<br>
+                • <strong>GitHub:</strong> For GitHub users, use https://github.com/USERNAME.png<br>
+                • <strong>Gravatar:</strong> If you have one, use https://www.gravatar.com/avatar/HASH<br>
+                <br>
+                <strong>⚠️ Note:</strong> Some websites block cross-origin requests. If you get CORS errors, try the services above.
+              </small>
+            </div>
+            
+            <!-- Quick Test Examples -->
+            <div class="mt-2">
+              <small class="text-muted">
+                <strong>🚀 Quick Examples (click to try):</strong>
+              </small>
+              <div class="mt-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://i.pravatar.cc/300?u=1')">
+                  Random Avatar 1
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://i.pravatar.cc/300?u=2')">
+                  Random Avatar 2
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://robohash.org/user1?size=300x300')">
+                  Robot Avatar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-1 mb-1" 
+                        onclick="setCustomAvatarUrl('https://picsum.photos/300/300?random=1')">
+                  Random Photo
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Avatar Preview -->
+          <div id="customAvatarPreview" class="text-center" style="display: none;">
+            <img id="customAvatarImg" src="" alt="Avatar Preview" class="rounded-circle mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+            <div>
+              <small id="customAvatarStatus" class="text-success">✅ Avatar loaded successfully</small>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="saveCustomAvatar()" id="saveCustomAvatarBtn" disabled>
+            <i class="bi bi-check-circle"></i> Use This Avatar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Image Upload Functions -->
   <script>
-    // Global variable to store the uploaded image data
+    // Global variables to store the uploaded image data
     let uploadedImageData = null;
     let editUploadedImageData = null;
+
+    // Initialize image source switching
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listeners for image source switching
+        const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
+        imageSourceRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                toggleImageSource(this.value);
+            });
+        });
+
+        const editImageSourceRadios = document.querySelectorAll('input[name="editImageSource"]');
+        editImageSourceRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                toggleEditImageSource(this.value);
+            });
+        });
+    });
+
+    // Toggle between file upload and URL input
+    function toggleImageSource(source) {
+        const fileSection = document.getElementById('fileUploadSection');
+        const urlSection = document.getElementById('urlInputSection');
+        
+        if (source === 'file') {
+            fileSection.style.display = 'block';
+            urlSection.style.display = 'none';
+            clearImageUrl();
+        } else {
+            fileSection.style.display = 'none';
+            urlSection.style.display = 'block';
+            clearImage();
+        }
+    }
+
+    // Toggle between file upload and URL input for edit modal
+    function toggleEditImageSource(source) {
+        const fileSection = document.getElementById('editFileUploadSection');
+        const urlSection = document.getElementById('editUrlInputSection');
+        
+        if (source === 'file') {
+            fileSection.style.display = 'block';
+            urlSection.style.display = 'none';
+            clearEditImageUrl();
+        } else {
+            fileSection.style.display = 'none';
+            urlSection.style.display = 'block';
+            clearEditImage();
+        }
+    }
 
     // Preview uploaded image
     function previewImage(input) {
@@ -543,20 +788,22 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const preview = document.getElementById('imagePreview');
-                const previewImg = document.getElementById('previewImg');
-                
-                previewImg.src = e.target.result;
-                preview.style.display = 'block';
-                
-                // Don't store base64 data - we'll send the file directly
+                showImagePreview(e.target.result, 'imagePreview', 'previewImg', 'imageStatus');
                 uploadedImageData = null;
             };
             reader.readAsDataURL(file);
         }
     }
 
-    // Preview edit image
+    // Preview image from URL
+    function previewImageUrl(input) {
+        const url = input.value.trim();
+        if (url) {
+            validateAndPreviewUrl(url, 'imagePreview', 'previewImg', 'imageStatus');
+        }
+    }
+
+    // Preview edit image from file
     function previewEditImage(input) {
         const file = input.files[0];
         if (file) {
@@ -576,18 +823,66 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const preview = document.getElementById('editImagePreview');
-                const previewImg = document.getElementById('editPreviewImg');
-                
-                previewImg.src = e.target.result;
-                preview.style.display = 'block';
-                
-                // Don't store base64 data - we'll send the file directly
+                showImagePreview(e.target.result, 'editImagePreview', 'editPreviewImg', 'editImageStatus');
                 editUploadedImageData = null;
                 window.editUploadedImageData = null;
             };
             reader.readAsDataURL(file);
         }
+    }
+
+    // Preview edit image from URL
+    function previewEditImageUrl(input) {
+        const url = input.value.trim();
+        if (url) {
+            validateAndPreviewUrl(url, 'editImagePreview', 'editPreviewImg', 'editImageStatus');
+        }
+    }
+
+    // Validate URL and show preview
+    function validateAndPreviewUrl(url, previewId, imgId, statusId) {
+        const statusElement = document.getElementById(statusId);
+        
+        // Reset status
+        statusElement.textContent = '⏳ Loading image...';
+        statusElement.className = 'text-info';
+        
+        // Basic URL validation
+        try {
+            new URL(url);
+        } catch (e) {
+            statusElement.textContent = '❌ Invalid URL format';
+            statusElement.className = 'text-danger';
+            return;
+        }
+
+        // Create a test image to validate the URL
+        const testImg = new Image();
+        testImg.onload = function() {
+            showImagePreview(url, previewId, imgId, statusId);
+            statusElement.textContent = '✅ Image loaded successfully';
+            statusElement.className = 'text-success';
+        };
+        testImg.onerror = function() {
+            statusElement.textContent = '❌ Unable to load image from this URL';
+            statusElement.className = 'text-danger';
+            document.getElementById(previewId).style.display = 'none';
+        };
+        testImg.src = url;
+    }
+
+    // Show image preview
+    function showImagePreview(src, previewId, imgId, statusId) {
+        const preview = document.getElementById(previewId);
+        const previewImg = document.getElementById(imgId);
+        
+        previewImg.src = src;
+        preview.style.display = 'block';
+        
+        // Update status
+        const statusElement = document.getElementById(statusId);
+        statusElement.textContent = '✅ Image loaded successfully';
+        statusElement.className = 'text-success';
     }
 
     // Clear uploaded image
@@ -600,6 +895,17 @@
         preview.style.display = 'none';
         previewImg.src = '';
         uploadedImageData = null;
+    }
+
+    // Clear image URL
+    function clearImageUrl() {
+        const input = document.getElementById('bookCoverUrl');
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        
+        input.value = '';
+        preview.style.display = 'none';
+        previewImg.src = '';
     }
 
     // Clear edit image
@@ -615,8 +921,226 @@
         window.editUploadedImageData = null;
     }
 
+    // Clear edit image URL
+    function clearEditImageUrl() {
+        const input = document.getElementById('editBookCoverUrl');
+        const preview = document.getElementById('editImagePreview');
+        const previewImg = document.getElementById('editPreviewImg');
+        
+        input.value = '';
+        preview.style.display = 'none';
+        previewImg.src = '';
+    }
 
+    // Get current image URL (for form submission)
+    function getCurrentImageUrl() {
+        const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
+        const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
+        
+        if (selectedSource === 'url') {
+            return document.getElementById('bookCoverUrl').value.trim();
+        } else {
+            // For file upload, return null - handled separately
+            return null;
+        }
+    }
 
+    // Get current edit image URL (for form submission)
+    function getCurrentEditImageUrl() {
+        const imageSourceRadios = document.querySelectorAll('input[name="editImageSource"]');
+        const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
+        
+        if (selectedSource === 'url') {
+            return document.getElementById('editBookCoverUrl').value.trim();
+        } else {
+            // For file upload, return null - handled separately
+            return null;
+        }
+    }
+  </script>
+
+  <!-- Edit Seller Profile Modal -->
+  <div class="modal fade" id="editSellerProfileModal" tabindex="-1" aria-labelledby="editSellerProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editSellerProfileModalLabel">Edit Seller Profile</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="editSellerProfileForm">
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="sellerFirstName" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="sellerFirstName" name="firstName" required>
+                <div class="invalid-feedback">Please enter your first name.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="sellerLastName" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="sellerLastName" name="lastName" required>
+                <div class="invalid-feedback">Please enter your last name.</div>
+              </div>
+              <div class="col-12">
+                <label for="sellerPhone" class="form-label">Phone Number</label>
+                <input type="tel" class="form-control" id="sellerPhone" name="phone" placeholder="Optional">
+                <div class="invalid-feedback">Please enter a valid phone number.</div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-warning">
+              <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Seller Profile Edit Functions
+    function showEditSellerProfileModal() {
+      const user = AuthManager.getCurrentUser();
+      const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+      
+      if (user) {
+        // Pre-populate form with current values
+        document.getElementById('sellerFirstName').value = userProfile.firstName || user.firstName || '';
+        document.getElementById('sellerLastName').value = userProfile.lastName || user.lastName || '';
+        document.getElementById('sellerPhone').value = userProfile.phone || user.phone || '';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editSellerProfileModal'));
+        modal.show();
+      } else {
+        console.error('User not logged in');
+        Utils.showError('Please log in to edit your profile.');
+      }
+    }
+
+    // Handle seller profile form submission
+    document.addEventListener('DOMContentLoaded', function() {
+      const editSellerProfileForm = document.getElementById('editSellerProfileForm');
+      
+      if (editSellerProfileForm) {
+        editSellerProfileForm.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          
+          const submitButton = editSellerProfileForm.querySelector('button[type="submit"]');
+          const spinner = submitButton.querySelector('.spinner-border');
+          
+          try {
+            // Show loading state
+            submitButton.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            // Get current user
+            const user = AuthManager.getCurrentUser();
+            if (!user) {
+              throw new Error('User not logged in');
+            }
+            
+            // Get form data
+            const formData = new FormData(editSellerProfileForm);
+            const updateData = {
+              firstName: formData.get('firstName').trim(),
+              lastName: formData.get('lastName').trim(),
+              phone: formData.get('phone').trim() || null
+            };
+            
+            // Validate form
+            if (!updateData.firstName || !updateData.lastName) {
+              throw new Error('First name and last name are required');
+            }
+            
+            // Validate phone number if provided
+            if (updateData.phone && !Utils.isValidPhoneNumber(updateData.phone)) {
+              throw new Error('Please enter a valid phone number');
+            }
+            
+            console.log('Updating seller profile with:', updateData);
+            
+            // Make API call
+            const response = await APIService.auth.updateProfile(user.userId || user.id, updateData);
+            
+            console.log('Seller profile update response:', response);
+            
+            // Update local storage with new profile data
+            const updatedProfile = response.data || response;
+            localStorage.setItem('bookvault_user_profile', JSON.stringify(updatedProfile));
+            
+            // Update UI
+            updateSellerProfileDisplay(updatedProfile);
+            
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editSellerProfileModal'));
+            modal.hide();
+            
+            // Show success message
+            Utils.showSuccess('Profile updated successfully!');
+            
+          } catch (error) {
+            console.error('Seller profile update error:', error);
+            
+            // Show error message
+            const errorMessage = error.message || 'Failed to update profile. Please try again.';
+            Utils.showError(errorMessage);
+            
+            // Show field-specific errors
+            if (error.message.includes('First name')) {
+              document.getElementById('sellerFirstName').classList.add('is-invalid');
+            }
+            if (error.message.includes('Last name')) {
+              document.getElementById('sellerLastName').classList.add('is-invalid');
+            }
+            if (error.message.includes('phone')) {
+              document.getElementById('sellerPhone').classList.add('is-invalid');
+            }
+            
+          } finally {
+            // Hide loading state
+            submitButton.disabled = false;
+            spinner.classList.add('d-none');
+          }
+        });
+        
+        // Clear validation errors on input
+        const formFields = editSellerProfileForm.querySelectorAll('input');
+        formFields.forEach(field => {
+          field.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+          });
+        });
+      }
+    });
+
+    // Update seller profile display
+    function updateSellerProfileDisplay(profile) {
+      const sellerNameElement = document.querySelector('.dashboard-card h4');
+      const sellerDetailsElement = document.querySelector('.dashboard-card .mb-2.small');
+      
+      if (sellerNameElement && profile.firstName && profile.lastName) {
+        // Update the seller name display
+        const currentText = sellerNameElement.textContent;
+        const storeName = currentText.includes('by') ? currentText.split(' by ')[0] : 'BookStore';
+        sellerNameElement.textContent = `${storeName} by ${profile.firstName} ${profile.lastName}`;
+      }
+      
+      if (sellerDetailsElement && profile.phone) {
+        // Update phone display if provided
+        const phoneSpan = sellerDetailsElement.querySelector('span:last-child');
+        if (phoneSpan) {
+          phoneSpan.innerHTML = `<i class="bi bi-telephone"></i> ${profile.phone}`;
+        }
+      }
+    }
+  </script>
+
+  </script>
+
+  <script>
     // Global function for edit book (accessible from modal)
     window.handleEditBook = function() {
         // Get form data
@@ -632,8 +1156,11 @@
             publisher: null
         };
 
-        // Handle uploaded image data - we'll send the file directly, not base64
-        bookData.coverImageUrl = null;
+        // Handle image URL - check if user selected URL option
+        const imageUrl = getCurrentEditImageUrl();
+        if (imageUrl) {
+            bookData.coverImageUrl = imageUrl;
+        }
 
         // Validate required fields
         if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
@@ -743,6 +1270,724 @@
             alert('Failed to update book. Please try again.');
         }
     }
+
+    // Products Pagination Management for Backend Data
+    let currentProductsPage = 1;
+    const productsPerPage = 12;
+    let totalProducts = 0;
+    let allProductsData = [];
+
+    // Function to initialize pagination with backend data
+    function initializeProductsPagination(products) {
+      if (!products || !Array.isArray(products)) {
+        console.log('No products data provided');
+        return;
+      }
+      
+      allProductsData = products;
+      totalProducts = products.length;
+      currentProductsPage = 1;
+      
+      if (totalProducts > 0) {
+        renderProductsPage();
+        document.getElementById('productsPaginationContainer').style.display = 'flex';
+      } else {
+        document.getElementById('productsPaginationContainer').style.display = 'none';
+      }
+    }
+
+    // Render current page of products
+    function renderProductsPage() {
+      const startIndex = (currentProductsPage - 1) * productsPerPage;
+      const endIndex = Math.min(startIndex + productsPerPage, totalProducts);
+      const currentProducts = allProductsData.slice(startIndex, endIndex);
+
+      // Try multiple selectors to find the table body
+      let tbody = document.querySelector('#products tbody') || 
+                  document.querySelector('#productsTableBody') ||
+                  document.querySelector('.product-table tbody');
+      
+      if (!tbody) {
+        console.error('Products table body not found');
+        return;
+      }
+
+      tbody.innerHTML = '';
+
+      currentProducts.forEach(product => {
+        const statusClass = getProductStatusClass(product.status || 'Active');
+        const coverImage = product.coverImageUrl || product.cover || 'asset/img/books/placeholder.jpg';
+        const price = typeof product.price === 'number' ? `$${product.price.toFixed(2)}` : product.price;
+        const quantity = product.stockQuantity || product.quantity || 0;
+        const status = product.status || 'Active';
+        
+        const row = `
+          <tr>
+            <td><img src="${coverImage}" class="rounded" style="width: 46px; height: 60px; object-fit: cover;" alt="${product.title}" onerror="this.src='asset/img/books/placeholder.jpg'"></td>
+            <td>${product.title}</td>
+            <td>${product.author}</td>
+            <td>${price}</td>
+            <td><span class="badge ${statusClass}">${status}</span></td>
+            <td>${quantity}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-warning" onclick="editProduct(${product.id})" title="Edit"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${product.id})" title="Delete"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+
+      // Update pagination info
+      const startElement = document.getElementById('productsShowingStart');
+      const endElement = document.getElementById('productsShowingEnd');
+      const totalElement = document.getElementById('productsTotalCount');
+      
+      if (startElement) startElement.textContent = startIndex + 1;
+      if (endElement) endElement.textContent = endIndex;
+      if (totalElement) totalElement.textContent = totalProducts;
+
+      renderProductsPagination();
+    }
+
+    // Get Bootstrap class for product status
+    function getProductStatusClass(status) {
+      switch (status?.toLowerCase()) {
+        case 'active':
+          return 'bg-success';
+        case 'paused':
+        case 'inactive':
+          return 'bg-warning text-dark';
+        case 'out_of_stock':
+          return 'bg-danger';
+        default:
+          return 'bg-secondary';
+      }
+    }
+
+    // Render pagination controls
+    function renderProductsPagination() {
+      const totalPages = Math.ceil(totalProducts / productsPerPage);
+      const pagination = document.getElementById('productsPagination');
+      
+      if (!pagination) {
+        console.error('Pagination element not found');
+        return;
+      }
+
+      pagination.innerHTML = '';
+
+      if (totalPages <= 1) {
+        return; // No pagination needed
+      }
+
+      // Previous button
+      const prevDisabled = currentProductsPage === 1 ? 'disabled' : '';
+      pagination.innerHTML += `
+        <li class="page-item ${prevDisabled}">
+          <a class="page-link" href="#" aria-label="Previous" onclick="changeProductsPage('prev'); return false;">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+      `;
+
+      // Page numbers
+      const startPage = Math.max(1, currentProductsPage - 2);
+      const endPage = Math.min(totalPages, currentProductsPage + 2);
+
+      // First page if not in range
+      if (startPage > 1) {
+        pagination.innerHTML += `
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="changeProductsPage(1); return false;">1</a>
+          </li>
+        `;
+        if (startPage > 2) {
+          pagination.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+      }
+
+      // Page numbers in range
+      for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentProductsPage ? 'active' : '';
+        pagination.innerHTML += `
+          <li class="page-item ${activeClass}">
+            <a class="page-link" href="#" onclick="changeProductsPage(${i}); return false;">${i}</a>
+          </li>
+        `;
+      }
+
+      // Last page if not in range
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          pagination.innerHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        pagination.innerHTML += `
+          <li class="page-item">
+            <a class="page-link" href="#" onclick="changeProductsPage(${totalPages}); return false;">${totalPages}</a>
+          </li>
+        `;
+      }
+
+      // Next button
+      const nextDisabled = currentProductsPage === totalPages ? 'disabled' : '';
+      pagination.innerHTML += `
+        <li class="page-item ${nextDisabled}">
+          <a class="page-link" href="#" aria-label="Next" onclick="changeProductsPage('next'); return false;">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      `;
+    }
+
+    // Change page function
+    function changeProductsPage(page) {
+      const totalPages = Math.ceil(totalProducts / productsPerPage);
+      
+      if (page === 'prev') {
+        if (currentProductsPage > 1) {
+          currentProductsPage--;
+        }
+      } else if (page === 'next') {
+        if (currentProductsPage < totalPages) {
+          currentProductsPage++;
+        }
+      } else if (typeof page === 'number') {
+        if (page >= 1 && page <= totalPages) {
+          currentProductsPage = page;
+        }
+      }
+
+      renderProductsPage();
+      
+      // Scroll to top of products table
+      const productsSection = document.querySelector('#products');
+      if (productsSection) {
+        productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // Integration with existing BookVault system
+    function updateProductsWithPagination(products) {
+      console.log('Updating products with pagination:', products?.length || 0, 'products');
+      initializeProductsPagination(products);
+    }
+
+    // Make functions globally available
+    window.updateProductsWithPagination = updateProductsWithPagination;
+    window.changeProductsPage = changeProductsPage;
+    
+    // Manual trigger function for testing/debugging
+    window.triggerProductsPagination = function() {
+      console.log('🔧 Manually triggering products pagination...');
+      const existingRows = document.querySelectorAll('#products tbody tr');
+      if (existingRows.length > 0 && !existingRows[0].querySelector('td[colspan]')) {
+        const extractedProducts = extractProductsFromTable();
+        console.log('📊 Extracted products:', extractedProducts);
+        if (extractedProducts.length > 0) {
+          updateProductsWithPagination(extractedProducts);
+          return true;
+        }
+      }
+      console.log('❌ No valid table data found to paginate');
+      return false;
+    };
+    
+    // Listen for custom events that might indicate data has loaded
+    document.addEventListener('productsLoaded', function(event) {
+      console.log('📡 Received productsLoaded event:', event.detail);
+      if (event.detail && Array.isArray(event.detail.products)) {
+        updateProductsWithPagination(event.detail.products);
+      }
+    });
+    
+    // Also listen for table updates
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList' && mutation.target.tagName === 'TBODY') {
+          // Table body was updated, check if we need to paginate
+          setTimeout(() => {
+            if (allProductsData.length === 0) {
+              const existingRows = document.querySelectorAll('#products tbody tr');
+              if (existingRows.length > 3 && !existingRows[0].querySelector('td[colspan]')) {
+                console.log('👀 Detected table update, applying pagination...');
+                window.triggerProductsPagination();
+              }
+            }
+          }, 500);
+        }
+      });
+    });
+    
+    // Start observing table changes
+    setTimeout(() => {
+      const tableBody = document.querySelector('#products tbody') || 
+                        document.querySelector('.product-table tbody');
+      if (tableBody) {
+        observer.observe(tableBody, { childList: true, subtree: true });
+        console.log('👁️ Started observing table changes');
+      }
+    }, 1000);
+    
+    // Hook into existing system
+    document.addEventListener('DOMContentLoaded', function() {
+      // Try multiple approaches to get products data
+      setTimeout(() => {
+        console.log('🔍 Searching for products data...');
+        
+        // Method 1: Check SellerManager
+        if (window.BookVault && window.BookVault.SellerManager) {
+          const sellerManager = window.BookVault.SellerManager;
+          if (sellerManager.products && Array.isArray(sellerManager.products)) {
+            console.log('✅ Found products in SellerManager:', sellerManager.products.length);
+            updateProductsWithPagination(sellerManager.products);
+            return;
+          }
+        }
+        
+        // Method 2: Check if SellerManager exists globally
+        if (window.SellerManager && window.SellerManager.products) {
+          console.log('✅ Found products in global SellerManager:', window.SellerManager.products.length);
+          updateProductsWithPagination(window.SellerManager.products);
+          return;
+        }
+        
+        // Method 3: Check existing table rows and convert them
+        const existingRows = document.querySelectorAll('#products tbody tr');
+        if (existingRows.length > 0 && !existingRows[0].querySelector('td[colspan]')) {
+          console.log('✅ Found existing table rows, converting to pagination...');
+          const extractedProducts = extractProductsFromTable();
+          if (extractedProducts.length > 0) {
+            updateProductsWithPagination(extractedProducts);
+            return;
+          }
+        }
+        
+        console.log('ℹ️ No products found, waiting for backend data...');
+      }, 1000);
+      
+      // Also try again after 3 seconds in case data loads slowly
+      setTimeout(() => {
+        if (allProductsData.length === 0) {
+          console.log('🔄 Retrying to find products data...');
+          const existingRows = document.querySelectorAll('#products tbody tr');
+          if (existingRows.length > 0 && !existingRows[0].querySelector('td[colspan]')) {
+            const extractedProducts = extractProductsFromTable();
+            if (extractedProducts.length > 0) {
+              updateProductsWithPagination(extractedProducts);
+            }
+          }
+        }
+      }, 3000);
+    });
+
+    // Extract products from existing table rows
+    function extractProductsFromTable() {
+      const products = [];
+      const rows = document.querySelectorAll('#products tbody tr');
+      
+      rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 6) {
+          const img = cells[0].querySelector('img');
+          const title = cells[1].textContent.trim();
+          const author = cells[2].textContent.trim();
+          const price = cells[3].textContent.trim();
+          const status = cells[4].textContent.trim();
+          const quantity = cells[5].textContent.trim();
+          
+          // Read status and quantity directly from the correct columns
+          let actualStatus = 'Active';
+          let actualQuantity = parseInt(quantity) || 0;
+          
+          // Check if status cell (cells[4]) contains a badge or status text
+          const statusBadge = cells[4].querySelector('.badge');
+          if (statusBadge) {
+            actualStatus = statusBadge.textContent.trim();
+          } else if (status && status !== '0' && isNaN(parseInt(status))) {
+            actualStatus = status;
+          } else {
+            // Default status based on quantity
+            actualStatus = actualQuantity > 0 ? 'Active' : 'Paused';
+          }
+          
+          if (title && author) {
+            products.push({
+              id: index + 1,
+              title: title,
+              author: author,
+              price: price,
+              quantity: actualQuantity,
+              stockQuantity: actualQuantity,
+              status: actualStatus,
+              coverImageUrl: img ? img.src : 'asset/img/books/placeholder.jpg'
+            });
+          }
+        }
+      });
+      
+      return products;
+    }
+
+    // Override the existing table rendering if it exists
+    if (window.BookVault && window.BookVault.SellerManager) {
+      const originalRenderProducts = window.BookVault.SellerManager.renderProducts;
+      if (originalRenderProducts) {
+        window.BookVault.SellerManager.renderProducts = function(products) {
+          // Call original function first
+          originalRenderProducts.call(this, products);
+          // Then add pagination
+          updateProductsWithPagination(products);
+        };
+      }
+    }
+
+    // Edit and Delete functions for products
+    function editProduct(productId) {
+      // Find the product in the current data
+      const product = allProductsData.find(p => p.id === productId);
+      if (!product) {
+        console.error('Product not found:', productId);
+        return;
+      }
+
+      // Try to use existing SellerManager edit function
+      if (window.BookVault && window.BookVault.SellerManager && typeof window.BookVault.SellerManager.editProduct === 'function') {
+        window.BookVault.SellerManager.editProduct(productId);
+      } else if (window.SellerManager && typeof window.SellerManager.editProduct === 'function') {
+        window.SellerManager.editProduct(productId);
+      } else {
+        // Fallback: populate and show edit modal
+        populateEditModal(product);
+      }
+    }
+
+    function deleteProduct(productId) {
+      // Find the product in the current data
+      const product = allProductsData.find(p => p.id === productId);
+      if (!product) {
+        console.error('Product not found:', productId);
+        return;
+      }
+
+      if (confirm(`Are you sure you want to delete "${product.title}"?`)) {
+        // Try to use existing SellerManager delete function
+        if (window.BookVault && window.BookVault.SellerManager && typeof window.BookVault.SellerManager.deleteProduct === 'function') {
+          window.BookVault.SellerManager.deleteProduct(productId);
+        } else if (window.SellerManager && typeof window.SellerManager.deleteProduct === 'function') {
+          window.SellerManager.deleteProduct(productId);
+        } else {
+          // Fallback: remove from local data and re-render
+          const index = allProductsData.findIndex(p => p.id === productId);
+          if (index > -1) {
+            allProductsData.splice(index, 1);
+            totalProducts = allProductsData.length;
+            
+            // Adjust current page if needed
+            const totalPages = Math.ceil(totalProducts / productsPerPage);
+            if (currentProductsPage > totalPages && totalPages > 0) {
+              currentProductsPage = totalPages;
+            }
+            
+            renderProductsPage();
+            console.log('Product deleted locally:', product.title);
+          }
+        }
+      }
+    }
+
+    function populateEditModal(product) {
+      // Populate the edit modal with product data
+      document.getElementById('editBookId').value = product.id;
+      document.getElementById('editBookTitle').value = product.title;
+      document.getElementById('editBookAuthor').value = product.author;
+      document.getElementById('editBookPrice').value = typeof product.price === 'number' ? product.price : parseFloat(product.price?.replace('$', '')) || 0;
+      document.getElementById('editBookDesc').value = product.description || '';
+      document.getElementById('editBookStock').value = product.stockQuantity || product.quantity || 0;
+      
+      // Set category if available
+      const categorySelect = document.getElementById('editBookGenre');
+      if (categorySelect && product.category) {
+        categorySelect.value = product.category;
+      }
+      
+      // Set current cover image
+      const currentCover = document.getElementById('currentBookCover');
+      if (currentCover) {
+        currentCover.src = product.coverImageUrl || product.cover || 'asset/img/books/placeholder.jpg';
+      }
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('editBookModal'));
+      modal.show();
+    }
+
+    // Make functions globally available
+    window.editProduct = editProduct;
+    window.deleteProduct = deleteProduct;
+
+    // Custom Avatar Functionality
+    function showCustomAvatarModal() {
+      const modal = new bootstrap.Modal(document.getElementById('customAvatarModal'));
+      modal.show();
+    }
+
+    function previewCustomAvatar(input) {
+      const url = input.value.trim();
+      const statusElement = document.getElementById('customAvatarStatus');
+      const saveButton = document.getElementById('saveCustomAvatarBtn');
+      const preview = document.getElementById('customAvatarPreview');
+      
+      console.log('🖼️ previewCustomAvatar called with URL:', url);
+      
+      if (!url) {
+        console.log('❌ No URL provided, hiding preview');
+        preview.style.display = 'none';
+        saveButton.disabled = true;
+        return;
+      }
+      
+      // Reset status and show loading
+      statusElement.textContent = '⏳ Loading image...';
+      statusElement.className = 'text-info';
+      saveButton.disabled = true;
+      preview.style.display = 'block'; // Show preview container even while loading
+      
+      // Basic URL validation
+      try {
+        const urlObj = new URL(url);
+        console.log('✅ URL format is valid:', urlObj.href);
+        
+        // Check if it looks like an image URL
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        const hasImageExtension = imageExtensions.some(ext => 
+          urlObj.pathname.toLowerCase().includes(`.${ext}`)
+        );
+        
+        // Check for CORS-friendly services
+        const corsServices = [
+          'unsplash.com', 'images.unsplash.com', 'source.unsplash.com',
+          'pixabay.com', 'cdn.pixabay.com',
+          'pexels.com', 'images.pexels.com',
+          'picsum.photos', 'lorem.picsum.photos',
+          'via.placeholder.com', 'placeholder.com',
+          'gravatar.com', 'www.gravatar.com',
+          'robohash.org', 'www.robohash.org',
+          'i.pravatar.cc', 'pravatar.cc',
+          'api.adorable.io', 'adorable.io',
+          'github.com', 'githubusercontent.com',
+          'cdn.jsdelivr.net', 'unpkg.com'
+        ];
+        
+        const isCorsService = corsServices.some(service => urlObj.hostname.includes(service));
+        
+        if (!hasImageExtension && !isCorsService) {
+          console.log('⚠️ URL might not be an image or may have CORS issues');
+          statusElement.textContent = '⚠️ This URL might not be an image or may have CORS restrictions. Consider using services like Unsplash, Pixabay, or Gravatar.';
+          statusElement.className = 'text-warning';
+        }
+        
+      } catch (e) {
+        console.log('❌ Invalid URL format:', e.message);
+        statusElement.textContent = '❌ Invalid URL format. Please enter a valid URL starting with http:// or https://';
+        statusElement.className = 'text-danger';
+        preview.style.display = 'none';
+        return;
+      }
+
+      // Use a different approach to avoid CORS issues
+      const previewImg = document.getElementById('customAvatarImg');
+      
+      // Create a new image element for testing
+      const testImg = document.createElement('img');
+      testImg.style.display = 'none';
+      document.body.appendChild(testImg);
+      
+      // Set up load handlers
+      testImg.onload = function() {
+        console.log('✅ Image loaded successfully:', url);
+        console.log('📏 Image dimensions:', testImg.naturalWidth, 'x', testImg.naturalHeight);
+        
+        // Show preview
+        previewImg.src = url;
+        preview.style.display = 'block';
+        
+        // Update status
+        statusElement.textContent = `✅ Avatar loaded successfully (${testImg.naturalWidth}×${testImg.naturalHeight}px)`;
+        statusElement.className = 'text-success';
+        saveButton.disabled = false;
+        
+        // Clean up
+        document.body.removeChild(testImg);
+        console.log('✅ Save button enabled');
+      };
+      
+      testImg.onerror = function() {
+        console.log('❌ Failed to load image:', url);
+        
+        // Try alternative approach - load directly into preview
+        console.log('🔄 Trying direct preview load...');
+        previewImg.onload = function() {
+          console.log('✅ Direct preview load successful');
+          statusElement.textContent = '✅ Avatar loaded successfully (preview mode)';
+          statusElement.className = 'text-success';
+          saveButton.disabled = false;
+          preview.style.display = 'block';
+        };
+        
+        previewImg.onerror = function() {
+          console.log('❌ Direct preview load also failed, trying proxy...');
+          
+          // Last resort - try using the backend proxy
+          const proxyUrl = `${window.CONFIG.API_BASE_URL}/api/books/proxy-image?url=${encodeURIComponent(url)}`;
+          console.log('🔄 Trying proxy URL:', proxyUrl);
+          
+          previewImg.onload = function() {
+            console.log('✅ Proxy load successful');
+            statusElement.textContent = '✅ Avatar loaded successfully (via proxy)';
+            statusElement.className = 'text-success';
+            saveButton.disabled = false;
+            preview.style.display = 'block';
+          };
+          
+          previewImg.onerror = function() {
+            console.log('❌ Proxy load also failed');
+            statusElement.textContent = '❌ Unable to load image from this URL. Please check the URL and try again.';
+            statusElement.className = 'text-danger';
+            preview.style.display = 'none';
+            saveButton.disabled = true;
+          };
+          
+          // Try the proxy
+          previewImg.src = proxyUrl;
+        };
+        
+        // Try loading directly into preview img
+        previewImg.src = url;
+        
+        // Clean up test image
+        document.body.removeChild(testImg);
+      };
+      
+      // Add timeout to prevent hanging
+      setTimeout(() => {
+        if (statusElement.textContent === '⏳ Loading image...') {
+          console.log('⏰ Image loading timeout');
+          statusElement.textContent = '❌ Image loading timeout. Please try a different URL.';
+          statusElement.className = 'text-danger';
+          preview.style.display = 'none';
+          saveButton.disabled = true;
+          
+          // Clean up if still exists
+          if (document.body.contains(testImg)) {
+            document.body.removeChild(testImg);
+          }
+        }
+      }, 10000); // 10 second timeout
+      
+      console.log('🔄 Starting image load test...');
+      testImg.src = url;
+    }
+
+    function clearCustomAvatar() {
+      document.getElementById('customAvatarUrl').value = '';
+      document.getElementById('customAvatarPreview').style.display = 'none';
+      document.getElementById('saveCustomAvatarBtn').disabled = true;
+    }
+
+    function saveCustomAvatar() {
+      const url = document.getElementById('customAvatarUrl').value.trim();
+      const currentUser = AuthManager.getCurrentUser();
+      
+      if (!url || !currentUser) {
+        Utils.showError('Please provide a valid avatar URL and ensure you are logged in.');
+        return;
+      }
+      
+      // Check if we're using the proxy URL for display
+      const previewImg = document.getElementById('customAvatarImg');
+      const isUsingProxy = previewImg.src.includes('/proxy-image?url=');
+      
+      // If using proxy, save the proxy URL for consistent display
+      const saveUrl = isUsingProxy ? previewImg.src : url;
+      
+      console.log('💾 Saving custom avatar to backend:', saveUrl);
+      
+      // Show loading state
+      const saveButton = document.getElementById('saveCustomAvatarBtn');
+      const originalText = saveButton.textContent;
+      saveButton.disabled = true;
+      saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+      
+      // Prepare update data
+      const updateData = {
+        avatarUrl: saveUrl
+      };
+      
+      // Save to backend via profile update API
+      APIService.auth.updateProfile(currentUser.userId || currentUser.id, updateData)
+        .then(response => {
+          console.log('✅ Avatar saved to backend:', response);
+          
+          // Also save to localStorage for immediate UI update
+          localStorage.setItem(`bookvault_avatar_${currentUser.id}`, saveUrl);
+          
+          // Update stored user profile with new avatar URL
+          const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+          userProfile.avatarUrl = saveUrl;
+          localStorage.setItem('bookvault_user_profile', JSON.stringify(userProfile));
+          
+          // Update avatar display
+          AvatarManager.updateAvatarDisplay();
+          
+          // Hide modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('customAvatarModal'));
+          modal.hide();
+          
+          // Show success message
+          Utils.showSuccess('Custom avatar saved successfully! Your avatar will now sync across all devices.');
+          
+          // Clear form
+          clearCustomAvatar();
+        })
+        .catch(error => {
+          console.error('❌ Error saving avatar to backend:', error);
+          
+          // Fallback to localStorage only
+          console.log('📱 Falling back to localStorage only...');
+          localStorage.setItem(`bookvault_avatar_${currentUser.id}`, saveUrl);
+          
+          // Update avatar display
+          AvatarManager.updateAvatarDisplay();
+          
+          // Hide modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('customAvatarModal'));
+          modal.hide();
+          
+          // Show warning message
+          Utils.showError('Avatar saved locally, but could not sync to server. It may not appear on other devices.');
+          
+          // Clear form
+          clearCustomAvatar();
+        })
+        .finally(() => {
+          // Reset button state
+          saveButton.disabled = false;
+          saveButton.innerHTML = originalText;
+        });
+    }
+
+    function setCustomAvatarUrl(url) {
+      document.getElementById('customAvatarUrl').value = url;
+      previewCustomAvatar(document.getElementById('customAvatarUrl'));
+    }
+
+    // Make custom avatar functions globally available
+    window.showCustomAvatarModal = showCustomAvatarModal;
+    window.previewCustomAvatar = previewCustomAvatar;
+    window.clearCustomAvatar = clearCustomAvatar;
+    window.saveCustomAvatar = saveCustomAvatar;
+    window.setCustomAvatarUrl = setCustomAvatarUrl;
   </script>
 </body>
 </html>

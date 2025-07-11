@@ -18,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -70,7 +72,7 @@ public class OrderController {
         OrderResponse order = orderService.getOrderById(orderId);
         
         // Ensure user can only access their own orders (unless admin)
-        if (!order.getUserId().equals(userId)) {
+        if (!order.getUserId().equals(userId) && !isCurrentUserAdmin()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied to this order"));
         }
@@ -92,7 +94,7 @@ public class OrderController {
         OrderResponse order = orderService.getOrderByNumber(orderNumber);
         
         // Ensure user can only access their own orders (unless admin)
-        if (!order.getUserId().equals(userId)) {
+        if (!order.getUserId().equals(userId) && !isCurrentUserAdmin()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied to this order"));
         }
@@ -296,5 +298,46 @@ public class OrderController {
         String cancellationReason = reason != null ? reason : "Cancelled by admin";
         OrderResponse order = orderService.cancelOrder(orderId, cancellationReason);
         return ResponseEntity.ok(ApiResponse.success(order, "Order cancelled successfully"));
+    }
+    
+    /**
+     * Get order tracking information
+     */
+    @GetMapping("/{orderId}/tracking")
+    @Operation(summary = "Get order tracking", description = "Get tracking information for an order")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderTracking(
+            @Parameter(description = "Order ID") @PathVariable UUID orderId,
+            @Parameter(description = "User ID") @RequestAttribute("userId") UUID userId) {
+        
+        log.info("Getting tracking info for order: {} by user: {}", orderId, userId);
+        
+        OrderResponse order = orderService.getOrderById(orderId);
+        
+        // Check if user owns this order or is admin
+        if (!order.getUserId().equals(userId) && !isCurrentUserAdmin()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied to this order"));
+        }
+        
+        // Return the order with tracking information
+        return ResponseEntity.ok(ApiResponse.success(order, "Order tracking information retrieved successfully"));
+    }
+    
+    /**
+     * Check if current user has admin role
+     */
+    private boolean isCurrentUserAdmin() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getAuthorities() == null) {
+                return false;
+            }
+            
+            return authentication.getAuthorities().stream()
+                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+        } catch (Exception e) {
+            log.error("Error checking admin role: {}", e.getMessage());
+            return false;
+        }
     }
 } 

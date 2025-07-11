@@ -24,6 +24,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 
 /**
  * REST Controller for book management
@@ -168,17 +179,12 @@ public class BookController {
     public ResponseEntity<ApiResponse<BookResponse>> createBook(
             @Valid @RequestBody BookCreateRequest request) {
         
-        try {
-            // Validate request
-            validateBookCreateRequest(request);
-            
-            BookResponse book = bookService.createBook(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(book, "Book created successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to create book: " + e.getMessage()));
-        }
+        // Validate request
+        validateBookCreateRequest(request);
+        
+        BookResponse book = bookService.createBook(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(book, "Book created successfully"));
     }
     
     @PostMapping("/upload")
@@ -193,58 +199,53 @@ public class BookController {
             @RequestParam("categoryNames") String categoryNames,
             @RequestParam(value = "coverImage", required = false) MultipartFile coverImage) {
         
-        try {
-            // Validate required fields
-            if (title == null || title.trim().isEmpty()) {
-                throw new IllegalArgumentException("Book title is required");
-            }
-            
-            if (author == null || author.trim().isEmpty()) {
-                throw new IllegalArgumentException("Book author is required");
-            }
-            
-            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("Book price must be greater than 0");
-            }
-            
-            if (stockQuantity == null || stockQuantity < 0) {
-                throw new IllegalArgumentException("Stock quantity must be 0 or greater");
-            }
-            
-            // Create BookCreateRequest from form data
-            BookCreateRequest request = new BookCreateRequest();
-            request.setTitle(title.trim());
-            request.setAuthor(author.trim());
-            request.setPrice(price);
-            request.setDescription(description.trim());
-            request.setStockQuantity(stockQuantity);
-            request.setCategoryNames(List.of(categoryNames));
-            
-            // Handle cover image
-            if (coverImage != null && !coverImage.isEmpty()) {
-                // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
-                // In a production environment, you would upload to a cloud storage service
-                String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
-                request.setCoverImageUrl("/asset/img/books/" + fileName);
-                
-                // Log the image details for debugging
-                System.out.println("Image uploaded: " + fileName + " (" + coverImage.getSize() + " bytes)");
-            } else {
-                request.setCoverImageUrl("/asset/img/books/placeholder.jpg");
-            }
-            
-            BookResponse book = bookService.createBook(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(book, "Book created successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to create book: " + e.getMessage()));
+        // Validate required fields
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title is required");
         }
+        
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book author is required");
+        }
+        
+        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Book price must be greater than 0");
+        }
+        
+        if (stockQuantity == null || stockQuantity < 0) {
+            throw new IllegalArgumentException("Stock quantity must be 0 or greater");
+        }
+        
+        // Create BookCreateRequest from form data
+        BookCreateRequest request = new BookCreateRequest();
+        request.setTitle(title.trim());
+        request.setAuthor(author.trim());
+        request.setPrice(price);
+        request.setDescription(description.trim());
+        request.setStockQuantity(stockQuantity);
+        request.setCategoryNames(List.of(categoryNames));
+        
+        // Handle cover image
+        if (coverImage != null && !coverImage.isEmpty()) {
+            // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
+            // In a production environment, you would upload to a cloud storage service
+            String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
+            request.setCoverImageUrl("/asset/img/books/" + fileName);
+            
+            // Log the image details for debugging
+            System.out.println("Image uploaded: " + fileName + " (" + coverImage.getSize() + " bytes)");
+        } else {
+            request.setCoverImageUrl("/asset/img/books/placeholder.jpg");
+        }
+        
+        BookResponse book = bookService.createBook(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(book, "Book created successfully"));
     }
     
     @PutMapping("/{id}")
     @Operation(summary = "Update book", description = "Update existing book details")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<BookResponse>> updateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id,
             @Valid @RequestBody BookUpdateRequest request) {
@@ -255,7 +256,7 @@ public class BookController {
     
     @PutMapping("/{id}/upload")
     @Operation(summary = "Update book with file upload", description = "Update existing book details with cover image file")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<BookResponse>> updateBookWithFile(
             @Parameter(description = "Book ID") @PathVariable UUID id,
             @RequestParam("title") String title,
@@ -266,58 +267,53 @@ public class BookController {
             @RequestParam("categoryNames") String categoryNames,
             @RequestParam(value = "coverImage", required = false) MultipartFile coverImage) {
         
-        try {
-            // Validate required fields
-            if (title == null || title.trim().isEmpty()) {
-                throw new IllegalArgumentException("Book title is required");
-            }
-            
-            if (author == null || author.trim().isEmpty()) {
-                throw new IllegalArgumentException("Book author is required");
-            }
-            
-            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("Book price must be greater than 0");
-            }
-            
-            if (stockQuantity == null || stockQuantity < 0) {
-                throw new IllegalArgumentException("Stock quantity must be 0 or greater");
-            }
-            
-            // Create BookUpdateRequest from form data
-            BookUpdateRequest request = new BookUpdateRequest();
-            request.setTitle(title.trim());
-            request.setAuthor(author.trim());
-            request.setPrice(price);
-            request.setDescription(description.trim());
-            request.setStockQuantity(stockQuantity);
-            request.setCategoryNames(List.of(categoryNames));
-            
-            // Handle cover image
-            if (coverImage != null && !coverImage.isEmpty()) {
-                // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
-                // In a production environment, you would upload to a cloud storage service
-                String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
-                request.setCoverImageUrl("/asset/img/books/" + fileName);
-                
-                // Log the image details for debugging
-                System.out.println("Image uploaded for update: " + fileName + " (" + coverImage.getSize() + " bytes)");
-            } else {
-                // Keep existing cover image URL if no new image provided
-                request.setCoverImageUrl(null);
-            }
-            
-            BookResponse book = bookService.updateBook(id, request);
-            return ResponseEntity.ok(ApiResponse.success(book, "Book updated successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to update book: " + e.getMessage()));
+        // Validate required fields
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title is required");
         }
+        
+        if (author == null || author.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book author is required");
+        }
+        
+        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Book price must be greater than 0");
+        }
+        
+        if (stockQuantity == null || stockQuantity < 0) {
+            throw new IllegalArgumentException("Stock quantity must be 0 or greater");
+        }
+        
+        // Create BookUpdateRequest from form data
+        BookUpdateRequest request = new BookUpdateRequest();
+        request.setTitle(title.trim());
+        request.setAuthor(author.trim());
+        request.setPrice(price);
+        request.setDescription(description.trim());
+        request.setStockQuantity(stockQuantity);
+        request.setCategoryNames(List.of(categoryNames));
+        
+        // Handle cover image
+        if (coverImage != null && !coverImage.isEmpty()) {
+            // For now, store a placeholder URL instead of base64 to avoid PostgreSQL issues
+            // In a production environment, you would upload to a cloud storage service
+            String fileName = "book_" + System.currentTimeMillis() + "_" + coverImage.getOriginalFilename();
+            request.setCoverImageUrl("/asset/img/books/" + fileName);
+            
+            // Log the image details for debugging
+            System.out.println("Image uploaded for update: " + fileName + " (" + coverImage.getSize() + " bytes)");
+        } else {
+            // Keep existing cover image URL if no new image provided
+            request.setCoverImageUrl(null);
+        }
+        
+        BookResponse book = bookService.updateBook(id, request);
+        return ResponseEntity.ok(ApiResponse.success(book, "Book updated successfully"));
     }
     
     @PatchMapping("/{id}/stock")
     @Operation(summary = "Update book stock", description = "Update book stock quantity")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> updateBookStock(
             @Parameter(description = "Book ID") @PathVariable UUID id,
             @Parameter(description = "New stock quantity") @RequestParam Integer stockQuantity) {
@@ -328,7 +324,7 @@ public class BookController {
     
     @PatchMapping("/{id}/activate")
     @Operation(summary = "Activate book", description = "Activate book listing")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> activateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -338,7 +334,7 @@ public class BookController {
     
     @PatchMapping("/{id}/deactivate")
     @Operation(summary = "Deactivate book", description = "Deactivate book listing")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> deactivateBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -348,7 +344,7 @@ public class BookController {
     
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete book", description = "Delete book listing")
-    @PreAuthorize("hasRole('SELLER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SELLER')")
     public ResponseEntity<ApiResponse<String>> deleteBook(
             @Parameter(description = "Book ID") @PathVariable UUID id) {
         
@@ -416,6 +412,75 @@ public class BookController {
         }
     }
     
+    @GetMapping("/proxy-image")
+    @Operation(summary = "Proxy image for CORS", description = "Proxy external image URLs to avoid CORS issues")
+    public ResponseEntity<Resource> proxyImage(@RequestParam String url) {
+        try {
+            // Validate URL
+            if (url == null || url.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Basic URL validation
+            URL imageUrl = new URL(url);
+            String protocol = imageUrl.getProtocol();
+            if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Open connection
+            URLConnection connection = imageUrl.openConnection();
+            connection.setRequestProperty("User-Agent", "BookVault/1.0");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
+            
+            // Read the image
+            try (InputStream inputStream = connection.getInputStream();
+                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+                
+                byte[] imageBytes = outputStream.toByteArray();
+                
+                // Determine content type
+                String contentType = connection.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    // Try to guess from URL
+                    String lowerUrl = url.toLowerCase();
+                    if (lowerUrl.contains(".jpg") || lowerUrl.contains(".jpeg")) {
+                        contentType = "image/jpeg";
+                    } else if (lowerUrl.contains(".png")) {
+                        contentType = "image/png";
+                    } else if (lowerUrl.contains(".gif")) {
+                        contentType = "image/gif";
+                    } else if (lowerUrl.contains(".webp")) {
+                        contentType = "image/webp";
+                    } else {
+                        contentType = "image/jpeg"; // Default
+                    }
+                }
+                
+                // Create response
+                ByteArrayResource resource = new ByteArrayResource(imageBytes);
+                
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, contentType)
+                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
+                        .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                        .body(resource);
+            }
+            
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
     /**
      * Get current user ID from security context
      */
@@ -462,5 +527,18 @@ public class BookController {
                 throw new IllegalArgumentException("ISBN must be 10 or 13 digits");
             }
         }
+    }
+
+    /**
+     * Check if current user has admin role
+     */
+    private boolean isCurrentUserAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        
+        return authentication.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
     }
 } 

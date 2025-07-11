@@ -24,13 +24,17 @@ public class UpdateProfileRequest {
     @Size(max = 20, message = "Phone must not exceed 20 characters")
     private String phone;
     
+    @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
+    private String avatarUrl;
+    
     // Constructors
     public UpdateProfileRequest() {}
     
-    public UpdateProfileRequest(String firstName, String lastName, String phone) {
+    public UpdateProfileRequest(String firstName, String lastName, String phone, String avatarUrl) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.phone = phone;
+        this.avatarUrl = avatarUrl;
     }
     
     // Builder pattern
@@ -42,6 +46,7 @@ public class UpdateProfileRequest {
         private String firstName;
         private String lastName;
         private String phone;
+        private String avatarUrl;
         
         public Builder firstName(String firstName) {
             this.firstName = firstName;
@@ -58,8 +63,13 @@ public class UpdateProfileRequest {
             return this;
         }
         
+        public Builder avatarUrl(String avatarUrl) {
+            this.avatarUrl = avatarUrl;
+            return this;
+        }
+        
         public UpdateProfileRequest build() {
-            return new UpdateProfileRequest(firstName, lastName, phone);
+            return new UpdateProfileRequest(firstName, lastName, phone, avatarUrl);
         }
     }
     
@@ -86,5 +96,13 @@ public class UpdateProfileRequest {
     
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+    
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 } 

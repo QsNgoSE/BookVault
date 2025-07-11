@@ -71,6 +71,7 @@ const BookVaultConfig = {
         // Admin
         ADMIN: {
             USERS: '/admin/users',
+            SELLERS: '/admin/sellers',
             BOOKS: '/admin/books',
             ORDERS: '/admin/orders',
             ANALYTICS: '/admin/analytics'

@@ -10,7 +10,31 @@
   <link rel="stylesheet" href="asset/css/seller.css">
 
 <style>
+    /* Edit Seller Profile Modal - Form Label Colors */
+    #editSellerProfileModal .form-label {
+      color: #d18e07;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
     
+    #editSellerProfileModal .form-label:hover {
+      color: #b8791a;
+    }
+    
+    /* Small helper text styling */
+    #editSellerProfileModal .form-text {
+      color: #6c757d;
+      font-size: 0.875rem;
+    }
+    
+    /* Character counter styling */
+    #editSellerProfileModal .form-text.text-muted {
+      color: #6c757d !important;
+    }
+    
+    #editSellerProfileModal .form-text.text-danger {
+      color: #dc3545 !important;
+    }
   </style>
   <!-- Chart.js CDN for revenue chart (optional) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -116,12 +140,12 @@
           </div>
     </div>
     <div class="flex-grow-1">
-      <h4 class="mb-0 fw-bold" style="color:#d18e07;">BookStore by Seller</h4>
+      <h4 class="mb-0 fw-bold seller-store-name" style="color:#d18e07;">BookStore by Seller</h4>
       <div class="mb-1" style="color:#856100;">Premium Book Seller • Since 2022</div>
-      <div class="mb-2 small">
-        <span class="me-3"><i class="bi bi-geo-alt text-warning"></i> London, UK</span>
-        <span class="me-3"><i class="bi bi-envelope"></i> john@example.com</span>
-        <span><i class="bi bi-telephone"></i> +44 7890 123456</span>
+      <div class="mb-2 small seller-contact-info">
+        <span class="me-3 seller-location"><i class="bi bi-geo-alt text-warning"></i> <span class="location-text">Location not set</span></span>
+        <span class="me-3 seller-email"><i class="bi bi-envelope"></i> <span class="email-text">user@email.com</span></span>
+        <span class="seller-phone"><i class="bi bi-telephone"></i> <span class="phone-text">Phone not set</span></span>
       </div>
       <div class="mb-2">
         <span class="me-1 text-warning">
@@ -132,7 +156,7 @@
         <span class="fw-bold" style="color:#d18e07;">4.8</span>
         <span class="text-muted small ms-2">(243 reviews)</span>
       </div>
-      <div class="mb-2" style="color:#646464;">
+      <div class="mb-2 seller-bio" style="color:#646464;">
         Sharing my love of books with readers worldwide. Specializing in rare editions, children’s stories, and trending bestsellers.
       </div>
       <button class="btn btn-outline-warning btn-sm rounded-pill px-3 mt-2" onclick="showEditSellerProfileModal()">
@@ -182,34 +206,10 @@
               <input type="number" class="form-control" id="bookStock" name="bookStock" placeholder="Available quantity" min="1" value="1" required>
             </div>
             <div class="mb-3">
-              <label for="bookCoverImage" class="form-label">Cover Image</label>
+              <label for="bookCoverUrl" class="form-label">Cover Image URL</label>
               
-              <!-- Image Source Selection -->
-              <div class="mb-2">
-                <div class="btn-group w-100" role="group" aria-label="Image source selection">
-                  <input type="radio" class="btn-check" name="imageSource" id="imageSourceFile" value="file" checked>
-                  <label class="btn btn-outline-primary" for="imageSourceFile">
-                    <i class="bi bi-upload"></i> Upload File
-                  </label>
-                  
-                  <input type="radio" class="btn-check" name="imageSource" id="imageSourceUrl" value="url">
-                  <label class="btn btn-outline-primary" for="imageSourceUrl">
-                    <i class="bi bi-link-45deg"></i> Use URL
-                  </label>
-                </div>
-              </div>
-
-              <!-- File Upload Section -->
-              <div id="fileUploadSection">
-                <div class="input-group">
-                  <input type="file" class="form-control" id="bookCoverImage" name="bookCoverImage" accept="image/*" onchange="previewImage(this)">
-                  <button class="btn btn-outline-secondary" type="button" onclick="clearImage()">Clear</button>
-                </div>
-                <small class="form-text text-muted">Upload JPG, PNG, or GIF. Max size: 100KB for database storage.</small>
-              </div>
-
               <!-- URL Input Section -->
-              <div id="urlInputSection" style="display: none;">
+              <div id="urlInputSection">
                 <div class="input-group">
                   <input type="url" class="form-control" id="bookCoverUrl" name="bookCoverUrl" placeholder="https://example.com/book-cover.jpg" onchange="previewImageUrl(this)">
                   <button class="btn btn-outline-secondary" type="button" onclick="clearImageUrl()">Clear</button>
@@ -492,6 +492,11 @@
         // Initialize avatar display
         AvatarManager.updateAvatarDisplay();
         
+        // Initialize seller profile display
+        setTimeout(() => {
+            initializeSellerProfileDisplay();
+        }, 500);
+        
         // Ensure SellerManager is available globally
         setTimeout(() => {
             if (window.BookVault && window.BookVault.SellerManager) {
@@ -568,34 +573,10 @@
               </div>
               <div class="col-md-4">
                 <div class="mb-3">
-                  <label for="editBookCoverImage" class="form-label">Cover Image</label>
+                  <label for="editBookCoverUrl" class="form-label">Cover Image URL</label>
                   
-                  <!-- Image Source Selection -->
-                  <div class="mb-2">
-                    <div class="btn-group w-100" role="group" aria-label="Edit image source selection">
-                      <input type="radio" class="btn-check" name="editImageSource" id="editImageSourceFile" value="file" checked>
-                      <label class="btn btn-outline-primary" for="editImageSourceFile">
-                        <i class="bi bi-upload"></i> Upload File
-                      </label>
-                      
-                      <input type="radio" class="btn-check" name="editImageSource" id="editImageSourceUrl" value="url">
-                      <label class="btn btn-outline-primary" for="editImageSourceUrl">
-                        <i class="bi bi-link-45deg"></i> Use URL
-                      </label>
-                    </div>
-                  </div>
-
-                  <!-- File Upload Section -->
-                  <div id="editFileUploadSection">
-                    <div class="input-group">
-                      <input type="file" class="form-control" id="editBookCoverImage" name="editBookCoverImage" accept="image/*" onchange="previewEditImage(this)">
-                      <button class="btn btn-outline-secondary" type="button" onclick="clearEditImage()">Clear</button>
-                    </div>
-                    <small class="form-text text-muted">Max size: 100KB for database storage.</small>
-                  </div>
-
                   <!-- URL Input Section -->
-                  <div id="editUrlInputSection" style="display: none;">
+                  <div id="editUrlInputSection">
                     <div class="input-group">
                       <input type="url" class="form-control" id="editBookCoverUrl" name="editBookCoverUrl" placeholder="https://example.com/book-cover.jpg" onchange="previewEditImageUrl(this)">
                       <button class="btn btn-outline-secondary" type="button" onclick="clearEditImageUrl()">Clear</button>
@@ -714,86 +695,15 @@
 
   <!-- Image Upload Functions -->
   <script>
-    // Global variables to store the uploaded image data
-    let uploadedImageData = null;
-    let editUploadedImageData = null;
+    // No longer needed - removed file upload functionality
 
-    // Initialize image source switching
+    // Initialize image previews
     document.addEventListener('DOMContentLoaded', function() {
-        // Add event listeners for image source switching
-        const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
-        imageSourceRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                toggleImageSource(this.value);
-            });
-        });
-
-        const editImageSourceRadios = document.querySelectorAll('input[name="editImageSource"]');
-        editImageSourceRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                toggleEditImageSource(this.value);
-            });
-        });
+        // No need for image source switching since we only use URL inputs now
+        console.log('📸 Image URL functionality initialized');
     });
 
-    // Toggle between file upload and URL input
-    function toggleImageSource(source) {
-        const fileSection = document.getElementById('fileUploadSection');
-        const urlSection = document.getElementById('urlInputSection');
-        
-        if (source === 'file') {
-            fileSection.style.display = 'block';
-            urlSection.style.display = 'none';
-            clearImageUrl();
-        } else {
-            fileSection.style.display = 'none';
-            urlSection.style.display = 'block';
-            clearImage();
-        }
-    }
-
-    // Toggle between file upload and URL input for edit modal
-    function toggleEditImageSource(source) {
-        const fileSection = document.getElementById('editFileUploadSection');
-        const urlSection = document.getElementById('editUrlInputSection');
-        
-        if (source === 'file') {
-            fileSection.style.display = 'block';
-            urlSection.style.display = 'none';
-            clearEditImageUrl();
-        } else {
-            fileSection.style.display = 'none';
-            urlSection.style.display = 'block';
-            clearEditImage();
-        }
-    }
-
-    // Preview uploaded image
-    function previewImage(input) {
-        const file = input.files[0];
-        if (file) {
-            // Validate file size (100KB limit for PostgreSQL)
-            if (file.size > 100 * 1024) {
-                alert('Image size must be less than 100KB for database storage');
-                input.value = '';
-                return;
-            }
-
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Please select a valid image file');
-                input.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                showImagePreview(e.target.result, 'imagePreview', 'previewImg', 'imageStatus');
-                uploadedImageData = null;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
+    // No longer needed - removed file upload functionality
 
     // Preview image from URL
     function previewImageUrl(input) {
@@ -803,33 +713,7 @@
         }
     }
 
-    // Preview edit image from file
-    function previewEditImage(input) {
-        const file = input.files[0];
-        if (file) {
-            // Validate file size (100KB limit for PostgreSQL)
-            if (file.size > 100 * 1024) {
-                alert('Image size must be less than 100KB for database storage');
-                input.value = '';
-                return;
-            }
-
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                alert('Please select a valid image file');
-                input.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                showImagePreview(e.target.result, 'editImagePreview', 'editPreviewImg', 'editImageStatus');
-                editUploadedImageData = null;
-                window.editUploadedImageData = null;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
+    // No longer needed - removed file upload functionality
 
     // Preview edit image from URL
     function previewEditImageUrl(input) {
@@ -885,17 +769,7 @@
         statusElement.className = 'text-success';
     }
 
-    // Clear uploaded image
-    function clearImage() {
-        const input = document.getElementById('bookCoverImage');
-        const preview = document.getElementById('imagePreview');
-        const previewImg = document.getElementById('previewImg');
-        
-        input.value = '';
-        preview.style.display = 'none';
-        previewImg.src = '';
-        uploadedImageData = null;
-    }
+    // No longer needed - removed file upload functionality
 
     // Clear image URL
     function clearImageUrl() {
@@ -908,18 +782,7 @@
         previewImg.src = '';
     }
 
-    // Clear edit image
-    function clearEditImage() {
-        const input = document.getElementById('editBookCoverImage');
-        const preview = document.getElementById('editImagePreview');
-        const previewImg = document.getElementById('editPreviewImg');
-        
-        input.value = '';
-        preview.style.display = 'none';
-        previewImg.src = '';
-        editUploadedImageData = null;
-        window.editUploadedImageData = null;
-    }
+    // No longer needed - removed file upload functionality
 
     // Clear edit image URL
     function clearEditImageUrl() {
@@ -934,28 +797,12 @@
 
     // Get current image URL (for form submission)
     function getCurrentImageUrl() {
-        const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
-        const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
-        
-        if (selectedSource === 'url') {
-            return document.getElementById('bookCoverUrl').value.trim();
-        } else {
-            // For file upload, return null - handled separately
-            return null;
-        }
+        return document.getElementById('bookCoverUrl').value.trim();
     }
 
     // Get current edit image URL (for form submission)
     function getCurrentEditImageUrl() {
-        const imageSourceRadios = document.querySelectorAll('input[name="editImageSource"]');
-        const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
-        
-        if (selectedSource === 'url') {
-            return document.getElementById('editBookCoverUrl').value.trim();
-        } else {
-            // For file upload, return null - handled separately
-            return null;
-        }
+        return document.getElementById('editBookCoverUrl').value.trim();
     }
   </script>
 
@@ -981,9 +828,25 @@
                 <div class="invalid-feedback">Please enter your last name.</div>
               </div>
               <div class="col-12">
+                <label for="sellerStoreName" class="form-label">Store/Business Name</label>
+                <input type="text" class="form-control" id="sellerStoreName" name="storeName" placeholder="e.g., Smith's Bookstore">
+                <div class="invalid-feedback">Please enter a valid store name.</div>
+              </div>
+              <div class="col-md-6">
                 <label for="sellerPhone" class="form-label">Phone Number</label>
                 <input type="tel" class="form-control" id="sellerPhone" name="phone" placeholder="Optional">
                 <div class="invalid-feedback">Please enter a valid phone number.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="sellerLocation" class="form-label">Location</label>
+                <input type="text" class="form-control" id="sellerLocation" name="location" placeholder="e.g., London, UK">
+                <div class="invalid-feedback">Please enter a valid location.</div>
+              </div>
+              <div class="col-12">
+                <label for="sellerBio" class="form-label">About Your Bookstore</label>
+                <textarea class="form-control" id="sellerBio" name="bio" rows="3" placeholder="Tell customers about your bookstore, what makes it special, and what types of books you specialize in..."></textarea>
+                <small class="form-text text-muted">500 characters remaining (max 500 characters)</small>
+                <div class="invalid-feedback">Bio must be 500 characters or less.</div>
               </div>
             </div>
           </div>
@@ -1004,12 +867,18 @@
     function showEditSellerProfileModal() {
       const user = AuthManager.getCurrentUser();
       const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+      const sellerProfile = JSON.parse(localStorage.getItem('bookvault_seller_profile') || '{}');
       
       if (user) {
         // Pre-populate form with current values
         document.getElementById('sellerFirstName').value = userProfile.firstName || user.firstName || '';
         document.getElementById('sellerLastName').value = userProfile.lastName || user.lastName || '';
         document.getElementById('sellerPhone').value = userProfile.phone || user.phone || '';
+        
+        // Pre-populate seller-specific fields from localStorage
+        document.getElementById('sellerStoreName').value = sellerProfile.storeName || '';
+        document.getElementById('sellerLocation').value = sellerProfile.location || '';
+        document.getElementById('sellerBio').value = sellerProfile.bio || '';
         
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('editSellerProfileModal'));
@@ -1050,6 +919,13 @@
               phone: formData.get('phone').trim() || null
             };
             
+            // Get seller-specific data
+            const sellerData = {
+              storeName: formData.get('storeName').trim() || '',
+              location: formData.get('location').trim() || '',
+              bio: formData.get('bio').trim() || ''
+            };
+            
             // Validate form
             if (!updateData.firstName || !updateData.lastName) {
               throw new Error('First name and last name are required');
@@ -1058,6 +934,11 @@
             // Validate phone number if provided
             if (updateData.phone && !Utils.isValidPhoneNumber(updateData.phone)) {
               throw new Error('Please enter a valid phone number');
+            }
+            
+            // Validate seller-specific fields
+            if (sellerData.bio && sellerData.bio.length > 500) {
+              throw new Error('Bio must be 500 characters or less');
             }
             
             console.log('Updating seller profile with:', updateData);
@@ -1071,8 +952,11 @@
             const updatedProfile = response.data || response;
             localStorage.setItem('bookvault_user_profile', JSON.stringify(updatedProfile));
             
+            // Save seller-specific data to localStorage
+            localStorage.setItem('bookvault_seller_profile', JSON.stringify(sellerData));
+            
             // Update UI
-            updateSellerProfileDisplay(updatedProfile);
+            updateSellerProfileDisplay(updatedProfile, sellerData);
             
             // Hide modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('editSellerProfileModal'));
@@ -1098,6 +982,9 @@
             if (error.message.includes('phone')) {
               document.getElementById('sellerPhone').classList.add('is-invalid');
             }
+            if (error.message.includes('Bio must be')) {
+              document.getElementById('sellerBio').classList.add('is-invalid');
+            }
             
           } finally {
             // Hide loading state
@@ -1107,33 +994,89 @@
         });
         
         // Clear validation errors on input
-        const formFields = editSellerProfileForm.querySelectorAll('input');
+        const formFields = editSellerProfileForm.querySelectorAll('input, textarea');
         formFields.forEach(field => {
           field.addEventListener('input', function() {
             this.classList.remove('is-invalid');
           });
         });
+        
+        // Add character counter for bio field
+        const bioField = document.getElementById('sellerBio');
+        if (bioField) {
+          bioField.addEventListener('input', function() {
+            const length = this.value.length;
+            const maxLength = 500;
+            const remaining = maxLength - length;
+            const helpText = this.nextElementSibling;
+            
+            if (remaining < 0) {
+              helpText.textContent = `Bio is ${Math.abs(remaining)} characters over the limit (max 500 characters)`;
+              helpText.className = 'form-text text-danger';
+              this.classList.add('is-invalid');
+            } else {
+              helpText.textContent = `${remaining} characters remaining (max 500 characters)`;
+                              helpText.className = 'form-text text-muted';
+                this.classList.remove('is-invalid');
+              }
+            });
+            
+            // Trigger character count update on initial load
+            bioField.dispatchEvent(new Event('input'));
+          }
       }
     });
 
-    // Update seller profile display
-    function updateSellerProfileDisplay(profile) {
-      const sellerNameElement = document.querySelector('.dashboard-card h4');
-      const sellerDetailsElement = document.querySelector('.dashboard-card .mb-2.small');
+    // Initialize seller profile display on page load
+    function initializeSellerProfileDisplay() {
+      const user = AuthManager.getCurrentUser();
+      const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
+      const sellerProfile = JSON.parse(localStorage.getItem('bookvault_seller_profile') || '{}');
       
+      if (user) {
+        // Combine user data with stored profile data
+        const combinedProfile = {
+          firstName: userProfile.firstName || user.firstName,
+          lastName: userProfile.lastName || user.lastName,
+          email: userProfile.email || user.email,
+          phone: userProfile.phone || user.phone
+        };
+        
+        updateSellerProfileDisplay(combinedProfile, sellerProfile);
+      }
+    }
+
+    // Update seller profile display
+    function updateSellerProfileDisplay(profile, sellerData = {}) {
+      // Update store name
+      const sellerNameElement = document.querySelector('.seller-store-name');
       if (sellerNameElement && profile.firstName && profile.lastName) {
-        // Update the seller name display
-        const currentText = sellerNameElement.textContent;
-        const storeName = currentText.includes('by') ? currentText.split(' by ')[0] : 'BookStore';
+        const storeName = sellerData.storeName || 'BookStore';
         sellerNameElement.textContent = `${storeName} by ${profile.firstName} ${profile.lastName}`;
       }
       
-      if (sellerDetailsElement && profile.phone) {
-        // Update phone display if provided
-        const phoneSpan = sellerDetailsElement.querySelector('span:last-child');
-        if (phoneSpan) {
-          phoneSpan.innerHTML = `<i class="bi bi-telephone"></i> ${profile.phone}`;
-        }
+      // Update email
+      const emailText = document.querySelector('.email-text');
+      if (emailText && profile.email) {
+        emailText.textContent = profile.email;
+      }
+      
+      // Update phone
+      const phoneText = document.querySelector('.phone-text');
+      if (phoneText) {
+        phoneText.textContent = profile.phone || 'Phone not set';
+      }
+      
+      // Update location
+      const locationText = document.querySelector('.location-text');
+      if (locationText) {
+        locationText.textContent = sellerData.location || 'Location not set';
+      }
+      
+      // Update bio
+      const sellerBio = document.querySelector('.seller-bio');
+      if (sellerBio) {
+        sellerBio.textContent = sellerData.bio || 'Tell customers about your bookstore and what makes it special.';
       }
     }
   </script>

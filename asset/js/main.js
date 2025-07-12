@@ -2757,66 +2757,23 @@ const SellerManager = {
             formData.append('categoryIds', selectedCategoryId);
             formData.append('categoryNames', selectedCategoryName);
             
-            // Handle image input - check if user selected URL option
-            const imageSourceRadios = document.querySelectorAll('input[name="imageSource"]');
-            const selectedSource = Array.from(imageSourceRadios).find(radio => radio.checked)?.value;
+            // Handle image input - only URL is supported now
+            const imageUrl = document.getElementById('bookCoverUrl')?.value?.trim();
             
-            if (selectedSource === 'url') {
-                // Use URL input
-                const imageUrl = document.getElementById('bookCoverUrl')?.value?.trim();
-                if (imageUrl) {
-                    // For URL input, send as JSON instead of FormData
-                    const bookData = {
-                        title: form.bookTitle.value.trim(),
-                        author: form.bookAuthor.value.trim(),
-                        price: parseFloat(form.bookPrice.value),
-                        description: form.bookDesc.value.trim(),
-                        stockQuantity: parseInt(form.bookStock?.value || 1),
-                        categoryNames: [selectedCategoryName],
-                        coverImageUrl: imageUrl
-                    };
-                    
-                    console.log('Sending book data with URL:', bookData);
-                    const response = await APIService.seller.createBook(bookData);
-                    Utils.showSuccess('Book uploaded successfully!');
-                } else {
-                    // No URL provided, send without image
-                    const bookData = {
-                        title: form.bookTitle.value.trim(),
-                        author: form.bookAuthor.value.trim(),
-                        price: parseFloat(form.bookPrice.value),
-                        description: form.bookDesc.value.trim(),
-                        stockQuantity: parseInt(form.bookStock?.value || 1),
-                        categoryNames: [selectedCategoryName],
-                        coverImageUrl: null
-                    };
-                    
-                    console.log('Sending book data without image:', bookData);
-                    const response = await APIService.seller.createBook(bookData);
-                    Utils.showSuccess('Book uploaded successfully!');
-                }
-            } else {
-                // Use file upload
-                const imageFile = form.bookCoverImage.files[0];
-                if (imageFile) {
-                    formData.append('coverImage', imageFile);
-                }
-
-                // Debug: Log the form data
-                console.log('FormData to send:', {
-                    title: formData.get('title'),
-                    author: formData.get('author'),
-                    price: formData.get('price'),
-                    description: formData.get('description'),
-                    stockQuantity: formData.get('stockQuantity'),
-                    categoryIds: formData.get('categoryIds'),
-                    categoryNames: formData.get('categoryNames'),
-                    hasImage: !!imageFile
-                });
-
-                const response = await APIService.seller.createBookWithFile(formData);
-                Utils.showSuccess('Book uploaded successfully!');
-            }
+            // Send as JSON (no file upload anymore)
+            const bookData = {
+                title: form.bookTitle.value.trim(),
+                author: form.bookAuthor.value.trim(),
+                price: parseFloat(form.bookPrice.value),
+                description: form.bookDesc.value.trim(),
+                stockQuantity: parseInt(form.bookStock?.value || 1),
+                categoryNames: [selectedCategoryName],
+                coverImageUrl: imageUrl || null
+            };
+            
+            console.log('Sending book data:', bookData);
+            const response = await APIService.seller.createBook(bookData);
+            Utils.showSuccess('Book uploaded successfully!');
             
             // Reset form
             form.reset();
@@ -2825,16 +2782,6 @@ const SellerManager = {
             const preview = document.getElementById('imagePreview');
             if (preview) {
                 preview.style.display = 'none';
-            }
-            
-            // Reset image source selection
-            const fileSourceRadio = document.getElementById('imageSourceFile');
-            if (fileSourceRadio) {
-                fileSourceRadio.checked = true;
-                // Trigger change event to reset sections
-                if (typeof toggleImageSource === 'function') {
-                    toggleImageSource('file');
-                }
             }
             
             // Refresh seller dashboard
@@ -2910,92 +2857,49 @@ const SellerManager = {
         if (!bookId || !bookData) {
             bookId = document.getElementById('editBookId').value;
             
-            // Check if there's a file upload
-            const imageFile = document.getElementById('editBookCoverImage').files[0];
+            // Get URL from the URL input field (no file upload anymore)
+            const imageUrl = document.getElementById('editBookCoverUrl')?.value?.trim();
             
-            if (imageFile) {
-                // Use FormData for file upload
-                const formData = new FormData();
-                formData.append('title', document.getElementById('editBookTitle').value.trim());
-                formData.append('author', document.getElementById('editBookAuthor').value.trim());
-                formData.append('price', document.getElementById('editBookPrice').value);
-                formData.append('description', document.getElementById('editBookDesc').value.trim());
-                formData.append('stockQuantity', document.getElementById('editBookStock').value || 1);
-                formData.append('categoryNames', document.getElementById('editBookGenre').value ? document.getElementById('editBookGenre').value.trim() : 'General');
-                formData.append('coverImage', imageFile);
+            // Use regular JSON update (no file upload)
+            bookData = {
+                title: document.getElementById('editBookTitle').value.trim(),
+                author: document.getElementById('editBookAuthor').value.trim(),
+                price: parseFloat(document.getElementById('editBookPrice').value).toString(),
+                description: document.getElementById('editBookDesc').value.trim(),
+                stockQuantity: parseInt(document.getElementById('editBookStock').value || 1),
+                coverImageUrl: imageUrl || null,
+                language: null,
+                pageCount: null,
+                publisher: null
+            };
 
-                // Validate required fields
-                if (!formData.get('title') || !formData.get('author') || !formData.get('price') || !formData.get('description')) {
-                    Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
-                    return;
+            // Validate required fields
+            if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
+                Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
+                return;
+            }
+
+            try {
+                Utils.showLoading('Updating book...');
+                
+                // Use the regular update API call
+                let response = await APIService.seller.updateBook(bookId, bookData);
+                
+                if (response.success) {
+                    Utils.showSuccess('Book updated successfully!');
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                    modal.hide();
+                    // Reload seller dashboard
+                    this.loadSellerDashboard();
+                } else {
+                    Utils.showError(response.message || 'Failed to update book');
                 }
-
-                try {
-                    Utils.showLoading('Updating book...');
-                    
-                    // Use the file upload endpoint
-                    let response = await APIService.seller.updateBookWithFile(bookId, formData);
-                    
-                    if (response.success) {
-                        Utils.showSuccess('Book updated successfully!');
-                        // Close modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
-                        modal.hide();
-                        // Reload seller dashboard
-                        this.loadSellerDashboard();
-                    } else {
-                        Utils.showError(response.message || 'Failed to update book');
-                    }
-                } catch (error) {
-                    console.error('Error updating book:', error);
-                    Utils.showError('Failed to update book. Please try again.');
-                } finally {
-                    Utils.hideLoading();
-                }
-            } else {
-                // No file upload, use regular JSON update
-                bookData = {
-                    title: document.getElementById('editBookTitle').value.trim(),
-                    author: document.getElementById('editBookAuthor').value.trim(),
-                    price: parseFloat(document.getElementById('editBookPrice').value).toString(),
-                    description: document.getElementById('editBookDesc').value.trim(),
-                    stockQuantity: parseInt(document.getElementById('editBookStock').value || 1),
-                    language: null,
-                    pageCount: null,
-                    publisher: null
-                };
-
-                // Handle uploaded image data - we'll send the file directly, not base64
-                bookData.coverImageUrl = null;
-
-                // Validate required fields
-                if (!bookData.title || !bookData.author || !bookData.price || !bookData.description) {
-                    Utils.showError('Please fill in all required fields (Title, Author, Price, Description).');
-                    return;
-                }
-
-                try {
-                    Utils.showLoading('Updating book...');
-                    
-                    // Try the API call first
-                    let response = await APIService.seller.updateBook(bookId, bookData);
-                    
-                    if (response.success) {
-                        Utils.showSuccess('Book updated successfully!');
-                        // Close modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
-                        modal.hide();
-                        // Reload seller dashboard
-                        this.loadSellerDashboard();
-                    } else {
-                        Utils.showError(response.message || 'Failed to update book');
-                    }
-                } catch (error) {
-                    console.error('Error updating book:', error);
-                    Utils.showError('Failed to update book. Please try again.');
-                } finally {
-                    Utils.hideLoading();
-                }
+            } catch (error) {
+                console.error('Error updating book:', error);
+                Utils.showError('Failed to update book. Please try again.');
+            } finally {
+                Utils.hideLoading();
             }
         } else {
             // Parameters provided, use regular update

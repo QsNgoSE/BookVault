@@ -104,19 +104,19 @@ const AvatarManager = {
         // First check if we have avatar URL from backend (user profile)
         const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
         if (userProfile.avatarUrl) {
-            console.log('🖼️ Using avatar from backend profile:', userProfile.avatarUrl);
+            // Using avatar from backend profile
             return userProfile.avatarUrl;
         }
         
         // Fallback to localStorage (legacy support)
         const storedAvatar = localStorage.getItem(`bookvault_avatar_${userId}`);
         if (storedAvatar) {
-            console.log('🖼️ Using avatar from localStorage:', storedAvatar);
+            // Using avatar from localStorage
             return storedAvatar;
         }
         
         // Default avatar
-        console.log('🖼️ Using default avatar');
+        // Using default avatar
         return 'asset/img/avatars/default-avatar.png';
     },
 
@@ -128,10 +128,10 @@ const AvatarManager = {
         // Also try to save to backend (async, non-blocking)
         const currentUser = AuthManager.getCurrentUser();
         if (currentUser && (currentUser.userId === userId || currentUser.id === userId)) {
-            console.log('🔄 Syncing avatar to backend:', avatarUrl);
+            // Sync avatar to backend
             APIService.auth.updateProfile(currentUser.userId || currentUser.id, { avatarUrl })
                 .then(response => {
-                    console.log('✅ Avatar synced to backend successfully');
+                    // Avatar synced to backend successfully
                     // Update stored user profile
                     const userProfile = JSON.parse(localStorage.getItem('bookvault_user_profile') || '{}');
                     userProfile.avatarUrl = avatarUrl;
@@ -330,10 +330,7 @@ const CartManager = {
             return false;
         }
 
-        console.log('🛍️ AddToCart called with:', { 
-            book: { id: book.id, title: book.title, author: book.author, price: book.price }, 
-            quantity 
-        });
+        // Adding item to cart
         
         // Validate required book data
         if (!book || !book.id || !book.title || !book.author || book.price == null || book.price <= 0) {
@@ -343,7 +340,7 @@ const CartManager = {
         }
         
         const cart = this.getCart();
-        console.log('📦 Current cart before add:', cart);
+        // Current cart before add
         
         const existingItem = cart.find(item => String(item.id) === String(book.id));
         
@@ -390,7 +387,7 @@ const CartManager = {
             this.showCartNotification(`Added "${book.title}" to cart!`);
         }
         
-        console.log('📦 Cart after add:', cart);
+        // Cart updated
         this.saveCart(cart);
         this.updateCartUI();
         return true;
@@ -424,7 +421,7 @@ const CartManager = {
         // Ensure bookId is treated as string for consistency
         const searchId = String(bookId);
         
-        // Debug cart search
+                    // Search for item in cart
         console.log(`🔍 Looking for item ${searchId} in cart with ${cart.length} items`);
         cart.forEach((item, index) => {
             console.log(`  Cart item ${index}: id=${item.id} (type: ${typeof item.id}), matches: ${String(item.id) === searchId}`);
@@ -558,7 +555,7 @@ const CartManager = {
             }
         });
         
-        console.log('🛒 Cart UI updated - Item count:', itemCount);
+        // Cart UI updated
     },
 
     // Show cart notification
@@ -587,7 +584,7 @@ const CartManager = {
         const cart = this.getCart();
         console.log(`🛍️ Cart has ${cart.length} items:`, cart);
         
-        // Debug each cart item
+                    // Check each cart item
         cart.forEach((item, index) => {
             console.log(`📋 Cart item ${index + 1}:`, {
                 id: item.id,
@@ -3774,17 +3771,10 @@ const APIService = {
             return APIService.makeRequest(`/books/seller/${sellerId}`);
         },
         createBook: (bookData) => {
-            // Debug authentication
+            // Authentication check
             const token = localStorage.getItem('bookvault_auth_token');
             const userRole = localStorage.getItem('bookvault_user_role');
             const currentUser = AuthManager.getCurrentUser();
-            
-            console.log('🔐 Book Upload Debug:', {
-                token: token ? 'Present' : 'Missing',
-                userRole: userRole,
-                currentUser: currentUser,
-                bookData: bookData
-            });
             
             return APIService.makeRequest(CONFIG.ENDPOINTS.SELLER.CREATE_BOOK, { 
                 method: 'POST', 
@@ -3797,12 +3787,7 @@ const APIService = {
             const userRole = localStorage.getItem('bookvault_user_role');
             const currentUser = AuthManager.getCurrentUser();
             
-            console.log('🔐 Book Upload with File Debug:', {
-                token: token ? 'Present' : 'Missing',
-                userRole: userRole,
-                currentUser: currentUser,
-                hasImage: formData.has('coverImage')
-            });
+            // Book upload with file
             
             return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.CREATE_BOOK}/upload`, { 
                 method: 'POST', 
@@ -3811,14 +3796,14 @@ const APIService = {
             });
         },
         updateBook: (bookId, bookData) => {
-            console.log('🔍 Debug: Sending book data for update:', JSON.stringify(bookData, null, 2));
+            // Sending book data for update
             return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.UPDATE_BOOK}/${bookId}`, { 
                 method: 'PUT', 
                 body: JSON.stringify(bookData) 
             });
         },
         updateBookWithFile: (bookId, formData) => {
-            console.log('🔍 Debug: Sending book data with file for update');
+            // Sending book data with file for update
             return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.UPDATE_BOOK}/${bookId}/upload`, { 
                 method: 'PUT', 
                 body: formData
@@ -3828,23 +3813,18 @@ const APIService = {
         deleteBook: (bookId) => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DELETE_BOOK}/${bookId}`, { method: 'DELETE' }),
         getMyOrders: () => APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.ORDERS}`),
         getDashboardStats: () => {
-            console.log('🔍 Debug: CONFIG.ENDPOINTS.SELLER.DASHBOARD =', CONFIG.ENDPOINTS.SELLER.DASHBOARD);
-            console.log('🔍 Debug: Full endpoint URL =', `${CONFIG.ENDPOINTS.SELLER.DASHBOARD}`);
-            console.log('🔍 Debug: CONFIG object =', CONFIG);
-            console.log('🔍 Debug: CONFIG.ENDPOINTS =', CONFIG.ENDPOINTS);
-            console.log('🔍 Debug: CONFIG.ENDPOINTS.SELLER =', CONFIG.ENDPOINTS.SELLER);
             return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.DASHBOARD}`);
         },
         getRevenueAnalytics: () => {
             const currentUser = AuthManager.getCurrentUser();
             const sellerId = currentUser?.id || currentUser?.userId;
-            console.log('💰 Getting revenue analytics for seller:', sellerId);
+            // Getting revenue analytics for seller
             return APIService.makeRequest(`${CONFIG.ENDPOINTS.SELLER.REVENUE}`);
         }
     },
 
     // User API calls - Currently not implemented in backend  
-    // TODO: Implement user service endpoints
+                    // User service endpoints to be implemented
     user: {
         getProfile: (userId) => APIService.auth.getProfile(userId), // Use auth service for now
         updateProfile: (userId, data) => APIService.auth.updateProfile(userId, data), // Use auth service
@@ -6788,182 +6768,4 @@ window.BookVault = {
 };
 
 // Also expose PageManager directly for HTML onclick handlers
-window.PageManager = PageManager;
-
-// Debug helpers (remove in production)
-window.debugCart = {
-    addTestBook: () => {
-        const testBook = {
-            id: 12345,
-            title: "Test Book",
-            author: "Test Author",
-            price: 19.99,
-            imageUrl: "asset/img/books/the-great-gatsby.png"
-        };
-        CartManager.addToCart(testBook);
-        console.log("Test book added to cart");
-    },
-    
-    showCart: () => {
-        console.log("Current cart:", CartManager.getCart());
-    },
-    
-    clearCart: () => {
-        CartManager.clearCart();
-        console.log("Cart cleared");
-    }
-};
-
-// Debug helpers for authentication (remove in production)
-window.debugAuth = {
-    testLogout: () => {
-        console.log('🧪 Testing logout function directly...');
-        if (PageManager && PageManager.performLogout) {
-            PageManager.performLogout();
-        } else {
-            AuthManager.logout();
-        }
-    },
-    
-    checkAuthState: () => {
-        console.log('🧪 Current auth state:');
-        console.log('- Logged in:', AuthManager.isLoggedIn());
-        console.log('- Token:', localStorage.getItem('bookvault_auth_token'));
-        console.log('- Role:', AuthManager.getUserRole());
-        console.log('- User:', AuthManager.getCurrentUser());
-    },
-    
-    findLogoutButtons: () => {
-        const buttons = document.querySelectorAll('.logout-btn');
-        console.log(`🧪 Found ${buttons.length} logout buttons:`);
-        buttons.forEach((btn, index) => {
-            console.log(`- Button ${index + 1}:`, btn);
-            console.log(`  - Text:`, btn.textContent);
-            console.log(`  - Classes:`, btn.className);
-            console.log(`  - Visible:`, btn.offsetParent !== null);
-            console.log(`  - In dropdown:`, btn.closest('.dropdown-menu') !== null);
-            console.log(`  - Has onclick:`, btn.onclick !== null);
-            console.log(`  - Has data-logout-bound:`, btn.hasAttribute('data-logout-bound'));
-            console.log(`  - Has data-force-fixed:`, btn.hasAttribute('data-force-fixed'));
-        });
-        return buttons;
-    },
-    
-    simulateLogoutClick: () => {
-        const buttons = document.querySelectorAll('.logout-btn');
-        if (buttons.length > 0) {
-            console.log('🧪 Simulating click on first logout button...');
-            console.log('🧪 Button details:', buttons[0]);
-            buttons[0].click();
-        } else {
-            console.log('🧪 No logout buttons found!');
-        }
-    },
-    
-    forceLogout: () => {
-        console.log('🧪 Force logout - no confirmation dialog');
-        
-        // Get current user before clearing to remove user-specific data
-        const currentUser = AuthManager.getCurrentUser();
-        
-        // Clear user-specific avatar data first
-        if (currentUser && currentUser.id) {
-            AvatarManager.cleanupUserAvatar(currentUser.id);
-        }
-        
-        localStorage.removeItem('bookvault_auth_token');
-        localStorage.removeItem('bookvault_user_role'); 
-        localStorage.removeItem('bookvault_user_profile');
-        CartManager.clearCart();
-        window.location.href = 'index.html';
-    },
-    
-    showDropdown: () => {
-        console.log('🧪 Trying to show dropdown for logout button access...');
-        const dropdown = document.querySelector('.dropdown-toggle');
-        if (dropdown) {
-            dropdown.click();
-            setTimeout(() => {
-                console.log('🧪 Dropdown should now be visible - try logout button');
-                const logoutBtn = document.querySelector('.logout-btn');
-                if (logoutBtn && logoutBtn.offsetParent !== null) {
-                    console.log('✅ Logout button is now visible!');
-                } else {
-                    console.log('❌ Logout button still not visible');
-                }
-            }, 200);
-        } else {
-            console.log('❌ No dropdown toggle found');
-        }
-    },
-    
-    testAllLogoutMethods: () => {
-        console.log('🧪 Testing all logout methods...');
-        
-        // Test Method 1: Direct click simulation
-        console.log('🧪 Testing Method 1: Direct click simulation');
-        const buttons = document.querySelectorAll('.logout-btn');
-        if (buttons.length > 0) {
-            buttons[0].click();
-        }
-        
-        setTimeout(() => {
-            // Test Method 2: Keyboard shortcut
-            console.log('🧪 Testing Method 2: Keyboard shortcut (Ctrl+Shift+L)');
-            const event = new KeyboardEvent('keydown', {
-                key: 'L',
-                ctrlKey: true,
-                shiftKey: true,
-                bubbles: true
-            });
-            document.dispatchEvent(event);
-        }, 1000);
-        
-        setTimeout(() => {
-            // Test Method 3: Direct function call
-            console.log('🧪 Testing Method 3: Direct function call');
-            if (PageManager && PageManager.performLogout) {
-                PageManager.performLogout();
-            }
-        }, 2000);
-    },
-    
-    fixLogoutButtons: () => {
-        console.log('🧪 Manually fixing logout buttons...');
-        if (PageManager && PageManager.forceFixLogoutButtons) {
-            PageManager.forceFixLogoutButtons();
-        } else {
-            console.log('❌ PageManager.forceFixLogoutButtons not available');
-        }
-    }
-};
-
-// GLOBAL IMMEDIATE LOGOUT FUNCTION - Call from console: testLogoutNow()
-window.testLogoutNow = function() {
-    console.log('🧪 TESTING LOGOUT NOW!');
-    
-    // Get current user before clearing to remove user-specific data
-    const currentUser = AuthManager.getCurrentUser();
-    
-    // Clear user-specific avatar data first
-    if (currentUser && currentUser.id) {
-        AvatarManager.cleanupUserAvatar(currentUser.id);
-    }
-    
-    // Clear auth data immediately
-    localStorage.removeItem('bookvault_auth_token');
-    localStorage.removeItem('bookvault_user_role'); 
-    localStorage.removeItem('bookvault_user_profile');
-    console.log('🚪 Auth data cleared');
-    
-    // Clear cart
-    if (window.CartManager) {
-        CartManager.clearCart();
-        console.log('🚪 Cart cleared');
-    }
-    
-    showLogoutFeedback();
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 2000);
-}; 
+window.PageManager = PageManager; 

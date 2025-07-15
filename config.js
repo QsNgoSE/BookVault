@@ -128,10 +128,6 @@ const getCurrentConfig = () => {
 // Export for use in other files
 const API_CONFIG = getCurrentConfig();
 
-// For debugging
-console.log('BookVault Environment:', BookVaultConfig.environment);
-console.log('API Configuration:', API_CONFIG);
-
 // Export for different module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = BookVaultConfig;
